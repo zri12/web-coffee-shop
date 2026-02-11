@@ -29,7 +29,4 @@
         "LOG_CHANNEL": "stderr",
         "SESSION_DRIVER": "cookie"
     },
-    "exclude": [
-        "storage/framework/cache/data/**"
-    ]
 }
