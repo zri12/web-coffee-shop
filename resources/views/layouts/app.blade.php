@@ -150,14 +150,110 @@
     
     @stack('scripts')
     
-    @stack('scripts')
-    
     <script>
-        // Initialize Cart Badge
-        document.addEventListener('DOMContentLoaded', function() {
-            if (window.Cart) {
-                window.Cart.updateBadge();
+        // Global Cart Functionality
+        window.Cart = {
+            get items() {
+                return JSON.parse(localStorage.getItem('cart') || '[]');
+            },
+            
+            add(id, name, price, image = null) {
+                let cart = this.items;
+                
+                // Always add as new item (qty=1, no merging)
+                cart.push({ 
+                    id, 
+                    name, 
+                    price, 
+                    image, 
+                    quantity: 1,
+                    finalPrice: price,
+                    type: 'beverage',
+                    options: {},
+                    cartItemId: Date.now() + Math.random()
+                });
+                
+                this.save(cart);
+                this.showToast('Item ditambahkan ke keranjang');
+            },
+            
+            remove(id) {
+                let cart = this.items.filter(item => item.id !== id);
+                this.save(cart);
+            },
+            
+            clear() {
+                this.save([]);
+            },
+            
+            updateQuantity(id, quantity) {
+                let cart = this.items;
+                const item = cart.find(item => item.id === id);
+                
+                if (item) {
+                    item.quantity = parseInt(quantity);
+                    if (item.quantity <= 0) {
+                        this.remove(id);
+                        return;
+                    }
+                }
+                
+                this.save(cart);
+            },
+            
+            removeByIndex(index) {
+                let cart = this.items;
+                if (index >= 0 && index < cart.length) {
+                    cart.splice(index, 1);
+                    this.save(cart);
+                }
+            },
+            
+            updateQuantityByIndex(index, quantity) {
+                let cart = this.items;
+                if (index >= 0 && index < cart.length) {
+                    cart[index].quantity = Math.max(1, parseInt(quantity));
+                    this.save(cart);
+                }
+            },
+            
+            save(cart) {
+                localStorage.setItem('cart', JSON.stringify(cart));
+                this.updateBadge();
+                window.dispatchEvent(new CustomEvent('cart-updated'));
+            },
+            
+            updateBadge() {
+                const cart = this.items;
+                const badge = document.getElementById('cart-badge');
+                if (!badge) return;
+                
+                // Each cart item is qty=1, so totalItems = cart.length
+                const totalItems = cart.length;
+                
+                if (totalItems > 0) {
+                    badge.classList.remove('hidden');
+                    badge.innerText = totalItems > 99 ? '99+' : totalItems;
+                } else {
+                    badge.classList.add('hidden');
+                }
+            },
+            
+            showToast(message) {
+                const toast = document.createElement('div');
+                toast.className = 'fixed bottom-4 right-4 z-50 bg-primary text-white px-6 py-3 rounded-xl shadow-lg animate-fade-in flex items-center gap-2';
+                toast.innerHTML = `<span class="material-symbols-outlined">check_circle</span><span>${message}</span>`;
+                document.body.appendChild(toast);
+                
+                setTimeout(() => {
+                    toast.remove();
+                }, 3000);
             }
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            Cart.updateBadge();
         });
     </script>
 </body>

@@ -30,13 +30,7 @@ class CustomerController extends Controller
             }])
             ->get();
 
-        return view('pages.menu', compact('table', 'categories'));
-    }
-
-    public function checkout($tableNumber)
-    {
-        $table = Table::where('table_number', $tableNumber)->firstOrFail();
-        return view('pages.cart', compact('table'));
+        return view('customer.menu', compact('table', 'categories'));
     }
 
     public function addToCart(Request $request, $tableNumber)

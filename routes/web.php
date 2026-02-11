@@ -51,20 +51,10 @@ Route::get('/api/order/{orderNumber}/status', [OrderController::class, 'getOrder
 Route::prefix('order')->name('customer.')->group(function () {
     Route::get('/{tableNumber}', [App\Http\Controllers\CustomerController::class, 'index'])->name('index');
     Route::get('/{tableNumber}/menu', [App\Http\Controllers\CustomerController::class, 'menu'])->name('menu');
-    Route::get('/{tableNumber}/checkout', [App\Http\Controllers\CustomerController::class, 'checkout'])->name('checkout');
-    // Forward cart requests to CartController (Unified)
-    Route::post('/{tableNumber}/cart', [App\Http\Controllers\CartController::class, 'store'])->name('cart.add');
-    Route::get('/{tableNumber}/cart', [App\Http\Controllers\CartController::class, 'index'])->name('cart.get');
-    Route::delete('/{tableNumber}/cart/item', [App\Http\Controllers\CartController::class, 'destroy'])->name('cart.remove');
-    Route::patch('/{tableNumber}/cart/item', [App\Http\Controllers\CartController::class, 'update'])->name('cart.update');
-});
-
-// Unified Cart Routes (General)
-Route::prefix('cart-api')->name('cart.api.')->group(function () {
-    Route::get('/', [App\Http\Controllers\CartController::class, 'index'])->name('index');
-    Route::post('/', [App\Http\Controllers\CartController::class, 'store'])->name('store');
-    Route::patch('/item', [App\Http\Controllers\CartController::class, 'update'])->name('update');
-    Route::delete('/item', [App\Http\Controllers\CartController::class, 'destroy'])->name('destroy');
+    Route::post('/{tableNumber}/cart', [App\Http\Controllers\CustomerController::class, 'addToCart'])->name('cart.add');
+    Route::get('/{tableNumber}/cart', [App\Http\Controllers\CustomerController::class, 'getCart'])->name('cart.get');
+    Route::delete('/{tableNumber}/cart/item', [App\Http\Controllers\CustomerController::class, 'removeFromCart'])->name('cart.remove');
+    Route::patch('/{tableNumber}/cart/item', [App\Http\Controllers\CustomerController::class, 'updateCartItem'])->name('cart.update');
 });
 
 // Legacy QR redirect for backward compatibility
