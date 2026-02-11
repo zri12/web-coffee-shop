@@ -4,7 +4,7 @@
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'POS') - Bean & Brew</title>
+    <title>@yield('title', 'POS') - {{ $systemSettings['cafe_name'] ?? config('app.name') }}</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>

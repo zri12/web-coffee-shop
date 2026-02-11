@@ -367,27 +367,13 @@
 
         <!-- Fixed Bottom Action -->
         <div class="bg-white border-t border-[#F1F1F1] px-5 py-4 pb-safe">
-            <!-- Quantity Counter -->
-            <div class="flex items-center justify-between mb-3">
-                <span class="text-[14px] font-semibold text-[#2F2D2C]">Quantity</span>
-                <div class="flex items-center gap-3">
-                    <button @click="quantity = Math.max(1, quantity - 1)" 
-                            class="w-9 h-9 bg-[#F9F9F9] rounded-full flex items-center justify-center hover:bg-[#EDEDED] transition-colors">
-                        <span class="material-symbols-outlined text-[20px] text-[#2F2D2C]">remove</span>
-                    </button>
-                    <span class="text-[16px] font-bold text-[#2F2D2C] w-8 text-center" x-text="quantity"></span>
-                    <button @click="quantity++" 
-                            class="w-9 h-9 bg-[#F9F9F9] rounded-full flex items-center justify-center hover:bg-[#EDEDED] transition-colors">
-                        <span class="material-symbols-outlined text-[20px] text-[#2F2D2C]">add</span>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Add to Cart Button -->
+            <!-- Add to Cart Button (Qty always 1) -->
             <button @click="addToCartWithOptions()" 
-                    class="w-full bg-[#C67C4E] text-white py-3.5 rounded-2xl font-bold text-[15px] shadow-lg hover:bg-[#A05E35] active:scale-[0.99] transition-all">
-                Add to Cart · <span x-text="formatPrice(calculateTotalPrice())"></span>
+                    class="w-full bg-[#C67C4E] text-white py-4 rounded-2xl font-bold text-[16px] shadow-lg hover:bg-[#A05E35] active:scale-[0.99] transition-all flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined">add_shopping_cart</span>
+                <span>Add to Cart · <span x-text="formatPrice(calculateItemPrice())"></span></span>
             </button>
+            <p class="text-[12px] text-center text-[#9B9B9B] mt-2">Each item added individually with chosen options</p>
         </div>
     </div>
 </div>

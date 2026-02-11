@@ -4,11 +4,19 @@
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Dashboard') - Bean & Brew</title>
-    
+    <title>@yield('title', 'Dashboard') - {{ $systemSettings['cafe_name'] ?? config('app.name') }}</title>
+
+    <!-- Anti-FOUC guard: hide until critical assets are ready -->
+    <style id="fouc-guard">html.fouc-prep, html.fouc-prep body { visibility: hidden; }</style>
+
+    <!-- Preload & preconnect for icon/fonts to avoid text fallbacks -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" as="style">
+    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" as="style">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    
+
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script>
        tailwind.config = {
@@ -37,14 +45,28 @@
 
     <style>
         body { font-family: 'Inter', sans-serif; }
+        body.loading { visibility: hidden; opacity: 0; }
+        body:not(.loading) { opacity: 1; transition: opacity 180ms ease; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #d47311; border-radius: 3px; opacity: 0.5; }
     </style>
+
+    <script>
+        // Prepare to hide until CSS & JS are ready
+        document.documentElement.classList.add('fouc-prep');
+        document.addEventListener('DOMContentLoaded', () => {
+            document.body.classList.add('loading');
+        });
+        window.addEventListener('load', () => {
+            document.documentElement.classList.remove('fouc-prep');
+            document.body.classList.remove('loading');
+        });
+    </script>
     
     @stack('styles')
 </head>
-<body class="bg-background-light dark:bg-background-dark text-text-main-light dark:text-text-main-dark overflow-hidden" x-data="{ sidebarOpen: false }">
+<body class="loading bg-background-light dark:bg-background-dark text-text-main-light dark:text-text-main-dark overflow-hidden" x-data="{ sidebarOpen: false }">
 <div class="flex h-screen w-full relative">
     <!-- Backdrop for Mobile -->
     <div x-show="sidebarOpen" 

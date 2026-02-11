@@ -170,22 +170,121 @@ class OrderController extends Controller
             $order->update(['total_amount' => $totalAmount]);
 
             // Create payment record
-            Payment::create([
+            // For cash: status = 'unpaid' (will be paid at cashier)
+            // For QRIS: status = 'pending' (waiting for online payment)
+            $paymentStatus = $request->payment_method === 'cash' ? 'unpaid' : 'pending';
+            
+            $payment = Payment::create([
                 'order_id' => $order->id,
                 'amount' => $totalAmount,
                 'method' => $request->payment_method, // 'cash' or 'qris'
-                'status' => 'pending',
+                'status' => $paymentStatus,
             ]);
+
+            // Generate Midtrans Snap Token for QRIS payments
+            $snapToken = null;
+            $paymentError = null;
+            
+            if ($request->payment_method === 'qris') {
+                try {
+                    // Verify Midtrans configuration
+                    if (!config('midtrans.server_key') || !config('midtrans.client_key')) {
+                        throw new \Exception('Midtrans configuration is missing. Please check .env file.');
+                    }
+
+                    // Configure Midtrans
+                    Config::$serverKey = config('midtrans.server_key');
+                    Config::$clientKey = config('midtrans.client_key');
+                    Config::$isProduction = config('midtrans.is_production', false);
+                    Config::$isSanitized = config('midtrans.is_sanitized', true);
+                    Config::$is3ds = config('midtrans.is_3ds', true);
+                    
+                    // DEVELOPMENT ONLY: Disable SSL verification for sandbox on Windows
+                    if (!Config::$isProduction) {
+                        Config::$curlOptions = array(
+                            CURLOPT_HTTPHEADER => array(),
+                            CURLOPT_SSL_VERIFYHOST => 0,
+                            CURLOPT_SSL_VERIFYPEER => 0
+                        );
+                        \Log::warning('⚠️ SSL verification disabled for sandbox mode (development only)');
+                    }
+
+                    // Prepare Midtrans transaction parameters
+                    $params = [
+                        'transaction_details' => [
+                            'order_id' => $order->order_number,
+                            'gross_amount' => (int)$totalAmount,
+                        ],
+                        'customer_details' => [
+                            'first_name' => $request->customer_name,
+                            'phone' => $request->customer_phone ?? '',
+                        ],
+                        'item_details' => $itemsDetails,
+                    ];
+
+                    \Log::info('Generating Snap token...', [
+                        'order' => $order->order_number,
+                        'amount' => $totalAmount,
+                        'items_count' => count($itemsDetails)
+                    ]);
+
+                    // Generate snap token using Midtrans SDK
+                    $snapToken = Snap::getSnapToken($params);
+
+                    // Save snap token to payment record
+                    $payment->update([
+                        'midtrans_transaction_id' => $snapToken,
+                    ]);
+
+                    \Log::info('✅ Snap token generated successfully', [
+                        'order' => $order->order_number,
+                        'token_preview' => substr($snapToken, 0, 20) . '...',
+                        'token_length' => strlen($snapToken)
+                    ]);
+                    
+                } catch (\Exception $e) {
+                    \Log::error('❌ Snap token generation failed', [
+                        'order' => $order->order_number,
+                        'error_message' => $e->getMessage(),
+                        'error_trace' => $e->getTraceAsString(),
+                        'server_key_exists' => !empty(config('midtrans.server_key')),
+                        'client_key_exists' => !empty(config('midtrans.client_key'))
+                    ]);
+                    
+                    $paymentError = 'Gagal membuat pembayaran: ' . $e->getMessage();
+                    // Don't rollback - order is still created, payment can be done manually
+                }
+            }
 
             DB::commit();
 
-            return redirect()->route('order.success', $order->order_number)
-                ->with('success', 'Pesanan berhasil dibuat!');
+            // Redirect based on payment method
+            if ($request->payment_method === 'cash') {
+                // Cash orders: redirect to payment waiting page
+                return redirect()->route('order.waiting', $order->order_number)
+                    ->with('success', 'Pesanan berhasil dibuat!');
+            } else {
+                // QRIS orders: redirect to success page with payment button
+                return redirect()->route('order.success', $order->order_number)
+                    ->with('success', 'Pesanan berhasil dibuat!');
+            }
 
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', $e->getMessage());
         }
+    }
+
+    /**
+     * Show waiting for payment page (cash orders)
+     */
+    public function waiting($orderNumber)
+    {
+        $order = Order::with('items.menu')
+            ->where('order_number', $orderNumber)
+            ->firstOrFail();
+        
+        return view('pages.order-waiting', compact('order'));
     }
 
     public function success($orderNumber)
@@ -194,29 +293,57 @@ class OrderController extends Controller
             ->with(['items.menu', 'payment'])
             ->firstOrFail();
             
+        // Get snap token from payment record if exists
         $snapToken = null;
         $paymentError = null;
         
-        // Generate Snap Token if Payment is not CASH and Pending
-        if ($order->payment && $order->payment_method !== 'cash' && $order->payment_status !== 'paid') {
+        if ($order->payment && $order->payment_method === 'qris' && $order->payment_status !== 'paid') {
+            $snapToken = $order->payment->midtrans_transaction_id;
             
-            // Try to generate Midtrans Snap Token
-            try {
-                $paymentController = new PaymentController();
-                $result = $paymentController->processPayment($order);
-                
-                if ($result['success']) {
-                    $snapToken = $result['snap_token'];
-                } else {
-                    $paymentError = $result['error'] ?? 'Failed to generate payment token';
-                }
-            } catch (\Exception $e) {
-                $paymentError = $e->getMessage();
-                \Log::error('Snap Token Generation Error: ' . $e->getMessage());
+            \Log::info('Order success page loaded', [
+                'order' => $order->order_number,
+                'payment_method' => $order->payment_method,
+                'payment_status' => $order->payment_status,
+                'has_payment_record' => !is_null($order->payment),
+                'snap_token_exists' => !is_null($snapToken),
+                'snap_token_length' => $snapToken ? strlen($snapToken) : 0
+            ]);
+            
+            if (!$snapToken) {
+                $paymentError = 'Token pembayaran tidak ditemukan. Silakan hubungi kasir.';
+                \Log::warning('⚠️ Snap token not found in payment record', [
+                    'order' => $order->order_number,
+                    'payment_id' => $order->payment->id ?? null
+                ]);
             }
         }
 
         return view('pages.order-success', compact('order', 'snapToken', 'paymentError'));
+    }
+
+    /**
+     * Get order status for polling (API endpoint)
+     */
+    public function getOrderStatus($orderNumber)
+    {
+        $order = Order::where('order_number', $orderNumber)
+            ->select('id', 'order_number', 'status', 'payment_status', 'payment_method', 'updated_at')
+            ->first();
+        
+        if (!$order) {
+            return response()->json(['error' => 'Order not found'], 404);
+        }
+        
+        return response()->json([
+            'success' => true,
+            'order' => [
+                'order_number' => $order->order_number,
+                'status' => $order->status,
+                'payment_status' => $order->payment_status,
+                'payment_method' => $order->payment_method,
+                'updated_at' => $order->updated_at->toISOString(),
+            ]
+        ]);
     }
 
     public function track()

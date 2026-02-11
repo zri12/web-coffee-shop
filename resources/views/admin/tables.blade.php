@@ -449,7 +449,7 @@ function printAllQR() {
     printWindow.document.write('@media print { .qr-grid { grid-template-columns: repeat(2, 1fr); } }');
     printWindow.document.write('</style>');
     printWindow.document.write('</head><body>');
-    printWindow.document.write('<h1 style="text-align: center; margin-bottom: 30px;">Cafe Aroma - Table QR Codes</h1>');
+    printWindow.document.write('<h1 style="text-align: center; margin-bottom: 30px;">{{ $systemSettings['cafe_name'] ?? 'Cafe' }} - Table QR Codes</h1>');
     printWindow.document.write('<div class="qr-grid">');
     
     // Get all QR containers from the DOM

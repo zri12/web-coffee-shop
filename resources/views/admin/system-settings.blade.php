@@ -7,7 +7,7 @@
     <!-- Header -->
     <div class="flex flex-col gap-1">
         <h1 class="text-xl sm:text-2xl font-bold text-[#181411] dark:text-white">System Settings</h1>
-        <p class="text-xs sm:text-sm text-[#897561] dark:text-[#a89c92]">Pengaturan sistem cafe</p>
+        <p class="text-xs sm:text-sm text-[#897561] dark:text-[#a89c92]">Pengaturan sistem cafe (tersimpan di database dan disinkronkan ke semua tampilan)</p>
     </div>
 
     <form action="{{ route('admin.system-settings.update') }}" method="POST" enctype="multipart/form-data" class="space-y-4 sm:space-y-6">
@@ -20,19 +20,19 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-[#181411] dark:text-white mb-2">Nama Cafe</label>
-                    <input type="text" name="cafe_name" value="{{ $cafe_name }}" required
+                          <input type="text" name="cafe_name" value="{{ old('cafe_name', $settings['cafe_name'] ?? '') }}" required
                            class="w-full px-4 py-3 rounded-lg border border-[#e6e0db] dark:border-[#3d362e] bg-white dark:bg-[#0f0d0b] text-[#181411] dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base">
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-[#181411] dark:text-white mb-2">Alamat</label>
                     <textarea name="address" rows="3"
-                              class="w-full px-4 py-3 rounded-lg border border-[#e6e0db] dark:border-[#3d362e] bg-white dark:bg-[#0f0d0b] text-[#181411] dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base">{{ $address }}</textarea>
+                              class="w-full px-4 py-3 rounded-lg border border-[#e6e0db] dark:border-[#3d362e] bg-white dark:bg-[#0f0d0b] text-[#181411] dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base">{{ old('address', $settings['address'] ?? '') }}</textarea>
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-[#181411] dark:text-white mb-2">Nomor Telepon</label>
-                    <input type="tel" name="phone" value="{{ $phone }}"
+                    <input type="tel" name="phone" value="{{ old('phone', $settings['phone'] ?? '') }}"
                            class="w-full px-4 py-3 rounded-lg border border-[#e6e0db] dark:border-[#3d362e] bg-white dark:bg-[#0f0d0b] text-[#181411] dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base">
                 </div>
 
@@ -41,6 +41,13 @@
                     <input type="file" name="logo" accept="image/*"
                            class="w-full px-4 py-3 rounded-lg border border-[#e6e0db] dark:border-[#3d362e] bg-white dark:bg-[#0f0d0b] text-[#181411] dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base">
                     <p class="text-xs text-[#897561] dark:text-[#a89c92] mt-1">Ukuran maksimal 2MB, format: JPG, PNG</p>
+
+                    @if(!empty($settings['logo_path']))
+                    <div class="mt-3 flex items-center gap-3">
+                        <img src="{{ $settings['logo_path'] }}" alt="Logo preview" class="h-12 w-12 rounded-lg object-cover border border-[#e6e0db] dark:border-[#3d362e]">
+                        <p class="text-xs text-[#897561] dark:text-[#a89c92]">Logo saat ini</p>
+                    </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -52,13 +59,13 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium text-[#181411] dark:text-white mb-2">Jam Buka</label>
-                    <input type="time" name="opening_time" value="{{ $opening_time }}"
+                    <input type="time" name="opening_time" value="{{ old('opening_time', $settings['opening_time'] ?? '') }}"
                            class="w-full px-4 py-3 rounded-lg border border-[#e6e0db] dark:border-[#3d362e] bg-white dark:bg-[#0f0d0b] text-[#181411] dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base">
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-[#181411] dark:text-white mb-2">Jam Tutup</label>
-                    <input type="time" name="closing_time" value="{{ $closing_time }}"
+                    <input type="time" name="closing_time" value="{{ old('closing_time', $settings['closing_time'] ?? '') }}"
                            class="w-full px-4 py-3 rounded-lg border border-[#e6e0db] dark:border-[#3d362e] bg-white dark:bg-[#0f0d0b] text-[#181411] dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base">
                 </div>
             </div>
@@ -68,8 +75,8 @@
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     @foreach(['senin' => 'Senin', 'selasa' => 'Selasa', 'rabu' => 'Rabu', 'kamis' => 'Kamis', 'jumat' => 'Jumat', 'sabtu' => 'Sabtu', 'minggu' => 'Minggu'] as $dayValue => $dayLabel)
                     <label class="flex items-center gap-2 p-3 bg-[#faf8f6] dark:bg-[#0f0d0b] rounded-lg cursor-pointer hover:bg-[#f4f2f0] dark:hover:bg-[#3e2d23] transition-colors touch-manipulation">
-                        <input type="checkbox" name="closed_days[]" value="{{ $dayValue }}"
-                               @if(in_array($dayValue, $closed_days ?? [])) checked @endif
+                           <input type="checkbox" name="closed_days[]" value="{{ $dayValue }}"
+                               @if(in_array($dayValue, old('closed_days', $settings['closed_days'] ?? []))) checked @endif
                                class="w-4 h-4 text-primary border-[#e6e0db] dark:border-[#3d362e] rounded focus:ring-primary">
                         <span class="text-sm text-[#181411] dark:text-white">{{ $dayLabel }}</span>
                     </label>
@@ -85,19 +92,19 @@
             <div class="space-y-4">
                 <div>
                     <label class="block text-sm font-medium text-[#181411] dark:text-white mb-2">Instagram</label>
-                    <input type="text" name="instagram" placeholder="@beanandbrew" value="{{ $instagram }}"
+                          <input type="text" name="instagram" placeholder="@beanandbrew" value="{{ old('instagram', $settings['instagram'] ?? '') }}"
                            class="w-full px-4 py-3 rounded-lg border border-[#e6e0db] dark:border-[#3d362e] bg-white dark:bg-[#0f0d0b] text-[#181411] dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base">
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-[#181411] dark:text-white mb-2">Facebook</label>
-                    <input type="text" name="facebook" placeholder="facebook.com/beanandbrew" value="{{ $facebook }}"
+                          <input type="text" name="facebook" placeholder="facebook.com/beanandbrew" value="{{ old('facebook', $settings['facebook'] ?? '') }}"
                            class="w-full px-4 py-3 rounded-lg border border-[#e6e0db] dark:border-[#3d362e] bg-white dark:bg-[#0f0d0b] text-[#181411] dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base">
                 </div>
 
                 <div>
                     <label class="block text-sm font-medium text-[#181411] dark:text-white mb-2">WhatsApp</label>
-                    <input type="tel" name="whatsapp" placeholder="+62 812-3456-7890" value="{{ $whatsapp }}"
+                    <input type="tel" name="whatsapp" placeholder="+62 812-3456-7890" value="{{ old('whatsapp', $settings['whatsapp'] ?? '') }}"
                            class="w-full px-4 py-3 rounded-lg border border-[#e6e0db] dark:border-[#3d362e] bg-white dark:bg-[#0f0d0b] text-[#181411] dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent text-sm sm:text-base">
                 </div>
             </div>
@@ -116,6 +123,13 @@
 <div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 3000)" 
      class="fixed bottom-4 right-4 bg-green-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg shadow-lg z-50 text-sm sm:text-base">
     {{ session('success') }}
+</div>
+@endif
+
+@if(session('error'))
+<div x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)" 
+     class="fixed bottom-4 right-4 bg-red-500 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg shadow-lg z-50 text-sm sm:text-base">
+    {{ session('error') }}
 </div>
 @endif
 @endsection

@@ -39,7 +39,7 @@
             <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-2">
                     <label class="text-xs font-bold text-[#897561] uppercase tracking-wider">Cafe Name</label>
-                    <input type="text" value="Bean & Brew Cafe" class="w-full px-4 py-2.5 bg-white dark:bg-[#2c241b] border border-[#e6e0db] dark:border-[#3d362e] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-[#181411] dark:text-white">
+                    <input type="text" value="{{ $systemSettings['cafe_name'] ?? 'Cafe' }}" class="w-full px-4 py-2.5 bg-white dark:bg-[#2c241b] border border-[#e6e0db] dark:border-[#3d362e] rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 text-[#181411] dark:text-white">
                 </div>
                 <div class="space-y-2">
                     <label class="text-xs font-bold text-[#897561] uppercase tracking-wider">Contact Number</label>

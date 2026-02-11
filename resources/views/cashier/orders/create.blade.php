@@ -260,7 +260,7 @@
                 })
                 .then(response => {
                     if (response.ok) {
-                        window.location.href = "{{ route('cashier.dashboard') }}"; // Redirect to dashboard
+                        window.location.href = "{{ route('cashier.incoming-orders') }}"; // Redirect to new orders
                     } else {
                         alert('Error placing order. Please try again.');
                         this.isProcessing = false;

@@ -288,7 +288,7 @@
     <div class="receipt-container">
         <!-- Header -->
         <div class="header">
-            <h1>Cafe Aroma</h1>
+            <h1>{{ $systemSettings['cafe_name'] ?? 'Cafe' }}</h1>
             <p>Order Receipt</p>
         </div>
 
@@ -367,7 +367,7 @@
         <!-- Footer -->
         <div class="footer">
             <p style="font-size: 12px; color: #999;">Thank you for your order!</p>
-            <p style="font-size: 11px; color: #ccc; margin-top: 4px;">Cafe Aroma - Your Coffee Destination</p>
+            <p style="font-size: 11px; color: #ccc; margin-top: 4px;">{{ $systemSettings['cafe_name'] ?? 'Cafe' }} - Your Coffee Destination</p>
         </div>
 
         <!-- Actions -->

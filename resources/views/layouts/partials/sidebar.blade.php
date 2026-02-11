@@ -7,7 +7,7 @@
             {{ substr(auth()->user()->name, 0, 1) }}
         </div>
         <div class="flex flex-col">
-            <h1 class="text-[#181411] dark:text-white text-base font-bold leading-normal">Bean & Brew</h1>
+                <h1 class="text-[#181411] dark:text-white text-base font-bold leading-normal">{{ $systemSettings['cafe_name'] ?? config('app.name') }}</h1>
             <p class="text-[#897561] text-xs font-normal leading-normal">
                 @if(auth()->user()->isAdmin())
                     Admin Portal

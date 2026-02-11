@@ -82,12 +82,17 @@
     </div>
 
     <!-- Right Side - Current Order -->
-    <div class="w-[400px] bg-white dark:bg-[#2d2115] border-l border-[#f4f2f0] dark:border-[#3e2d23] flex flex-col">
-        <!-- Header -->
-        <div class="p-6 border-b border-[#f4f2f0] dark:border-[#3e2d23]">
+    <div class="w-[420px] bg-white dark:bg-[#2d2115] border-l border-[#f4f2f0] dark:border-[#3e2d23] flex flex-col h-full overflow-hidden">
+        <!-- Header - Fixed at top -->
+        <div class="flex-shrink-0 p-6 border-b border-[#f4f2f0] dark:border-[#3e2d23]">
             <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-bold text-[#181411] dark:text-white">Current Order</h2>
-                <span class="px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">#<span x-text="orderNumber"></span></span>
+                <div class="flex items-center gap-2">
+                    <span x-show="items.length > 0" class="px-3 py-1 bg-primary text-white rounded-full text-xs font-bold animate-pulse">
+                        <span x-text="items.length"></span> items
+                    </span>
+                    <span class="px-2 py-1 bg-primary/10 text-primary rounded-full text-xs font-medium">#<span x-text="orderNumber"></span></span>
+                </div>
             </div>
 
             <!-- Table Selection -->
@@ -112,68 +117,65 @@
             </div>
         </div>
 
-        <!-- Order Items -->
-        <div class="flex-1 overflow-y-auto p-6 space-y-3">
-            <template x-for="(item, index) in items" :key="index">
-                <div class="flex items-start gap-3 p-3 bg-[#fdfbf7] dark:bg-[#221910] rounded-xl">
-                    <!-- Item Image Placeholder -->
-                    <div class="size-12 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0">
-                        <span class="material-symbols-outlined text-primary text-[20px]">restaurant</span>
-                    </div>
-                    
-                    <div class="flex-1 min-w-0">
-                        <h4 class="font-bold text-sm text-[#181411] dark:text-white mb-1" x-text="item.name"></h4>
-                        <p class="text-xs text-[#897561] dark:text-[#a89c92] mb-1" x-text="item.category"></p>
+        <!-- Order Items - Scrollable Section -->
+        <div class="flex-1 overflow-y-auto min-h-0">
+            <div class="p-4 space-y-3">
+                <template x-for="(item, index) in items" :key="index">
+                    <div class="flex items-start gap-2 p-3 bg-[#fdfbf7] dark:bg-[#221910] rounded-xl shadow-sm">
+                        <!-- Item Image Placeholder -->
+                        <div class="size-10 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0">
+                            <span class="material-symbols-outlined text-primary text-[18px]">restaurant</span>
+                        </div>
                         
-                        <!-- Notes (if any) -->
-                        <template x-if="item.notes">
-                            <div class="text-[10px] text-[#897561] dark:text-[#a89c92] mb-2 bg-white dark:bg-[#2d2115] px-2 py-1.5 rounded space-y-0.5 leading-relaxed">
-                                <div class="font-semibold text-[#181411] dark:text-white mb-1">🔔 Customization:</div>
-                                <div x-html="item.notes.replace(/\|/g, '<br>•')"></div>
-                            </div>
-                        </template>
-                        
-                        <div class="flex items-center justify-between mt-2">
-                            <!-- Quantity Controls -->
-                            <div class="flex items-center gap-2">
-                                <button type="button" @click="decreaseQuantity(index)" class="size-6 rounded bg-white dark:bg-[#2d2115] border border-[#e8e4df] dark:border-[#3e2d23] flex items-center justify-center hover:border-primary transition-colors">
-                                    <span class="material-symbols-outlined text-[14px] text-[#181411] dark:text-white">remove</span>
-                                </button>
-                                <span class="text-sm font-bold text-[#181411] dark:text-white w-6 text-center" x-text="item.quantity"></span>
-                                <button type="button" @click="increaseQuantity(index)" class="size-6 rounded bg-white dark:bg-[#2d2115] border border-[#e8e4df] dark:border-[#3e2d23] flex items-center justify-center hover:border-primary transition-colors">
-                                    <span class="material-symbols-outlined text-[14px] text-[#181411] dark:text-white">add</span>
-                                </button>
-                            </div>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="font-bold text-sm text-[#181411] dark:text-white mb-0.5" x-text="item.name"></h4>
+                            <p class="text-[10px] text-[#897561] dark:text-[#a89c92] mb-1" x-text="item.category"></p>
                             
-                            <!-- Price & Remove -->
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-bold text-[#181411] dark:text-white">Rp <span x-text="formatPrice(item.price * item.quantity)"></span></span>
-                                <button type="button" @click="removeItem(index)" class="size-6 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
-                                    <span class="material-symbols-outlined text-[14px]">close</span>
-                                </button>
+                            <!-- Notes (if any) -->
+                            <template x-if="item.notes">
+                                <div class="text-[9px] text-[#897561] dark:text-[#a89c92] mb-2 bg-white dark:bg-[#2d2115] px-2 py-1 rounded leading-relaxed">
+                                    <div class="font-semibold text-[#181411] dark:text-white mb-0.5">🔔 Notes:</div>
+                                    <div x-html="item.notes.replace(/\|/g, '<br>• ')"></div>
+                                </div>
+                            </template>
+                            
+                            <div class="flex items-center justify-between mt-2">
+                                <!-- Quantity Controls -->
+                                <div class="flex items-center gap-1">
+                                    <button type="button" @click="decreaseQuantity(index)" class="size-6 rounded bg-white dark:bg-[#2d2115] border border-[#e8e4df] dark:border-[#3e2d23] flex items-center justify-center hover:border-primary transition-colors">
+                                        <span class="material-symbols-outlined text-[14px] text-[#181411] dark:text-white">remove</span>
+                                    </button>
+                                    <span class="text-sm font-bold text-[#181411] dark:text-white w-8 text-center" x-text="item.quantity"></span>
+                                    <button type="button" @click="increaseQuantity(index)" class="size-6 rounded bg-white dark:bg-[#2d2115] border border-[#e8e4df] dark:border-[#3e2d23] flex items-center justify-center hover:border-primary transition-colors">
+                                        <span class="material-symbols-outlined text-[14px] text-[#181411] dark:text-white">add</span>
+                                    </button>
+                                </div>
+                                
+                                <!-- Price & Remove -->
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-bold text-[#181411] dark:text-white">Rp <span x-text="formatPrice(item.price * item.quantity)"></span></span>
+                                    <button type="button" @click="removeItem(index)" class="size-6 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+                                        <span class="material-symbols-outlined text-[14px]">close</span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
+                </template>
 
-                    <!-- Remove Button -->
-                    <button type="button" @click="removeItem(index)" class="text-[#897561] dark:text-[#a89c92] hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                        <span class="material-symbols-outlined text-[18px]">close</span>
-                    </button>
+                <!-- Empty State -->
+                <div x-show="items.length === 0" class="text-center py-16">
+                    <div class="size-16 mx-auto rounded-full bg-[#f4f2f0] dark:bg-[#221910] flex items-center justify-center mb-3">
+                        <span class="material-symbols-outlined text-[#897561] dark:text-[#a89c92] text-[32px]">shopping_cart</span>
+                    </div>
+                    <p class="text-sm font-medium text-[#897561] dark:text-[#a89c92]">No items added yet</p>
+                    <p class="text-xs text-[#897561] dark:text-[#a89c92] mt-1">Click on menu items to add</p>
                 </div>
-            </template>
-
-            <!-- Empty State -->
-            <div x-show="items.length === 0" class="text-center py-12">
-                <div class="size-16 mx-auto rounded-full bg-[#f4f2f0] dark:bg-[#221910] flex items-center justify-center mb-3">
-                    <span class="material-symbols-outlined text-[#897561] dark:text-[#a89c92] text-[32px]">shopping_cart</span>
-                </div>
-                <p class="text-sm text-[#897561] dark:text-[#a89c92]">No items added yet</p>
-                <p class="text-xs text-[#897561] dark:text-[#a89c92] mt-1">Click on menu items to add</p>
             </div>
         </div>
 
-        <!-- Order Summary & Actions -->
-        <div class="p-6 border-t border-[#f4f2f0] dark:border-[#3e2d23] space-y-4">
+        <!-- Order Summary & Actions - Fixed at bottom -->
+        <div class="flex-shrink-0 p-4 border-t-2 border-[#f4f2f0] dark:border-[#3e2d23] bg-[#f8f6f3] dark:bg-[#1a1410] space-y-3">
             <!-- Totals -->
             <div class="space-y-2">
                 <div class="flex items-center justify-between text-sm">
@@ -212,10 +214,219 @@
             </div>
 
             <!-- Place Order Button -->
-            <button @click="submitOrder()" :disabled="items.length === 0 || !tableNumber || !paymentMethod" class="w-full px-4 py-3.5 bg-primary text-white rounded-xl hover:bg-primary-dark transition-colors font-bold text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+            <button 
+                type="button"
+                onclick="handlePlaceOrderClick()"
+                class="w-full px-4 py-4 text-white rounded-xl transition-all font-bold text-base flex items-center justify-center gap-2 group bg-gradient-to-r from-primary to-orange-600 shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 cursor-pointer">
+                <span class="material-symbols-outlined text-[24px] animate-bounce">shopping_cart_checkout</span>
                 <span>Place Order</span>
-                <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+                <span class="text-sm font-normal opacity-90" x-show="items.length > 0">• Rp <span x-text="formatPrice(calculateTotal())"></span></span>
             </button>
+            
+            <script>
+            function handlePlaceOrderClick() {
+                // Get the Alpine.js component data
+                const mainComponent = document.querySelector('[x-data="manualOrder()"]');
+                
+                if (mainComponent && mainComponent._x_dataStack && mainComponent._x_dataStack[0]) {
+                    const data = mainComponent._x_dataStack[0];
+                    
+                    // Validation
+                    if (data.items.length === 0) {
+                        showErrorModal({
+                            title: 'Item Kosong',
+                            message: 'Silakan tambahkan minimal 1 item',
+                            icon: '🛒'
+                        });
+                        return;
+                    }
+                    if (!data.tableNumber) {
+                        showErrorModal({
+                            title: 'Meja Belum Dipilih',
+                            message: 'Silakan pilih nomor meja',
+                            icon: '🪑'
+                        });
+                        return;
+                    }
+                    if (!data.paymentMethod) {
+                        showErrorModal({
+                            title: 'Metode Pembayaran',
+                            message: 'Silakan pilih metode pembayaran',
+                            icon: '💳'
+                        });
+                        return;
+                    }
+                    
+                    console.log('Making API request to create order...');
+                    
+                    // Direct API call
+                    fetch('/cashier/manual-order', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            table_number: data.tableNumber,
+                            customer_name: data.customerName || 'Guest', 
+                            payment_method: data.paymentMethod,
+                            items: data.items.map(item => ({
+                                menu_id: item.menu_id,
+                                quantity: item.quantity,
+                                price: item.price,
+                                notes: item.notes || ''
+                            }))
+                        })
+                    })
+                    .then(response => {
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            // Show modern success modal instead of alert
+                            showSuccessModal({
+                                title: 'Order Berhasil Dibuat!',
+                                message: 'Order siap diproses oleh dapur.',
+                                icon: '✅'
+                            });
+                            
+                            // Reset form
+                            const alpineData = mainComponent._x_dataStack[0];
+                            alpineData.items = [];
+                            alpineData.tableNumber = '';
+                            alpineData.customerName = 'Guest';
+                            alpineData.paymentMethod = '';
+                        } else {
+                            // Show modern error modal
+                            showErrorModal({
+                                title: 'Gagal Membuat Order',
+                                message: data.message || 'Terjadi kesalahan',
+                                icon: '❌'
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        showErrorModal({
+                            title: 'Network Error',
+                            message: 'Koneksi bermasalah: ' + error.message,
+                            icon: '⚠️'
+                        });
+                    });
+                    
+                } else {
+                    showErrorModal({
+                        title: 'System Error',
+                        message: 'Alpine.js tidak ditemukan. Silakan refresh halaman.',
+                        icon: '⚠️'
+                    });
+                }
+            }
+            
+            // Modern Modal Functions
+            function showSuccessModal(options) {
+                createModal({
+                    ...options,
+                    type: 'success',
+                    bgColor: 'bg-green-50 dark:bg-green-900/20',
+                    borderColor: 'border-green-200 dark:border-green-800',
+                    iconBg: 'bg-green-100 dark:bg-green-800',
+                    buttonBg: 'bg-green-600 hover:bg-green-700',
+                    autoClose: true
+                });
+            }
+            
+            function showErrorModal(options) {
+                createModal({
+                    ...options,
+                    type: 'error',
+                    bgColor: 'bg-red-50 dark:bg-red-900/20',
+                    borderColor: 'border-red-200 dark:border-red-800',
+                    iconBg: 'bg-red-100 dark:bg-red-800',
+                    buttonBg: 'bg-red-600 hover:bg-red-700',
+                    autoClose: false
+                });
+            }
+            
+            function createModal(options) {
+                // Remove existing modal if any
+                const existingModal = document.getElementById('customModal');
+                if (existingModal) {
+                    existingModal.remove();
+                }
+                
+                // Create modal HTML
+                const modal = document.createElement('div');
+                modal.id = 'customModal';
+                modal.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4';
+                modal.style.opacity = '0';
+                modal.style.transition = 'opacity 0.3s ease';
+                
+                modal.innerHTML = `
+                    <div class="relative bg-white dark:bg-[#1a1612] rounded-2xl shadow-2xl max-w-md w-full transform transition-all" 
+                         style="transform: scale(0.9); transition: transform 0.3s ease, opacity 0.3s ease;">
+                        <!-- Modal Content -->
+                        <div class="p-6">
+                            <!-- Icon -->
+                            <div class="flex justify-center mb-4">
+                                <div class="w-16 h-16 ${options.iconBg} rounded-full flex items-center justify-center">
+                                    <span class="text-2xl">${options.icon}</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Title -->
+                            <h3 class="text-xl font-bold text-center text-[#181411] dark:text-white mb-3">
+                                ${options.title}
+                            </h3>
+                            
+                            <!-- Message -->
+                            <p class="text-center text-[#897561] dark:text-[#a89c92] mb-6 leading-relaxed">
+                                ${options.message}
+                            </p>
+                            
+                            <!-- Button -->
+                            <button 
+                                onclick="closeModal()"
+                                class="${options.buttonBg} w-full px-4 py-3 text-white rounded-xl font-medium transition-all hover:shadow-lg">
+                                ${options.type === 'success' ? 'Lanjutkan' : 'Tutup'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                document.body.appendChild(modal);
+                
+                // Animate in
+                requestAnimationFrame(() => {
+                    modal.style.opacity = '1';
+                    const modalContent = modal.querySelector('div > div');
+                    modalContent.style.transform = 'scale(1)';
+                });
+                
+                // Auto close for success
+                if (options.autoClose && options.type === 'success') {
+                    setTimeout(() => {
+                        closeModal(true); // true = refresh page
+                    }, 2500);
+                }
+            }
+            
+            function closeModal(refresh = false) {
+                const modal = document.getElementById('customModal');
+                if (modal) {
+                    modal.style.opacity = '0';
+                    const modalContent = modal.querySelector('div > div');
+                    modalContent.style.transform = 'scale(0.9)';
+                    
+                    setTimeout(() => {
+                        modal.remove();
+                        if (refresh) {
+                            window.location.reload();
+                        }
+                    }, 300);
+                }
+            }
+            </script>
         </div>
     </div>
 
@@ -526,6 +737,13 @@
         </div>
     </div>
 </div>
+@endsection
+
+<!-- Order Confirmation Modal -->
+<x-order-confirm-modal />
+
+<!-- Success Modal Component -->
+<x-success-modal />
 
 @push('scripts')
 <script>
@@ -820,21 +1038,38 @@ function manualOrder() {
             this.errorMessage = '';
 
             if (this.items.length === 0) {
-                this.errorMessage = 'Please add at least one item';
+                this.errorMessage = 'Silakan tambahkan minimal 1 item';
                 return;
             }
 
             if (!this.tableNumber) {
-                this.errorMessage = 'Please select a table';
+                this.errorMessage = 'Silakan pilih nomor meja';
                 return;
             }
 
             if (!this.paymentMethod) {
-                this.errorMessage = 'Please select a payment method';
+                this.errorMessage = 'Silakan pilih metode pembayaran';
                 return;
             }
 
-            console.log('Submitting order:', {
+            // Show order confirmation modal first
+            window.dispatchEvent(new CustomEvent('show-order-confirm-modal', {
+                detail: {
+                    orderDetails: this.items,
+                    totalAmount: this.calculateTotal(),
+                    itemCount: this.items.length,
+                    tableNumber: this.tableNumber,
+                    paymentMethod: this.paymentMethod,
+                    customerName: this.customerName,
+                    confirmAction: () => {
+                        this.submitOrderToServer();
+                    }
+                }
+            }));
+        },
+
+        async submitOrderToServer() {
+            console.log('Submitting order to server:', {
                 table_number: this.tableNumber,
                 customer_name: this.customerName,
                 payment_method: this.paymentMethod,
@@ -867,16 +1102,29 @@ function manualOrder() {
                 console.log('Response data:', data);
 
                 if (response.ok && data.success) {
-                    // Clear cart and reset form
-                    this.items = [];
-                    this.tableNumber = '';
-                    this.customerName = 'Guest';
-                    this.paymentMethod = '';
+                    // Show success modal after order created
+                    window.dispatchEvent(new CustomEvent('show-success-modal', {
+                        detail: {
+                            title: '✅ Order Berhasil!',
+                            message: 'Order berhasil dibuat dan pembayaran telah tercatat. Order siap diproses oleh dapur.',
+                            primaryLabel: 'Kembali ke Incoming Orders',
+                            secondaryLabel: 'Buat Order Baru',
+                            primaryAction: () => {
+                                window.location.href = '/cashier/incoming-orders';
+                            }
+                        }
+                    }));
                     
-                    // Redirect to incoming orders
-                    window.location.href = '/cashier/incoming-orders';
+                    // Reset form for new order (if user clicks secondary button)
+                    setTimeout(() => {
+                        this.items = [];
+                        this.tableNumber = '';
+                        this.customerName = 'Guest';
+                        this.paymentMethod = '';
+                        this.orderNumber = Math.floor(Math.random() * 10000);
+                    }, 500);
                 } else {
-                    this.errorMessage = data.message || 'Failed to create order';
+                    this.errorMessage = data.message || 'Gagal membuat order';
                     if (data.errors) {
                         console.error('Validation errors:', data.errors);
                         this.errorMessage += ': ' + Object.values(data.errors).flat().join(', ');
@@ -884,11 +1132,10 @@ function manualOrder() {
                 }
             } catch (error) {
                 console.error('Error creating order:', error);
-                this.errorMessage = 'An error occurred: ' + error.message;
+                this.errorMessage = 'Terjadi kesalahan: ' + error.message;
             }
         }
     }
 }
 </script>
 @endpush
-@endsection

@@ -188,16 +188,148 @@
     </div>
 
     <!-- Order Detail Modal -->
-    <div x-show="showDetailModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" x-cloak>
-        <div class="bg-white dark:bg-[#2d2115] rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto" @click.away="showDetailModal = false">
-            <div class="p-6 border-b border-[#f4f2f0] dark:border-[#3e2d23] flex items-center justify-between">
-                <h3 class="text-lg font-bold text-[#181411] dark:text-white">Order Details</h3>
-                <button @click="showDetailModal = false" class="text-[#897561] dark:text-[#a89c92] hover:text-[#181411] dark:hover:text-white">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
+    <div x-show="showDetailModal" x-cloak class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="relative bg-white dark:bg-[#1a1612] rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-[#f4f2f0] dark:border-[#3e2d23]" @click.away="closeModal()" x-transition>
+            <!-- Header -->
+            <div class="p-6 border-b border-[#f4f2f0] dark:border-[#3e2d23] flex items-start justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="material-symbols-outlined text-primary">receipt_long</span>
+                        <h3 class="text-lg font-bold text-[#181411] dark:text-white" x-text="detail.order_number || 'Order Details'"></h3>
+                    </div>
+                    <p class="text-xs text-[#897561] dark:text-[#a89c92]" x-text="detail.created_at || ''"></p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="px-3 py-1 rounded-full text-xs font-semibold" :class="statusBadge(detail.status)">
+                        <span class="capitalize" x-text="detail.status || 'pending'"></span>
+                    </span>
+                    <button @click="closeModal()" class="p-2 rounded-full hover:bg-[#f4f2f0] dark:hover:bg-[#2c241b] text-[#897561] dark:text-[#a89c92]">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
             </div>
-            <div class="p-6">
-                <p class="text-sm text-[#897561] dark:text-[#a89c92]">Order detail view will be implemented here</p>
+
+            <!-- Body -->
+            <div class="p-6 space-y-6">
+                <!-- Loading State -->
+                <template x-if="loading">
+                    <div class="flex items-center gap-3 text-[#897561] dark:text-[#a89c92]">
+                        <span class="material-symbols-outlined animate-spin">progress_activity</span>
+                        <span>Loading order details...</span>
+                    </div>
+                </template>
+
+                <!-- Error State -->
+                <template x-if="errorMessage">
+                    <div class="p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm" x-text="errorMessage"></div>
+                </template>
+
+                <template x-if="!loading && !errorMessage">
+                    <div class="space-y-6">
+                        <!-- Customer & Order Info -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[#fdfbf7] dark:bg-[#221910] rounded-xl p-4 border border-[#f4f2f0] dark:border-[#3e2d23]">
+                            <div class="space-y-2">
+                                <div class="flex items-center gap-2 text-sm text-[#897561] dark:text-[#a89c92]">
+                                    <span class="material-symbols-outlined text-[#d47311]">person</span>
+                                    <span class="font-semibold text-[#181411] dark:text-white" x-text="detail.customer_name || 'Guest'"></span>
+                                </div>
+                                <div class="flex items-center gap-2 text-sm text-[#897561] dark:text-[#a89c92]">
+                                    <span class="material-symbols-outlined text-[#d47311]">restaurant</span>
+                                    <span>
+                                        <span class="font-semibold text-[#181411] dark:text-white" x-text="orderTypeLabel(detail.order_type)"></span>
+                                        <template x-if="detail.table_number">
+                                            <span class="ml-1 text-xs text-[#897561] dark:text-[#a89c92]">(Table <span x-text="detail.table_number"></span>)</span>
+                                        </template>
+                                    </span>
+                                </div>
+                                <div class="flex items-center gap-2 text-sm text-[#897561] dark:text-[#a89c92]">
+                                    <span class="material-symbols-outlined text-[#d47311]">badge</span>
+                                    <span class="font-semibold text-[#181411] dark:text-white" x-text="detail.cashier_name || 'Cashier'"></span>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <div class="flex items-center gap-2 text-sm text-[#897561] dark:text-[#a89c92]">
+                                    <span class="material-symbols-outlined text-[#d47311]">payments</span>
+                                    <span class="font-semibold text-[#181411] dark:text-white" x-text="paymentLabel(detail.payment_method)"></span>
+                                    <span class="px-2 py-1 rounded-full text-[11px] font-semibold" :class="paymentBadge(detail.payment_status)" x-text="paymentStatusLabel(detail.payment_status)"></span>
+                                </div>
+                                <div class="flex items-center gap-2 text-sm text-[#897561] dark:text-[#a89c92]">
+                                    <span class="material-symbols-outlined text-[#d47311]">event</span>
+                                    <span x-text="detail.created_at || '-'" class="font-semibold text-[#181411] dark:text-white"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Items -->
+                        <div class="space-y-3">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[#d47311]">list_alt</span>
+                                <h4 class="text-sm font-semibold text-[#181411] dark:text-white">Order Items</h4>
+                            </div>
+                            <div class="border border-[#f4f2f0] dark:border-[#3e2d23] rounded-xl divide-y divide-[#f4f2f0] dark:divide-[#3e2d23] bg-white dark:bg-[#2d2115]" x-show="detail.items && detail.items.length" x-transition>
+                                <template x-for="(item, idx) in detail.items" :key="idx">
+                                    <div class="p-4 flex items-start justify-between gap-3">
+                                        <div>
+                                            <p class="font-semibold text-[#181411] dark:text-white" x-text="item.menu_name"></p>
+                                            <p class="text-xs text-[#897561] dark:text-[#a89c92]" x-text="item.notes || formatOptions(item.options)"></p>
+                                        </div>
+                                        <div class="text-right min-w-[120px]">
+                                            <p class="text-sm text-[#181411] dark:text-white" x-text="'Qty: ' + item.quantity"></p>
+                                            <p class="text-sm text-[#897561] dark:text-[#a89c92]" x-text="'Rp ' + formatNumber(item.unit_price)"></p>
+                                            <p class="font-semibold text-primary" x-text="'Rp ' + formatNumber(item.subtotal)"></p>
+                                        </div>
+                                    </div>
+                                </template>
+                                <template x-if="!detail.items || detail.items.length === 0">
+                                    <div class="p-4 text-center text-sm text-[#897561] dark:text-[#a89c92]">No items</div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Payment Summary -->
+                        <div class="bg-[#fdfbf7] dark:bg-[#221910] rounded-xl p-4 border border-[#f4f2f0] dark:border-[#3e2d23] space-y-2">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[#d47311]">credit_card</span>
+                                <h4 class="text-sm font-semibold text-[#181411] dark:text-white">Payment Info</h4>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-sm text-[#181411] dark:text-white">
+                                <div class="flex justify-between text-[#897561] dark:text-[#a89c92]"><span>Subtotal</span><span x-text="'Rp ' + formatNumber(detail.subtotal)"></span></div>
+                                <div class="flex justify-between text-[#897561] dark:text-[#a89c92]"><span>Tax (5%)</span><span x-text="'Rp ' + formatNumber(detail.tax_amount)"></span></div>
+                                <div class="flex justify-between font-semibold text-[#181411] dark:text-white col-span-2 border-t border-[#f4f2f0] dark:border-[#3e2d23] pt-2"><span>Total</span><span x-text="'Rp ' + formatNumber(detail.total_amount)"></span></div>
+                            </div>
+                        </div>
+
+                        <!-- Timeline (optional) -->
+                        <div class="space-y-3" x-show="detail.timeline && detail.timeline.length">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[#d47311]">schedule</span>
+                                <h4 class="text-sm font-semibold text-[#181411] dark:text-white">Order Timeline</h4>
+                            </div>
+                            <div class="border border-[#f4f2f0] dark:border-[#3e2d23] rounded-xl divide-y divide-[#f4f2f0] dark:divide-[#3e2d23] bg-white dark:bg-[#2d2115]">
+                                <template x-for="(step, idx) in detail.timeline" :key="idx">
+                                    <div class="p-3 flex items-center gap-3">
+                                        <span class="material-symbols-outlined text-[#d47311]">check_circle</span>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-[#181411] dark:text-white" x-text="step.label"></p>
+                                            <p class="text-xs text-[#897561] dark:text-[#a89c92]" x-text="step.time"></p>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-4 border-t border-[#f4f2f0] dark:border-[#3e2d23] bg-[#fdfbf7] dark:bg-[#221910] flex items-center justify-end gap-3">
+                <template x-if="detail.payment_status === 'paid'">
+                    <a :href="printUrl(detail.id)" target="_blank" class="px-4 py-2 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-[#b95f0d] flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[18px]">print</span>
+                        Print Receipt
+                    </a>
+                </template>
+                <button @click="closeModal()" class="px-4 py-2 bg-[#f4f2f0] dark:bg-[#2c241b] text-[#181411] dark:text-white rounded-lg text-sm font-semibold hover:bg-[#e8e4df] dark:hover:bg-[#3a2f25]">Tutup</button>
             </div>
         </div>
     </div>
@@ -211,6 +343,12 @@ function orderHistory() {
         dateTo: '',
         statusFilter: '',
         showDetailModal: false,
+        loading: false,
+        errorMessage: '',
+        detail: {
+            items: [],
+            timeline: []
+        },
 
         applyFilters() {
             const params = new URLSearchParams();
@@ -230,7 +368,81 @@ function orderHistory() {
 
         viewDetails(orderId) {
             this.showDetailModal = true;
-            // Fetch order details via AJAX if needed
+            this.loading = true;
+            this.errorMessage = '';
+            this.detail = { items: [], timeline: [] };
+
+            fetch(`/cashier/history/${orderId}/details`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        this.detail = {
+                            ...data.order,
+                            items: data.order.items || [],
+                            timeline: data.order.timeline || []
+                        };
+                    } else {
+                        this.errorMessage = data.message || 'Order not found';
+                    }
+                })
+                .catch(() => {
+                    this.errorMessage = 'Gagal memuat order';
+                })
+                .finally(() => {
+                    this.loading = false;
+                });
+        },
+
+        closeModal() {
+            this.showDetailModal = false;
+        },
+
+        statusBadge(status) {
+            switch(status) {
+                case 'processing': return 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400';
+                case 'completed': return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400';
+                case 'cancelled': return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400';
+                default: return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400';
+            }
+        },
+
+        paymentBadge(status) {
+            return status === 'paid'
+                ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400';
+        },
+
+        paymentStatusLabel(status) {
+            return status === 'paid' ? 'Paid' : 'Unpaid';
+        },
+
+        paymentLabel(method) {
+            if (!method) return '-';
+            return method.toUpperCase();
+        },
+
+        orderTypeLabel(type) {
+            if (!type) return 'Walk-in';
+            const map = { 'dine-in': 'Dine In', 'take-away': 'Take Away', 'walk-in': 'Walk-in' };
+            return map[type] || type;
+        },
+
+        formatNumber(val) {
+            if (val === undefined || val === null) return '0';
+            return new Intl.NumberFormat('id-ID').format(Math.round(val));
+        },
+
+        formatOptions(options) {
+            if (!options) return '';
+            const parts = [];
+            Object.keys(options).forEach(key => {
+                parts.push(`${key}: ${options[key]}`);
+            });
+            return parts.join(', ');
+        },
+
+        printUrl(id) {
+            return `/cashier/orders/${id}/print-bill`;
         }
     }
 }

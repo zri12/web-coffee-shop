@@ -23,9 +23,10 @@
                     <span class="material-symbols-outlined">payments</span>
                 </div>
             </div>
-            <div class="flex items-center gap-1 text-xs font-medium text-green-600">
-                <span class="material-symbols-outlined text-[16px]">trending_up</span>
-                <span>+5.2% vs yesterday</span>
+            @php $revUp = $stats['revenue_change'] >= 0; @endphp
+            <div class="flex items-center gap-1 text-xs font-medium {{ $revUp ? 'text-green-600' : 'text-red-500' }}">
+                <span class="material-symbols-outlined text-[16px]">{{ $revUp ? 'trending_up' : 'trending_down' }}</span>
+                <span>{{ $stats['revenue_change'] }}% vs yesterday</span>
             </div>
         </div>
 
@@ -40,9 +41,10 @@
                     <span class="material-symbols-outlined">shopping_cart</span>
                 </div>
             </div>
-            <div class="flex items-center gap-1 text-xs font-medium text-green-600">
-                <span class="material-symbols-outlined text-[16px]">trending_up</span>
-                <span>+3.1% vs yesterday</span>
+            @php $ordUp = $stats['orders_change'] >= 0; @endphp
+            <div class="flex items-center gap-1 text-xs font-medium {{ $ordUp ? 'text-green-600' : 'text-red-500' }}">
+                <span class="material-symbols-outlined text-[16px]">{{ $ordUp ? 'trending_up' : 'trending_down' }}</span>
+                <span>{{ $stats['orders_change'] }}% vs yesterday</span>
             </div>
         </div>
 
@@ -57,9 +59,10 @@
                     <span class="material-symbols-outlined">receipt_long</span>
                 </div>
             </div>
-            <div class="flex items-center gap-1 text-xs font-medium text-red-500">
-                <span class="material-symbols-outlined text-[16px]">trending_down</span>
-                <span>-1.5% vs yesterday</span>
+            @php $aovUp = $stats['aov_change'] >= 0; @endphp
+            <div class="flex items-center gap-1 text-xs font-medium {{ $aovUp ? 'text-green-600' : 'text-red-500' }}">
+                <span class="material-symbols-outlined text-[16px]">{{ $aovUp ? 'trending_up' : 'trending_down' }}</span>
+                <span>{{ $stats['aov_change'] }}% vs yesterday</span>
             </div>
         </div>
 
@@ -81,44 +84,33 @@
         </div>
     </div>
 
-    <!-- Daily Orders Chart (Full Width) -->
-    <div class="bg-white dark:bg-[#1a1612] p-6 rounded-xl border border-[#e6e0db] dark:border-[#3d362e] shadow-sm">
-        <div class="flex justify-between items-center mb-6">
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <!-- Daily Orders Chart -->
+        <div class="bg-white dark:bg-[#1a1612] p-6 rounded-xl border border-[#e6e0db] dark:border-[#3d362e] shadow-sm lg:col-span-2">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="text-lg font-bold text-[#181411] dark:text-white">Daily Orders (7 days)</h3>
+                    <p class="text-sm text-[#897561]">Real-time order counts</p>
+                </div>
+            </div>
             <div>
-                <h3 class="text-lg font-bold text-[#181411] dark:text-white">Daily Orders</h3>
-                <p class="text-sm text-[#897561]">Order count over the last 7 days</p>
+                <canvas id="ordersChart" class="w-full h-80"></canvas>
+                <div id="ordersEmpty" class="hidden text-sm text-[#897561] mt-4">No data available</div>
             </div>
         </div>
-        
-        <!-- Chart Container -->
-        <div class="relative">
-            <!-- Chart Bars -->
-            <div class="flex items-end justify-between gap-4 h-80 px-4">
-                @php
-                    $maxCount = max(array_column($dailyOrders, 'count'));
-                    $maxCount = $maxCount > 0 ? $maxCount : 1;
-                @endphp
-                @foreach($dailyOrders as $day)
-                <div class="flex-1 flex flex-col items-center gap-2">
-                    <!-- Bar -->
-                    @php
-                        $barHeight = $day['count'] > 0 ? (($day['count'] / $maxCount) * 100) : 2;
-                    @endphp
-                    <div class="w-full bg-gradient-to-t from-[#C8A17D] to-[#E5C9A8] rounded-t-lg transition-all hover:from-primary hover:to-[#C8A17D] relative group" 
-                         style="height: {{ $barHeight }}%;">
-                        <!-- Tooltip on hover -->
-                        <div class="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-[#181411] text-white px-3 py-1.5 rounded-lg text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-                            {{ $day['count'] }} orders
-                        </div>
-                    </div>
-                    <!-- Count Label -->
-                    <div class="text-base font-bold text-[#181411] dark:text-white">{{ $day['count'] }}</div>
-                    <!-- Day Label -->
-                    <div class="text-sm text-[#897561] font-medium">{{ $day['day'] }}</div>
-                    <!-- Date Label -->
-                    <div class="text-xs text-[#897561]">{{ $day['date'] }}</div>
+
+        <!-- Payment Distribution -->
+        <div class="bg-white dark:bg-[#1a1612] p-6 rounded-xl border border-[#e6e0db] dark:border-[#3d362e] shadow-sm">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h3 class="text-lg font-bold text-[#181411] dark:text-white">Payment Methods</h3>
+                    <p class="text-sm text-[#897561]">Distribution (today)</p>
                 </div>
-                @endforeach
+            </div>
+            <div>
+                <canvas id="paymentChart" class="w-full h-80"></canvas>
+                <div id="paymentEmpty" class="hidden text-sm text-[#897561] mt-4">No data available</div>
             </div>
         </div>
     </div>
@@ -181,3 +173,119 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const ordersLabels = @json($ordersPerDayLabels);
+    const ordersData = @json($ordersPerDayCounts);
+    const revenueData = @json($revenuePerDay);
+    const paymentData = @json(array_values($paymentSummary));
+    const paymentLabels = ['CASH', 'CARD', 'QRIS'];
+
+    // Orders + Revenue combo chart
+    const ordersCtx = document.getElementById('ordersChart');
+    if (ordersCtx && ordersData.some(v => v > 0)) {
+        new Chart(ordersCtx, {
+            type: 'bar',
+            data: {
+                labels: ordersLabels,
+                datasets: [
+                    {
+                        type: 'bar',
+                        label: 'Orders',
+                        data: ordersData,
+                        backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                        borderRadius: 8,
+                        borderSkipped: false,
+                    },
+                    {
+                        type: 'line',
+                        label: 'Revenue',
+                        data: revenueData,
+                        borderColor: 'rgba(34, 197, 94, 0.9)',
+                        backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                        tension: 0.35,
+                        yAxisID: 'y1',
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: { display: true, text: 'Orders' }
+                    },
+                    y1: {
+                        beginAtZero: true,
+                        position: 'right',
+                        grid: { drawOnChartArea: false },
+                        title: { display: true, text: 'Revenue (Rp)' },
+                        ticks: {
+                            callback: (value) => 'Rp ' + new Intl.NumberFormat('id-ID').format(value)
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: true },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => {
+                                const val = ctx.parsed[ctx.datasetIndex === 0 ? 'y' : 'y1'] ?? ctx.parsed.y;
+                                if (ctx.datasetIndex === 1) {
+                                    return ctx.dataset.label + ': Rp ' + new Intl.NumberFormat('id-ID').format(val);
+                                }
+                                return ctx.dataset.label + ': ' + val;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    } else {
+        document.getElementById('ordersEmpty').classList.remove('hidden');
+    }
+
+    // Payment distribution donut
+    const payCtx = document.getElementById('paymentChart');
+    const totalPay = paymentData.reduce((a,b)=>a+b,0);
+    if (payCtx && totalPay > 0) {
+        new Chart(payCtx, {
+            type: 'doughnut',
+            data: {
+                labels: paymentLabels,
+                datasets: [{
+                    data: paymentData,
+                    backgroundColor: [
+                        'rgba(34,197,94,0.8)',
+                        'rgba(59,130,246,0.8)',
+                        'rgba(234,88,12,0.8)'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                cutout: '60%',
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => {
+                                const val = ctx.raw;
+                                const pct = totalPay > 0 ? ((val/totalPay)*100).toFixed(1) : 0;
+                                return `${ctx.label}: ${val} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    } else {
+        document.getElementById('paymentEmpty').classList.remove('hidden');
+    }
+});
+</script>
+@endpush

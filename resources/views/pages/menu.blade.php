@@ -183,14 +183,14 @@
              class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#F1F1F1]">
              
             <div class="max-w-md mx-auto px-4 pb-5 pt-3">
-                <a href="{{ route('cart') }}" class="w-full bg-[#C67C4E] text-white px-5 py-3.5 rounded-2xl flex items-center justify-between shadow-lg active:scale-[0.99] transition-transform">
+                <button @click="goToCheckout()" class="w-full bg-[#C67C4E] text-white px-5 py-3.5 rounded-2xl flex items-center justify-between shadow-lg active:scale-[0.99] transition-transform">
                     <div class="flex items-center gap-3">
                         <div class="bg-[#2F4B4E] w-6 h-6 rounded-md flex items-center justify-center text-[13px] font-bold text-white" x-text="cartCount">0</div>
                         <span class="font-semibold text-[15px]">View Cart</span>
                     </div>
                     
                     <span class="font-bold text-[15px]" x-text="cartTotal">Rp 0</span>
-                </a>
+                </button>
             </div>
         </div>
 
@@ -203,6 +203,12 @@
 @push('scripts')
 <script>
 document.addEventListener('alpine:init', () => {
+    // Inject Table Number if available
+    @if(isset($table))
+        window.appTableNumber = "{{ $table->table_number }}";
+        window.checkoutUrl = "{{ route('customer.checkout', ['tableNumber' => $table->table_number]) }}";
+    @endif
+
     Alpine.data('menuHandler', () => ({
         activeCategory: 'all',
         cartCount: 0,
@@ -219,9 +225,9 @@ document.addEventListener('alpine:init', () => {
             description: '',
             image: '',
             isFeatured: false,
-            type: 'beverage' // beverage, food, dessert
+            type: 'beverage'
         },
-        quantity: 1,
+        // Options
         temperature: 'ice',
         iceLevel: 'normal',
         sugarLevel: 'normal',
@@ -234,7 +240,7 @@ document.addEventListener('alpine:init', () => {
         specialRequest: '',
         
         init() {
-            // Update cart info from localStorage
+            // Update cart info from window.Cart
             this.updateCartInfo();
             
             // Initialize sections
@@ -242,15 +248,10 @@ document.addEventListener('alpine:init', () => {
                 this.sections = Array.from(document.querySelectorAll('.category-section'));
             });
             
-            // Listen for cart updates
-            window.addEventListener('storage', () => {
-                this.updateCartInfo();
+            // Listen for global cart updates
+            window.addEventListener('cart-updated', (e) => {
+                this.updateCartInfo(e.detail);
             });
-            
-            // Check cart every 500ms for updates
-            setInterval(() => {
-                this.updateCartInfo();
-            }, 500);
         },
 
         showProductDetail(id, name, price, description, image, isFeatured, categorySlug, formattedPrice) {
@@ -266,7 +267,13 @@ document.addEventListener('alpine:init', () => {
             };
             
             // Reset options
-            this.quantity = 1;
+            this.resetOptions();
+            
+            this.showDetail = true;
+            document.body.style.overflow = 'hidden';
+        },
+
+        resetOptions() {
             this.temperature = 'ice';
             this.iceLevel = 'normal';
             this.sugarLevel = 'normal';
@@ -277,9 +284,6 @@ document.addEventListener('alpine:init', () => {
             this.addOns = [];
             this.sauces = [];
             this.specialRequest = '';
-            
-            this.showDetail = true;
-            document.body.style.overflow = 'hidden';
         },
 
         getProductType(categorySlug) {
@@ -292,143 +296,76 @@ document.addEventListener('alpine:init', () => {
             if (foodCategories.includes(categorySlug)) return 'food';
             if (snackCategories.includes(categorySlug)) return 'snack';
             if (dessertCategories.includes(categorySlug)) return 'dessert';
-            return 'beverage'; // default
+            return 'beverage';
         },
 
-        addToCartWithOptions() {
-            // Only save options relevant to product type
-            const options = {};
+        async addToCartWithOptions() {
+            const options = this.buildOptions();
             
-            if (this.selectedProduct.type === 'beverage') {
-                options.temperature = this.temperature;
-                if (this.temperature === 'ice') {
-                    options.iceLevel = this.iceLevel;
-                }
-                options.sugarLevel = this.sugarLevel;
-                options.size = this.size;
-                if (this.addOns.length > 0) {
-                    options.addOns = this.addOns;
-                }
-            } else if (this.selectedProduct.type === 'food') {
-                options.spiceLevel = this.spiceLevel;
-                options.portion = this.portion;
-                if (this.addOns.length > 0) {
-                    options.addOns = this.addOns;
-                }
-            } else if (this.selectedProduct.type === 'snack') {
-                options.portion = this.portion;
-                if (this.sauces.length > 0) {
-                    options.sauces = this.sauces;
-                }
-            } else if (this.selectedProduct.type === 'dessert') {
-                options.portion = this.portion;
-                if (this.toppings.length > 0) {
-                    options.toppings = this.toppings;
-                }
-            }
-            
-            // Always save special request if provided
-            if (this.specialRequest && this.specialRequest.trim() !== '') {
-                options.specialRequest = this.specialRequest;
-            }
-            
-            // Get existing cart
-            let cart = [];
-            try {
-                const cartData = localStorage.getItem('cart');
-                if (cartData) cart = JSON.parse(cartData);
-            } catch(e) {}
-            
-            // Add item with options
-            const itemPrice = this.calculateItemPrice(); // Price per item with add-ons
-            const cartItem = {
-                id: this.selectedProduct.id,
-                name: this.selectedProduct.name,
-                price: this.selectedProduct.priceRaw,
-                finalPrice: itemPrice,
-                image: this.selectedProduct.image,
-                quantity: this.quantity,
-                type: this.selectedProduct.type,
-                options: options
-            };
-            
-            // Check if same item with same options exists
-            const existingIndex = cart.findIndex(item => 
-                item.id === cartItem.id && 
-                JSON.stringify(item.options) === JSON.stringify(cartItem.options)
+            // Use unified Cart API
+            await window.Cart.add(
+                this.selectedProduct.id, 
+                this.selectedProduct.name, 
+                this.calculateItemPrice(), 
+                this.selectedProduct.image, 
+                1, 
+                options
             );
-            
-            if (existingIndex > -1) {
-                cart[existingIndex].quantity += this.quantity;
-            } else {
-                cart.push(cartItem);
-            }
-            
-            // Save to localStorage
-            localStorage.setItem('cart', JSON.stringify(cart));
-            
-            // Trigger update event
-            window.dispatchEvent(new Event('storage'));
             
             // Close modal
             this.showDetail = false;
             document.body.style.overflow = '';
         },
 
+        buildOptions() {
+            const options = {};
+            
+            if (this.selectedProduct.type === 'beverage') {
+                options.temperature = this.temperature;
+                if (this.temperature === 'ice') options.iceLevel = this.iceLevel;
+                options.sugarLevel = this.sugarLevel;
+                options.size = this.size;
+                if (this.addOns.length > 0) options.addOns = this.addOns;
+            } else if (this.selectedProduct.type === 'food') {
+                options.spiceLevel = this.spiceLevel;
+                options.portion = this.portion;
+                if (this.addOns.length > 0) options.addOns = this.addOns;
+            } else if (this.selectedProduct.type === 'snack') {
+                options.portion = this.portion;
+                if (this.sauces.length > 0) options.sauces = this.sauces;
+            } else if (this.selectedProduct.type === 'dessert') {
+                options.portion = this.portion;
+                if (this.toppings.length > 0) options.toppings = this.toppings;
+            }
+            
+            if (this.specialRequest && this.specialRequest.trim() !== '') {
+                options.specialRequest = this.specialRequest;
+            }
+            
+            return options;
+        },
+
         calculateItemPrice() {
             let total = this.selectedProduct.priceRaw;
             
-            // Add-ons pricing (beverages & food)
-            if (this.addOns.length > 0) {
-                const addonPrices = {
-                    'extra-shot': 5000,
-                    'whipped-cream': 3000,
-                    'caramel-syrup': 3000,
-                    'extra-cheese': 5000,
-                    'extra-egg': 3000,
-                    'extra-rice': 5000
-                };
-                this.addOns.forEach(addon => {
-                    total += addonPrices[addon] || 0;
-                });
+            // Add-ons pricing logic
+            // ... (Keep existing logic or ensure it matches backend)
+            // Ideally backend handles this, but frontend needs it for display
+             if (this.addOns.length > 0) {
+                const addonPrices = { 'extra-shot': 5000, 'whipped-cream': 3000, 'caramel-syrup': 3000, 'extra-cheese': 5000, 'extra-egg': 3000, 'extra-rice': 5000 };
+                this.addOns.forEach(addon => total += addonPrices[addon] || 0);
             }
-            
-            // Toppings pricing (dessert)
             if (this.toppings.length > 0) {
-                const toppingPrices = {
-                    'chocolate': 3000,
-                    'caramel': 3000,
-                    'whipped': 5000,
-                    'ice-cream': 8000
-                };
-                this.toppings.forEach(topping => {
-                    total += toppingPrices[topping] || 0;
-                });
+               const toppingPrices = { 'chocolate': 3000, 'caramel': 3000, 'whipped': 5000, 'ice-cream': 8000 };
+               this.toppings.forEach(topping => total += toppingPrices[topping] || 0);
             }
+            if (this.sauces.length > 0 && this.sauces.includes('bbq')) total += 2000;
             
-            // Sauces pricing (snack)
-            if (this.sauces.length > 0) {
-                const saucePrices = {
-                    'ketchup': 0,
-                    'mayonnaise': 0,
-                    'chili': 0,
-                    'bbq': 2000
-                };
-                this.sauces.forEach(sauce => {
-                    total += saucePrices[sauce] || 0;
-                });
-            }
+            if (this.selectedProduct.type === 'beverage' && this.size === 'large') total += 8000;
             
-            // Size pricing for beverages
-            if (this.selectedProduct.type === 'beverage' && this.size === 'large') {
-                total += 8000;
-            }
-            
-            // Portion/Size pricing difference
-            if (this.portion === 'large' && (this.selectedProduct.type === 'food' || this.selectedProduct.type === 'snack')) {
-                total += 5000;
-            } else if (this.portion === 'large' && this.selectedProduct.type === 'dessert') {
-                total += 8000;
+             if (this.portion === 'large') {
+                if(this.selectedProduct.type === 'dessert') total += 8000;
+                else if (['food', 'snack'].includes(this.selectedProduct.type)) total += 5000;
             } else if (this.portion === 'small' && this.selectedProduct.type === 'snack') {
                 total -= 5000;
             }
@@ -436,31 +373,15 @@ document.addEventListener('alpine:init', () => {
             return total;
         },
 
-        calculateTotalPrice() {
-            return this.calculateItemPrice() * this.quantity;
-        },
-
-        formatPrice(price) {
-            return 'Rp ' + new Intl.NumberFormat('id-ID').format(price);
-        },
-
         scrollToCategory(id) {
             this.activeCategory = id;
-            
-            // Small delay to ensure Alpine has updated
             setTimeout(() => {
                 const element = document.getElementById('cat-' + id);
-                
                 if (element) {
-                    // Get header height for offset
                     const headerOffset = window.innerWidth >= 768 ? 100 : 180;
                     const elementPosition = element.getBoundingClientRect().top;
                     const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-
-                    window.scrollTo({
-                        top: offsetPosition,
-                        behavior: 'smooth'
-                    });
+                    window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
                 }
             }, 50);
         },
@@ -468,57 +389,29 @@ document.addEventListener('alpine:init', () => {
         onScroll(e) {
             const container = e.target;
             const scrollPosition = container.scrollTop + (window.innerWidth >= 768 ? 100 : 180); 
-
             for (const section of this.sections) {
                 const top = section.offsetTop;
                 const height = section.offsetHeight;
-                
                 if (scrollPosition >= top && scrollPosition < top + height) {
-                    const id = section.dataset.id;
-                    if (this.activeCategory !== id) {
-                        this.activeCategory = id;
-                    }
+                    this.activeCategory = section.dataset.id;
                     break;
                 }
             }
         },
 
-        updateCartInfo() {
-            try {
-                // Get cart from localStorage
-                const cartData = localStorage.getItem('cart');
-                if (cartData) {
-                    const cart = JSON.parse(cartData);
-                    this.cartCount = cart.length || 0;
-                    
-                    // Calculate total
-                    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-                    this.cartTotal = 'Rp ' + total.toLocaleString('id-ID');
-                    
-                    // Update navbar badge
-                    this.updateNavbarBadge(this.cartCount);
-                } else {
-                    this.cartCount = 0;
-                    this.cartTotal = 'Rp 0';
-                    this.updateNavbarBadge(0);
-                }
-            } catch (e) {
-                this.cartCount = 0;
-                this.cartTotal = 'Rp 0';
-                this.updateNavbarBadge(0);
+        goToCheckout() {
+            if (window.checkoutUrl) {
+                window.location.href = window.checkoutUrl;
+            } else {
+                window.location.href = '/cart';
             }
         },
-        
-        updateNavbarBadge(count) {
-            const badge = document.getElementById('cart-badge');
-            if (badge) {
-                if (count > 0) {
-                    badge.textContent = count;
-                    badge.classList.remove('hidden');
-                } else {
-                    badge.classList.add('hidden');
-                }
-            }
+
+        updateCartInfo(cartData = null) {
+            const cart = cartData || window.Cart.items || [];
+            this.cartCount = cart.length;
+            const total = cart.reduce((sum, item) => sum + (item.subtotal || item.finalPrice || item.price), 0);
+            this.cartTotal = window.Cart.formatPrice(total);
         }
     }));
 });

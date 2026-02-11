@@ -7,17 +7,22 @@ use App\Models\Category;
 use App\Models\Menu;
 use App\Models\Order;
 use App\Models\User;
+use App\Services\SystemSettingsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
+    public function __construct(private readonly SystemSettingsService $settingsService)
+    {
+    }
+
     public function index()
     {
         $user = auth()->user();
 
         if ($user->isCashier()) {
-            return redirect()->route('cashier.dashboard');
+            return redirect()->route('cashier.incoming-orders');
         }
 
         if ($user->isManager()) {
@@ -358,21 +363,11 @@ class DashboardController extends Controller
     // System Settings
     public function systemSettings()
     {
-        // Load cafe settings from environment
-        $systemSettings = [
-            'cafe_name' => env('APP_NAME', 'Bean & Brew'),
-            'address' => env('CAFE_ADDRESS', 'Jl. Kopi Nusantara No. 123, Jakarta'),
-            'phone' => env('CAFE_PHONE', '+62 812-3456-7890'),
-            'logo_path' => env('CAFE_LOGO_PATH', ''),
-            'opening_time' => env('CAFE_OPENING_TIME', '08:00'),
-            'closing_time' => env('CAFE_CLOSING_TIME', '22:00'),
-            'closed_days' => explode(',', env('CAFE_CLOSED_DAYS', '')),
-            'instagram' => env('SOCIAL_INSTAGRAM', ''),
-            'facebook' => env('SOCIAL_FACEBOOK', ''),
-            'whatsapp' => env('SOCIAL_WHATSAPP', ''),
-        ];
+        $settings = $this->settingsService->all();
 
-        return view('admin.system-settings', $systemSettings);
+        return view('admin.system-settings', [
+            'settings' => $settings,
+        ]);
     }
 
     public function updateSystemSettings(Request $request)
@@ -390,48 +385,29 @@ class DashboardController extends Controller
             'whatsapp' => 'nullable|string',
         ]);
 
-        // Update .env file
-        $envPath = base_path('.env');
-        $envContent = file_get_contents($envPath);
+        $payload = [
+            'cafe_name' => $validated['cafe_name'],
+            'address' => $validated['address'] ?? '',
+            'phone' => $validated['phone'] ?? '',
+            'opening_time' => $validated['opening_time'],
+            'closing_time' => $validated['closing_time'],
+            'closed_days' => $validated['closed_days'] ?? [],
+            'instagram' => $validated['instagram'] ?? '',
+            'facebook' => $validated['facebook'] ?? '',
+            'whatsapp' => $validated['whatsapp'] ?? '',
+        ];
 
-        // Helper function to update env value
-        $updateEnvValue = function(&$content, $key, $value) {
-            $pattern = '/^' . preg_quote($key) . '=.*/m';
-            if (preg_match($pattern, $content)) {
-                $content = preg_replace($pattern, $key . '="' . $value . '"', $content);
-            } else {
-                $content .= "\n" . $key . '="' . $value . '"';
-            }
-        };
-
-        // Update basic settings
-        $updateEnvValue($envContent, 'APP_NAME', $request->cafe_name);
-        $updateEnvValue($envContent, 'CAFE_ADDRESS', $request->address ?? '');
-        $updateEnvValue($envContent, 'CAFE_PHONE', $request->phone ?? '');
-        $updateEnvValue($envContent, 'CAFE_OPENING_TIME', $request->opening_time);
-        $updateEnvValue($envContent, 'CAFE_CLOSING_TIME', $request->closing_time);
-        $updateEnvValue($envContent, 'CAFE_CLOSED_DAYS', implode(',', $request->closed_days ?? []));
-        $updateEnvValue($envContent, 'SOCIAL_INSTAGRAM', $request->instagram ?? '');
-        $updateEnvValue($envContent, 'SOCIAL_FACEBOOK', $request->facebook ?? '');
-        $updateEnvValue($envContent, 'SOCIAL_WHATSAPP', $request->whatsapp ?? '');
-
-        // Handle logo upload
         if ($request->hasFile('logo')) {
-            $logoFile = $request->file('logo');
-            $logoPath = 'cafe/' . time() . '_' . $logoFile->getClientOriginalName();
-            $logoFile->storeAs('public', $logoPath);
-            $updateEnvValue($envContent, 'CAFE_LOGO_PATH', '/storage/' . $logoPath);
+            $payload['logo_path'] = $this->settingsService->storeLogo($request->file('logo'));
         }
 
-        // Write to .env file
-        if (file_put_contents($envPath, $envContent) === false) {
-            return redirect()->back()->with('error', 'Gagal menyimpan file .env. Pastikan file memiliki permission untuk ditulis.');
+        try {
+            $this->settingsService->update($payload);
+        } catch (\RuntimeException $e) {
+            return redirect()->back()->with('error', $e->getMessage());
         }
 
-        // Clear config cache
-        \Artisan::call('config:cache');
-
-        return redirect()->back()->with('success', 'Pengaturan sistem berhasil disimpan!');
+        return redirect()->back()->with('success', 'Pengaturan sistem berhasil disimpan dan disinkronkan!');
     }
 
     // Logs & Audit

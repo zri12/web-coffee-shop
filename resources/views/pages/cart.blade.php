@@ -42,7 +42,7 @@
                         </div>
                         <h3 class="text-lg font-bold text-text-main dark:text-white mb-2">Keranjang kosong</h3>
                         <p class="text-text-subtle dark:text-gray-400 mb-6">Belum ada item di keranjang Anda.</p>
-                        <a href="{{ route('menu.index') }}" class="inline-flex items-center justify-center h-12 px-8 rounded-full bg-primary hover:bg-primary-dark text-white text-sm font-bold transition-colors shadow-sm">
+                        <a :href="window.appTableNumber ? `/order/${window.appTableNumber}/menu` : '{{ route('menu.index') }}'" class="inline-flex items-center justify-center h-12 px-8 rounded-full bg-primary hover:bg-primary-dark text-white text-sm font-bold transition-colors shadow-sm">
                             Lihat Menu
                         </a>
                     </div>
@@ -195,26 +195,15 @@
                                     </div>
                                 </div>
                                 
-                                <!-- Quantity -->
-                                <div class="flex items-center gap-3 bg-background-light dark:bg-background-dark rounded-lg p-1">
-                                    <button @click="updateQuantity(index, item.quantity - 1)" 
-                                            class="w-8 h-8 rounded-md hover:bg-white dark:hover:bg-surface-dark flex items-center justify-center transition-colors text-text-main dark:text-white">
-                                        <span class="material-symbols-outlined text-sm">remove</span>
-                                    </button>
-                                    <span class="w-4 text-center font-bold text-text-main dark:text-white" x-text="item.quantity"></span>
-                                    <button @click="updateQuantity(index, item.quantity + 1)" 
-                                            class="w-8 h-8 rounded-md hover:bg-white dark:hover:bg-surface-dark flex items-center justify-center transition-colors text-text-main dark:text-white">
-                                        <span class="material-symbols-outlined text-sm">add</span>
-                                    </button>
+                                <!-- Subtotal (Price for this single item) -->
+                                <div class="hidden sm:block text-right min-w-[100px] flex-shrink-0">
+                                    <p class="font-bold text-text-main dark:text-white" x-text="formatPrice(item.finalPrice || item.price)"></p>
                                 </div>
                                 
-                                <!-- Subtotal (Hidden on small mobile) -->
-                                <div class="hidden sm:block text-right min-w-[100px]">
-                                    <p class="font-bold text-text-main dark:text-white" x-text="formatPrice((item.finalPrice || item.price) * item.quantity)"></p>
-                                </div>
-                                
-                                <!-- Remove -->
-                                <button @click="removeItem(index)" class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors">
+                                <!-- Remove Button (No quantity controls - each item is qty=1) -->
+                                <button @click="removeItem(index)" 
+                                        class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors flex-shrink-0"
+                                        title="Remove this item">
                                     <span class="material-symbols-outlined">delete</span>
                                 </button>
                             </div>
@@ -274,8 +263,10 @@
                                 <label class="block text-sm font-bold text-text-main dark:text-white mb-2">Nomor Meja</label>
                                 <div class="relative">
                                     <input type="number" name="table_number" min="0"
-                                           class="w-full pl-10 pr-4 py-3 bg-background-light dark:bg-background-dark border border-[#e6e0db] dark:border-[#3E2723] rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" 
-                                           placeholder="Contoh: 5">
+                                           class="w-full pl-10 pr-4 py-3 bg-background-light dark:bg-background-dark border border-[#e6e0db] dark:border-[#3E2723] rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all {{ isset($table) ? 'bg-gray-100 cursor-not-allowed' : '' }}" 
+                                           placeholder="Contoh: 5"
+                                           value="{{ isset($table) ? $table->table_number : '' }}"
+                                           {{ isset($table) ? 'readonly' : '' }}>
                                     <span class="material-symbols-outlined text-text-subtle dark:text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 text-[20px]">table_restaurant</span>
                                 </div>
                             </div>
@@ -334,37 +325,54 @@ header a[href*="cart"] {
 
 @push('scripts')
 <script>
+    @if(isset($table))
+        window.appTableNumber = "{{ $table->table_number }}";
+    @endif
+
 function cartPage() {
     return {
         items: [],
         paymentMethod: 'cash',
         
         get totalItems() {
-            return this.items.reduce((sum, item) => sum + item.quantity, 0);
+            // Each cart entry is qty=1, so just count array length
+            return this.items.length;
         },
         
         get totalPrice() {
-            return this.items.reduce((sum, item) => sum + ((item.finalPrice || item.price) * item.quantity), 0);
+            // Each item has qty=1, so just sum finalPrice
+            // Handles both backend (snake_case) and frontend (camelCase) keys just in case
+            return this.items.reduce((sum, item) => sum + (item.subtotal || item.finalPrice || item.price), 0);
         },
         
         formatPrice(price) {
-            return 'Rp ' + new Intl.NumberFormat('id-ID').format(price);
+            return window.Cart.formatPrice(price);
         },
         
-        updateQuantity(index, qty) {
-            Cart.updateQuantityByIndex(index, qty);
-        },
-        
-        removeItem(index) {
-            Cart.removeByIndex(index);
+        async removeItem(index) {
+            // Find item by index
+            const item = this.items[index];
+            if (item && item.cartItemId) {
+                if (confirm('Hapus item ini dari keranjang?')) {
+                    await window.Cart.remove(item.cartItemId);
+                    // The cart-updated event will update this.items
+                }
+            }
         },
         
         init() {
-            this.items = Cart.items;
+            // Sync with global cart
+            this.items = window.Cart.items;
             
-            window.addEventListener('cart-updated', () => {
-                this.items = Cart.items;
+            // Listen for global updates
+            window.addEventListener('cart-updated', (e) => {
+                this.items = e.detail || window.Cart.items || [];
             });
+            
+            // Force valid table number if present in global scope (for QR flow compatibility in cart page)
+            if (window.appTableNumber) {
+                 window.Cart.tableNumber = window.appTableNumber;
+            }
         }
     }
 }

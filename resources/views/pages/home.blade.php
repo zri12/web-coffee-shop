@@ -216,26 +216,32 @@
 
 @push('scripts')
 <script>
-// Simple cart functionality
+// Simple cart functionality (qty=1 per add, no merging)
 function addToCart(id, name, price) {
     let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    const existingItem = cart.find(item => item.id === id);
     
-    if (existingItem) {
-        existingItem.quantity++;
-    } else {
-        cart.push({ id, name, price, quantity: 1 });
-    }
+    // Always add as new item with unique ID (no merging)
+    cart.push({ 
+        id, 
+        name, 
+        price, 
+        quantity: 1,
+        finalPrice: price,
+        type: 'beverage',
+        options: {}, // No options for quick add
+        cartItemId: Date.now() + Math.random()
+    });
     
     localStorage.setItem('cart', JSON.stringify(cart));
     updateCartBadge();
-    showToast('Ditambahkan ke keranjang!');
+    showToast('Added to cart!');
 }
 
 function updateCartBadge() {
     const cart = JSON.parse(localStorage.getItem('cart') || '[]');
     const badge = document.getElementById('cart-badge');
-    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+    // Each item is qty=1, so count = array length
+    const totalItems = cart.length;
     
     if (totalItems > 0) {
         badge.classList.remove('hidden');

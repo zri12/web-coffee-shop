@@ -25,6 +25,7 @@ Route::get('/menu/{menu:slug}', [MenuController::class, 'show'])->name('menu.sho
 // Cart & Checkout
 Route::get('/cart', [OrderController::class, 'cart'])->name('cart');
 Route::post('/checkout', [OrderController::class, 'checkout'])->name('checkout');
+Route::get('/order/{orderNumber}/waiting', [OrderController::class, 'waiting'])->name('order.waiting');
 Route::get('/order/{orderNumber}/success', [OrderController::class, 'success'])->name('order.success');
 
 // Payment Processing
@@ -43,14 +44,27 @@ Route::post('/midtrans/webhook', [App\Http\Controllers\PaymentController::class,
 Route::get('/track', [OrderController::class, 'track'])->name('track');
 Route::post('/track', [OrderController::class, 'trackOrder'])->name('track.search');
 
+// Order Status API (for polling)
+Route::get('/api/order/{orderNumber}/status', [OrderController::class, 'getOrderStatus'])->name('order.status');
+
 // QR Entry / Customer Routes
 Route::prefix('order')->name('customer.')->group(function () {
     Route::get('/{tableNumber}', [App\Http\Controllers\CustomerController::class, 'index'])->name('index');
     Route::get('/{tableNumber}/menu', [App\Http\Controllers\CustomerController::class, 'menu'])->name('menu');
-    Route::post('/{tableNumber}/cart', [App\Http\Controllers\CustomerController::class, 'addToCart'])->name('cart.add');
-    Route::get('/{tableNumber}/cart', [App\Http\Controllers\CustomerController::class, 'getCart'])->name('cart.get');
-    Route::delete('/{tableNumber}/cart/item', [App\Http\Controllers\CustomerController::class, 'removeFromCart'])->name('cart.remove');
-    Route::patch('/{tableNumber}/cart/item', [App\Http\Controllers\CustomerController::class, 'updateCartItem'])->name('cart.update');
+    Route::get('/{tableNumber}/checkout', [App\Http\Controllers\CustomerController::class, 'checkout'])->name('checkout');
+    // Forward cart requests to CartController (Unified)
+    Route::post('/{tableNumber}/cart', [App\Http\Controllers\CartController::class, 'store'])->name('cart.add');
+    Route::get('/{tableNumber}/cart', [App\Http\Controllers\CartController::class, 'index'])->name('cart.get');
+    Route::delete('/{tableNumber}/cart/item', [App\Http\Controllers\CartController::class, 'destroy'])->name('cart.remove');
+    Route::patch('/{tableNumber}/cart/item', [App\Http\Controllers\CartController::class, 'update'])->name('cart.update');
+});
+
+// Unified Cart Routes (General)
+Route::prefix('cart-api')->name('cart.api.')->group(function () {
+    Route::get('/', [App\Http\Controllers\CartController::class, 'index'])->name('index');
+    Route::post('/', [App\Http\Controllers\CartController::class, 'store'])->name('store');
+    Route::patch('/item', [App\Http\Controllers\CartController::class, 'update'])->name('update');
+    Route::delete('/item', [App\Http\Controllers\CartController::class, 'destroy'])->name('destroy');
 });
 
 // Legacy QR redirect for backward compatibility
@@ -143,12 +157,16 @@ Route::middleware(['auth', 'role:cashier'])->prefix('cashier')->name('cashier.')
     Route::get('/incoming-orders', [App\Http\Controllers\Cashier\CashierController::class, 'incomingOrders'])->name('incoming-orders');
     Route::get('/orders', [App\Http\Controllers\Cashier\CashierController::class, 'orders'])->name('orders');
     Route::get('/orders/{order}', [App\Http\Controllers\Cashier\CashierController::class, 'showOrder'])->name('orders.show');
+    Route::get('/orders/{order}/print-kitchen', [App\Http\Controllers\Cashier\CashierController::class, 'printKitchen'])->name('orders.print-kitchen');
+    Route::get('/orders/{order}/print-bill', [App\Http\Controllers\Cashier\CashierController::class, 'printBill'])->name('orders.print-bill');
     Route::patch('/orders/{order}/status', [App\Http\Controllers\Cashier\CashierController::class, 'updateOrderStatus'])->name('orders.updateStatus');
+    Route::post('/orders/{order}/confirm-payment', [App\Http\Controllers\Cashier\CashierController::class, 'confirmPayment'])->name('orders.confirmPayment');
     Route::get('/manual-order', [App\Http\Controllers\Cashier\CashierController::class, 'manualOrder'])->name('manual-order');
     Route::post('/manual-order', [App\Http\Controllers\Cashier\CashierController::class, 'storeManualOrder'])->name('manual-order.store');
     Route::get('/payments', [App\Http\Controllers\Cashier\CashierController::class, 'payments'])->name('payments');
     Route::post('/payments/{order}/process', [App\Http\Controllers\Cashier\CashierController::class, 'processPayment'])->name('payments.process');
     Route::get('/history', [App\Http\Controllers\Cashier\CashierController::class, 'history'])->name('history');
+    Route::get('/history/{order}/details', [App\Http\Controllers\Cashier\CashierController::class, 'getOrderDetails'])->name('history.details');
     Route::get('/profile', [App\Http\Controllers\Cashier\CashierController::class, 'profile'])->name('profile');
     Route::post('/profile/update', [App\Http\Controllers\Cashier\CashierController::class, 'updateProfile'])->name('profile.update');
     Route::post('/profile/password', [App\Http\Controllers\Cashier\CashierController::class, 'updatePassword'])->name('profile.password');

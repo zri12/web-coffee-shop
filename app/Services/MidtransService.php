@@ -59,7 +59,7 @@ class MidtransService
      */
     public static function isConfigured()
     {
-        return !empty(env('MIDTRANS_MERCHANT_ID')) && !empty(env('MIDTRANS_SERVER_KEY')) && !empty(env('MIDTRANS_CLIENT_KEY'));
+        return !empty(env('MIDTRANS_SERVER_KEY')) && !empty(env('MIDTRANS_CLIENT_KEY'));
     }
 
     /**

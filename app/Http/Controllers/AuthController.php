@@ -147,7 +147,7 @@ class AuthController extends Controller
             $user = Auth::user();
             $redirectRoute = match($user->role) {
                 'admin' => 'admin.dashboard',
-                'cashier' => 'cashier.dashboard',
+                'cashier' => 'cashier.incoming-orders',
                 'manager' => 'manager.dashboard',
                 default => 'home'
             };

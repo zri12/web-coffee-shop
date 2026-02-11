@@ -4,52 +4,117 @@ namespace App\Http\Controllers\Manager;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ManagerController extends Controller
 {
     public function index()
     {
-        // 1. Stats Cards - Today's Data
-        $todayRevenue = \App\Models\Order::whereDate('created_at', today())
-            ->where('status', 'completed')
+        // Dates
+        $today = now()->startOfDay();
+        $yesterday = now()->subDay()->startOfDay();
+
+        // 1) Revenue (paid only, exclude cancelled)
+        $todayRevenue = \App\Models\Order::whereDate('created_at', $today)
+            ->where('payment_status', 'paid')
+            ->where('status', '!=', 'cancelled')
             ->sum('total_amount');
-        
-        $todayOrders = \App\Models\Order::whereDate('created_at', today())->count();
-        
+
+        $yesterdayRevenue = \App\Models\Order::whereDate('created_at', $yesterday)
+            ->where('payment_status', 'paid')
+            ->where('status', '!=', 'cancelled')
+            ->sum('total_amount');
+
+        // 2) Orders (all except cancelled)
+        $todayOrders = \App\Models\Order::whereDate('created_at', $today)
+            ->where('status', '!=', 'cancelled')
+            ->count();
+
+        $yesterdayOrders = \App\Models\Order::whereDate('created_at', $yesterday)
+            ->where('status', '!=', 'cancelled')
+            ->count();
+
+        // 3) AOV
         $avgOrderValue = $todayOrders > 0 ? $todayRevenue / $todayOrders : 0;
-        
-        // Real Table Occupancy based on occupied tables
+        $yesterdayAvg = $yesterdayOrders > 0 ? $yesterdayRevenue / $yesterdayOrders : 0;
+
+        // 4) Table occupancy (distinct tables with active orders)
         $totalTables = \App\Models\Table::count();
-        $occupiedTables = \App\Models\Table::where('status', 'occupied')->count();
+        $occupiedTables = \App\Models\Order::whereIn('status', ['pending', 'processing'])
+            ->whereNotNull('table_number')
+            ->distinct('table_number')
+            ->count('table_number');
         $tableOccupancy = $totalTables > 0 ? round(($occupiedTables / $totalTables) * 100) : 0;
+
+        // Helper for percent change
+        $percentChange = function($todayVal, $yesterdayVal) {
+            if ($yesterdayVal == 0) {
+                return $todayVal > 0 ? 100 : 0;
+            }
+            return round((($todayVal - $yesterdayVal) / $yesterdayVal) * 100, 1);
+        };
 
         $stats = [
             'revenue' => $todayRevenue,
+            'revenue_change' => $percentChange($todayRevenue, $yesterdayRevenue),
             'orders' => $todayOrders,
+            'orders_change' => $percentChange($todayOrders, $yesterdayOrders),
             'avg_order_value' => $avgOrderValue,
-            'occupancy' => $tableOccupancy
+            'aov_change' => $percentChange($avgOrderValue, $yesterdayAvg),
+            'occupancy' => $tableOccupancy,
         ];
 
-        // 2. Daily Order Data for Chart (Last 7 days)
-        $dailyOrders = [];
+        // 5) Charts data - last 7 days
+        $ordersPerDayLabels = [];
+        $ordersPerDayCounts = [];
+        $revenuePerDay = [];
+
         for ($i = 6; $i >= 0; $i--) {
-            $date = now()->subDays($i);
-            $orderCount = \App\Models\Order::whereDate('created_at', $date->toDateString())->count();
-            
-            $dailyOrders[] = [
-                'date' => $date->format('M d'),
-                'day' => $date->format('D'),
-                'count' => $orderCount
-            ];
+            $date = now()->subDays($i)->startOfDay();
+            $label = $date->format('d M');
+
+            $count = \App\Models\Order::whereDate('created_at', $date)
+                ->where('status', '!=', 'cancelled')
+                ->count();
+
+            $revenueDay = \App\Models\Order::whereDate('created_at', $date)
+                ->where('payment_status', 'paid')
+                ->where('status', '!=', 'cancelled')
+                ->sum('total_amount');
+
+            $ordersPerDayLabels[] = $label;
+            $ordersPerDayCounts[] = $count;
+            $revenuePerDay[] = round($revenueDay, 2);
         }
 
-        // 3. Recent Orders
-        $recentOrders = \App\Models\Order::with('items') 
+        // Payment method distribution (today, exclude cancelled)
+        $paymentSummaryRaw = \App\Models\Order::whereDate('created_at', $today)
+            ->where('status', '!=', 'cancelled')
+            ->selectRaw('payment_method, COUNT(*) as total')
+            ->groupBy('payment_method')
+            ->pluck('total', 'payment_method')
+            ->toArray();
+
+        $paymentSummary = [
+            'cash' => $paymentSummaryRaw['cash'] ?? 0,
+            'card' => $paymentSummaryRaw['card'] ?? 0,
+            'qris' => $paymentSummaryRaw['qris'] ?? 0,
+        ];
+
+        // 6) Recent Orders
+        $recentOrders = \App\Models\Order::with('items')
             ->latest()
             ->take(5)
             ->get();
 
-        return view('manager.index', compact('stats', 'dailyOrders', 'recentOrders'));
+        return view('manager.index', [
+            'stats' => $stats,
+            'ordersPerDayLabels' => $ordersPerDayLabels,
+            'ordersPerDayCounts' => $ordersPerDayCounts,
+            'revenuePerDay' => $revenuePerDay,
+            'paymentSummary' => $paymentSummary,
+            'recentOrders' => $recentOrders,
+        ]);
     }
 
     public function menus(Request $request)
@@ -180,47 +245,73 @@ class ManagerController extends Controller
     {
         // Build query with filters
         $query = \App\Models\Order::with(['items', 'payment']);
-        
+
         // Apply status filter
         if ($request->has('status') && $request->status !== 'all') {
             $query->where('status', $request->status);
         }
-        
+
+        // Apply payment method filter
+        if ($request->has('payment_method') && $request->payment_method !== 'all') {
+            $query->whereHas('payment', function ($q) use ($request) {
+                $q->where('method', $request->payment_method);
+            });
+        }
+
+        // Apply search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('order_number', 'like', "%{$search}%")
+                    ->orWhere('customer_name', 'like', "%{$search}%")
+                    ->orWhere('table_number', 'like', "%{$search}%");
+            });
+        }
+
         // Apply date range filter
         if ($request->has('date_from') && $request->date_from) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
-        
+
         if ($request->has('date_to') && $request->date_to) {
             $query->whereDate('created_at', '<=', $request->date_to);
         }
-        
+
         // Handle export
         if ($request->has('export')) {
             $orders = $query->latest()->get();
-            
+
             if ($request->export === 'pdf') {
                 return view('manager.orders.pdf', compact('orders'));
             } elseif ($request->export === 'excel') {
                 return $this->exportExcel($orders);
             }
         }
-        
+
         // Get order statistics
         $totalOrders = \App\Models\Order::count();
         $pendingOrders = \App\Models\Order::where('status', 'pending')->count();
         $processingOrders = \App\Models\Order::where('status', 'processing')->count();
         $completedOrders = \App\Models\Order::where('status', 'completed')->count();
-        
+
         // Get filtered orders
         $orders = $query->latest()->take(10)->get();
-        
+
+        $filters = [
+            'status' => $request->status ?? 'all',
+            'payment_method' => $request->payment_method ?? 'all',
+            'date_from' => $request->date_from,
+            'date_to' => $request->date_to,
+            'search' => $request->search,
+        ];
+
         return view('manager.orders.index', compact(
             'totalOrders',
             'pendingOrders', 
             'processingOrders',
             'completedOrders',
-            'orders'
+            'orders',
+            'filters'
         ));
     }
     
@@ -342,89 +433,204 @@ class ManagerController extends Controller
     public function reports(Request $request)
     {
         $period = $request->get('period', 'daily');
-        
-        // Revenue Overview based on period
-        $dailyRevenue = [];
-        $maxRevenue = 0;
-        
-        if ($period === 'daily') {
-            // Last 7 days
-            for ($i = 6; $i >= 0; $i--) {
-                $date = now()->subDays($i);
-                $revenue = \App\Models\Order::whereDate('created_at', $date->toDateString())
-                    ->where('status', 'completed')
+        $dateFrom = $request->get('date_from');
+        $dateTo = $request->get('date_to');
+        $paymentMethod = $request->get('payment_method', 'all');
+        $orderType = $request->get('order_type', 'all');
+
+        $baseQuery = \App\Models\Order::query()->with(['items', 'payment']);
+
+        if ($dateFrom) {
+            $baseQuery->whereDate('created_at', '>=', $dateFrom);
+        }
+        if ($dateTo) {
+            $baseQuery->whereDate('created_at', '<=', $dateTo);
+        }
+        if ($paymentMethod !== 'all') {
+            $baseQuery->whereHas('payment', function ($q) use ($paymentMethod) {
+                $q->where('method', $paymentMethod);
+            });
+        }
+        if ($orderType !== 'all') {
+            $baseQuery->where('order_type', $orderType);
+        }
+
+        // Revenue overview & trend
+        $revenueSeries = [];
+        $labels = [];
+        $previousTotal = 0;
+        $currentTotal = 0;
+
+        if ($period === 'weekly') {
+            for ($i = 7; $i >= 0; $i--) {
+                $start = now()->subWeeks($i)->startOfWeek();
+                $end = now()->subWeeks($i)->endOfWeek();
+                $revenue = (clone $baseQuery)->whereBetween('created_at', [$start, $end])
+                    ->where('status', '!=', 'cancelled')
+                    ->where('payment_status', 'paid')
                     ->sum('total_amount');
-                
-                if ($revenue > $maxRevenue) {
-                    $maxRevenue = $revenue;
+                $labels[] = 'W' . $start->weekOfYear;
+                $revenueSeries[] = $revenue;
+                if ($i === 0) {
+                    $currentTotal = $revenue;
+                } elseif ($i === 1) {
+                    $previousTotal = $revenue;
                 }
-                
-                $dailyRevenue[] = [
-                    'day' => $date->format('D'),
-                    'revenue' => $revenue,
-                    'date' => $date->format('Y-m-d')
-                ];
             }
-        } elseif ($period === 'weekly') {
-            // Last 7 weeks
-            for ($i = 6; $i >= 0; $i--) {
-                $startDate = now()->subWeeks($i)->startOfWeek();
-                $endDate = now()->subWeeks($i)->endOfWeek();
-                $revenue = \App\Models\Order::whereBetween('created_at', [$startDate, $endDate])
-                    ->where('status', 'completed')
-                    ->sum('total_amount');
-                
-                if ($revenue > $maxRevenue) {
-                    $maxRevenue = $revenue;
-                }
-                
-                $dailyRevenue[] = [
-                    'day' => 'W' . $startDate->week,
-                    'revenue' => $revenue,
-                    'date' => $startDate->format('M d')
-                ];
-            }
-        } else { // monthly
-            // Last 7 months
-            for ($i = 6; $i >= 0; $i--) {
+        } elseif ($period === 'monthly') {
+            for ($i = 5; $i >= 0; $i--) {
                 $date = now()->subMonths($i);
-                $revenue = \App\Models\Order::whereYear('created_at', $date->year)
+                $revenue = (clone $baseQuery)
+                    ->whereYear('created_at', $date->year)
                     ->whereMonth('created_at', $date->month)
-                    ->where('status', 'completed')
+                    ->where('status', '!=', 'cancelled')
+                    ->where('payment_status', 'paid')
                     ->sum('total_amount');
-                
-                if ($revenue > $maxRevenue) {
-                    $maxRevenue = $revenue;
+                $labels[] = $date->format('M');
+                $revenueSeries[] = $revenue;
+                if ($i === 0) {
+                    $currentTotal = $revenue;
+                } elseif ($i === 1) {
+                    $previousTotal = $revenue;
                 }
-                
-                $dailyRevenue[] = [
-                    'day' => $date->format('M'),
-                    'revenue' => $revenue,
-                    'date' => $date->format('Y-m')
-                ];
+            }
+        } else {
+            // daily (last 7 days)
+            for ($i = 6; $i >= 0; $i--) {
+                $date = now()->subDays($i)->startOfDay();
+                $revenue = (clone $baseQuery)
+                    ->whereDate('created_at', $date)
+                    ->where('status', '!=', 'cancelled')
+                    ->where('payment_status', 'paid')
+                    ->sum('total_amount');
+                $labels[] = $date->format('D');
+                $revenueSeries[] = $revenue;
+                if ($i === 0) {
+                    $currentTotal = $revenue;
+                } elseif ($i === 1) {
+                    $previousTotal = $revenue;
+                }
             }
         }
-        
-        // Category Performance
-        $categoryStats = \App\Models\Category::withCount(['menus as total_sold' => function($query) {
-                $query->join('order_items', 'menus.id', '=', 'order_items.menu_id')
-                    ->join('orders', 'order_items.order_id', '=', 'orders.id')
-                    ->where('orders.status', 'completed');
-            }])
+
+        $revenueChange = $previousTotal > 0 ? round((($currentTotal - $previousTotal) / $previousTotal) * 100, 1) : ($currentTotal > 0 ? 100 : 0);
+
+        // Order & transaction insights
+        $totalOrders = (clone $baseQuery)->count();
+        $pendingOrders = (clone $baseQuery)->where('status', 'pending')->count();
+        $processingOrders = (clone $baseQuery)->where('status', 'processing')->count();
+        $completedOrders = (clone $baseQuery)->where('status', 'completed')->count();
+        $cancelledOrders = (clone $baseQuery)->where('status', 'cancelled')->count();
+
+        // Payment analytics
+        $paymentMethodTotals = (clone $baseQuery)
+            ->where('payment_status', 'paid')
+            ->selectRaw('payment_method, SUM(total_amount) as amount, COUNT(*) as total')
+            ->groupBy('payment_method')
+            ->get()
+            ->keyBy('payment_method');
+
+        $paymentChart = [
+            'labels' => ['Cash', 'Card', 'QRIS'],
+            'data' => [
+                (float) ($paymentMethodTotals['cash']->amount ?? 0),
+                (float) ($paymentMethodTotals['card']->amount ?? 0),
+                (float) ($paymentMethodTotals['qris']->amount ?? 0),
+            ],
+        ];
+
+        // Best selling items (top 5 by quantity)
+        $bestItems = \App\Models\OrderItem::query()
+            ->selectRaw('menu_name as name, SUM(quantity) as qty, SUM(subtotal) as revenue')
+            ->whereHas('order', function ($q) use ($dateFrom, $dateTo, $paymentMethod, $orderType) {
+                $q->where('status', 'completed');
+                if ($dateFrom) $q->whereDate('created_at', '>=', $dateFrom);
+                if ($dateTo) $q->whereDate('created_at', '<=', $dateTo);
+                if ($paymentMethod !== 'all') $q->where('payment_method', $paymentMethod);
+                if ($orderType !== 'all') $q->where('order_type', $orderType);
+            })
+            ->groupBy('menu_name')
+            ->orderByDesc('qty')
+            ->limit(5)
             ->get();
-        
-        $totalSold = $categoryStats->sum('total_sold');
-        
-        $categoryPerformance = $categoryStats->map(function($category) use ($totalSold) {
-            $percentage = $totalSold > 0 ? round(($category->total_sold / $totalSold) * 100) : 0;
+
+        // Category contribution
+        $categoryStats = \App\Models\Category::select('categories.name')
+            ->selectRaw('SUM(order_items.quantity) as qty')
+            ->leftJoin('menus', 'menus.category_id', '=', 'categories.id')
+            ->leftJoin('order_items', 'order_items.menu_id', '=', 'menus.id')
+            ->leftJoin('orders', 'orders.id', '=', 'order_items.order_id')
+            ->when($dateFrom, fn($q) => $q->whereDate('orders.created_at', '>=', $dateFrom))
+            ->when($dateTo, fn($q) => $q->whereDate('orders.created_at', '<=', $dateTo))
+            ->when($paymentMethod !== 'all', fn($q) => $q->where('orders.payment_method', $paymentMethod))
+            ->when($orderType !== 'all', fn($q) => $q->where('orders.order_type', $orderType))
+            ->where('orders.status', 'completed')
+            ->groupBy('categories.name')
+            ->get();
+
+        $totalCategoryQty = max(1, $categoryStats->sum('qty'));
+        $categoryPerformance = $categoryStats->map(function ($row) use ($totalCategoryQty) {
+            $percent = $totalCategoryQty > 0 ? round(($row->qty / $totalCategoryQty) * 100, 1) : 0;
             return [
-                'name' => $category->name,
-                'percentage' => $percentage,
-                'total_sold' => $category->total_sold
+                'name' => $row->name ?? 'Uncategorized',
+                'percentage' => $percent,
+                'qty' => (int) $row->qty,
             ];
         })->sortByDesc('percentage')->values();
-        
-        return view('manager.reports.index', compact('dailyRevenue', 'maxRevenue', 'categoryPerformance', 'period'));
+
+        // Peak hour (07-22)
+        $peakHours = [];
+        for ($h = 7; $h <= 22; $h++) {
+            $count = (clone $baseQuery)
+                ->whereRaw('HOUR(created_at) = ?', [$h])
+                ->count();
+            $peakHours[] = ['label' => sprintf('%02d:00', $h), 'value' => $count];
+        }
+
+        // Dine-in vs takeaway and occupancy
+        $dineIn = (clone $baseQuery)->where('order_type', 'dine_in')->count();
+        $takeAway = (clone $baseQuery)->where('order_type', 'takeaway')->count();
+        $totalTables = \App\Models\Table::count();
+        $occupiedTables = \App\Models\Order::whereIn('status', ['pending', 'processing'])
+            ->whereNotNull('table_number')
+            ->distinct('table_number')
+            ->count('table_number');
+        $occupancyRate = $totalTables > 0 ? round(($occupiedTables / $totalTables) * 100) : 0;
+
+        // Export minimal CSV for filtered orders
+        if ($request->get('export') === 'csv') {
+            $orders = (clone $baseQuery)->latest()->get();
+            return $this->exportCSV($orders);
+        }
+
+        $filters = [
+            'period' => $period,
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'payment_method' => $paymentMethod,
+            'order_type' => $orderType,
+        ];
+
+        return view('manager.reports.index', [
+            'period' => $period,
+            'revenueLabels' => $labels,
+            'revenueSeries' => $revenueSeries,
+            'revenueChange' => $revenueChange,
+            'currentRevenue' => array_sum($revenueSeries),
+            'totalOrders' => $totalOrders,
+            'pendingOrders' => $pendingOrders,
+            'processingOrders' => $processingOrders,
+            'completedOrders' => $completedOrders,
+            'cancelledOrders' => $cancelledOrders,
+            'paymentChart' => $paymentChart,
+            'bestItems' => $bestItems,
+            'categoryPerformance' => $categoryPerformance,
+            'peakHours' => $peakHours,
+            'dineIn' => $dineIn,
+            'takeAway' => $takeAway,
+            'occupancyRate' => $occupancyRate,
+            'filters' => $filters,
+        ]);
     }
 
     public function tables(Request $request)

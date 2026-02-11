@@ -30,21 +30,26 @@ class CustomerController extends Controller
             }])
             ->get();
 
-        return view('customer.menu', compact('table', 'categories'));
+        return view('pages.menu', compact('table', 'categories'));
+    }
+
+    public function checkout($tableNumber)
+    {
+        $table = Table::where('table_number', $tableNumber)->firstOrFail();
+        return view('pages.cart', compact('table'));
     }
 
     public function addToCart(Request $request, $tableNumber)
     {
         $request->validate([
             'menu_id' => 'required|exists:menus,id',
-            'quantity' => 'required|integer|min:1',
+            'quantity' => 'nullable|integer|min:1',
             'options' => 'nullable|array',
         ]);
 
         $table = Table::where('table_number', $tableNumber)->firstOrFail();
         $menu = Menu::findOrFail($request->menu_id);
 
-        // Check if menu is available
         if (!$menu->is_available) {
             return response()->json([
                 'success' => false,
@@ -52,57 +57,46 @@ class CustomerController extends Controller
             ], 400);
         }
 
-        // Calculate price with options
+        $quantity = (int) ($request->quantity ?? 1);
+        $normalizedOptions = $this->normalizeOptions($request->options ?? []);
+
         $basePrice = $menu->price;
-        $finalPrice = $this->calculatePriceWithOptions($basePrice, $request->options ?? []);
+        $finalPrice = $this->calculatePriceWithOptions($basePrice, $normalizedOptions);
 
-        // Create cart item array
-        $cartItem = [
-            'id' => $menu->id,
-            'name' => $menu->name,
-            'base_price' => $basePrice,
-            'final_price' => $finalPrice,
-            'quantity' => $request->quantity,
-            'subtotal' => $finalPrice * $request->quantity,
-            'options' => $request->options ?? [],
-            'table_number' => $tableNumber,
-            'image' => $menu->image_url ?: $menu->image
-        ];
-
-        // Get existing cart from session
         $cart = session()->get("cart.table_{$tableNumber}", []);
-
-        // Check if same item with same options exists
-        $existingIndex = null;
-        foreach ($cart as $index => $item) {
-            if ($item['id'] == $menu->id && json_encode($item['options']) === json_encode($cartItem['options'])) {
-                $existingIndex = $index;
-                break;
-            }
-        }
+        $optionSignature = $this->buildOptionSignature($normalizedOptions);
+        $existingIndex = $this->findCartItemIndex($cart, $menu->id, $optionSignature);
 
         if ($existingIndex !== null) {
-            // Update quantity of existing item
-            $cart[$existingIndex]['quantity'] += $request->quantity;
+            $cart[$existingIndex]['quantity'] += $quantity;
             $cart[$existingIndex]['subtotal'] = $cart[$existingIndex]['final_price'] * $cart[$existingIndex]['quantity'];
         } else {
-            // Add new item to cart
-            $cart[] = $cartItem;
+            $cart[] = [
+                'id' => $menu->id,
+                'name' => $menu->name,
+                'base_price' => $basePrice,
+                'final_price' => $finalPrice,
+                'quantity' => $quantity,
+                'subtotal' => $finalPrice * $quantity,
+                'options' => $normalizedOptions,
+                'options_signature' => $optionSignature,
+                'table_number' => $tableNumber,
+                'image' => $menu->image_url ?: $menu->image,
+                'cart_item_id' => uniqid('cart_', true)
+            ];
         }
 
-        // Save cart to session
-        session()->put("cart.table_{$tableNumber}", $cart);
+        session()->put("cart.table_{$tableNumber}", array_values($cart));
 
-        // Calculate cart totals
-        $cartCount = array_sum(array_column($cart, 'quantity'));
-        $cartTotal = array_sum(array_column($cart, 'subtotal'));
+        $cartCount = $this->countCartItems($cart);
+        $cartTotal = $this->sumCartTotals($cart);
 
         return response()->json([
             'success' => true,
             'message' => 'Item added to cart',
             'cart_count' => $cartCount,
             'cart_total' => $cartTotal,
-            'item' => $cartItem
+            'cart' => $cart
         ]);
     }
 
@@ -177,8 +171,8 @@ class CustomerController extends Controller
         $table = Table::where('table_number', $tableNumber)->firstOrFail();
         $cart = session()->get("cart.table_{$tableNumber}", []);
 
-        $cartCount = array_sum(array_column($cart, 'quantity'));
-        $cartTotal = array_sum(array_column($cart, 'subtotal'));
+        $cartCount = $this->countCartItems($cart);
+        $cartTotal = $this->sumCartTotals($cart);
 
         return response()->json([
             'success' => true,
@@ -194,54 +188,103 @@ class CustomerController extends Controller
     public function removeFromCart(Request $request, $tableNumber)
     {
         $request->validate([
-            'index' => 'required|integer|min:0'
+            'cart_item_id' => 'required|string'
         ]);
 
         $cart = session()->get("cart.table_{$tableNumber}", []);
-        
-        if (isset($cart[$request->index])) {
-            unset($cart[$request->index]);
-            $cart = array_values($cart); // Reindex array
-            session()->put("cart.table_{$tableNumber}", $cart);
-        }
+        $cart = array_values(array_filter($cart, function ($item) use ($request) {
+            return $item['cart_item_id'] !== $request->cart_item_id;
+        }));
 
-        $cartCount = array_sum(array_column($cart, 'quantity'));
-        $cartTotal = array_sum(array_column($cart, 'subtotal'));
+        session()->put("cart.table_{$tableNumber}", $cart);
+
+        $cartCount = $this->countCartItems($cart);
+        $cartTotal = $this->sumCartTotals($cart);
 
         return response()->json([
             'success' => true,
             'message' => 'Item removed from cart',
             'cart_count' => $cartCount,
-            'cart_total' => $cartTotal
+            'cart_total' => $cartTotal,
+            'cart' => $cart,
         ]);
     }
 
     /**
-     * Update cart item quantity
+     * Update cart item - deprecated in new qty=1 model
+     * Now just removes the item since we don't allow quantity changes
      */
     public function updateCartItem(Request $request, $tableNumber)
     {
         $request->validate([
-            'index' => 'required|integer|min:0',
-            'quantity' => 'required|integer|min:1'
+            'cart_item_id' => 'required|string',
+            'quantity' => 'required|integer',
         ]);
 
         $cart = session()->get("cart.table_{$tableNumber}", []);
-        
-        if (isset($cart[$request->index])) {
-            $cart[$request->index]['quantity'] = $request->quantity;
-            $cart[$request->index]['subtotal'] = $cart[$request->index]['final_price'] * $request->quantity;
-            session()->put("cart.table_{$tableNumber}", $cart);
+        foreach ($cart as $index => $item) {
+            if ($item['cart_item_id'] === $request->cart_item_id) {
+                if ($request->quantity <= 0) {
+                    unset($cart[$index]);
+                } else {
+                    $cart[$index]['quantity'] = $request->quantity;
+                    $cart[$index]['subtotal'] = $cart[$index]['final_price'] * $request->quantity;
+                }
+                break;
+            }
         }
 
-        $cartCount = array_sum(array_column($cart, 'quantity'));
-        $cartTotal = array_sum(array_column($cart, 'subtotal'));
+        $cart = array_values($cart);
+        session()->put("cart.table_{$tableNumber}", $cart);
+
+        $cartCount = $this->countCartItems($cart);
+        $cartTotal = $this->sumCartTotals($cart);
 
         return response()->json([
             'success' => true,
             'message' => 'Cart updated',
             'cart_count' => $cartCount,
-            'cart_total' => $cartTotal
+            'cart_total' => $cartTotal,
+            'cart' => $cart,
         ]);
+    }
+
+    private function countCartItems(array $cart): int
+    {
+        return array_sum(array_column($cart, 'quantity'));
+    }
+
+    private function sumCartTotals(array $cart): int
+    {
+        return array_sum(array_column($cart, 'subtotal'));
+    }
+
+    private function normalizeOptions(array $options): array
+    {
+        ksort($options);
+
+        foreach ($options as $key => $value) {
+            if (is_array($value)) {
+                sort($options[$key]);
+            }
+        }
+
+        return $options;
+    }
+
+    private function buildOptionSignature(array $options): string
+    {
+        return md5(json_encode($options));
+    }
+
+    private function findCartItemIndex(array $cart, int $menuId, string $optionSignature): ?int
+    {
+        foreach ($cart as $index => $item) {
+            if (($item['id'] ?? null) === $menuId && ($item['options_signature'] ?? '') === $optionSignature) {
+                return $index;
+            }
+        }
+
+        return null;
     }
 }

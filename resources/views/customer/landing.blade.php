@@ -6,16 +6,6 @@
     <!-- Background Decor -->
     <div class="absolute top-[-20%] left-[-10%] w-[120%] h-[60%] bg-gradient-to-b from-orange-100/40 to-transparent rounded-b-full blur-3xl -z-10"></div>
 
-    <!-- Top Icons -->
-    <div class="w-full flex justify-between items-center text-[#897561] mt-2">
-        <button class="p-2 -ml-2">
-            <span class="material-symbols-outlined text-2xl">menu</span>
-        </button>
-        <button class="p-2 -mr-2">
-            <span class="material-symbols-outlined text-2xl">help</span>
-        </button>
-    </div>
-
     <!-- Center Content -->
     <div class="flex-1 flex flex-col items-center justify-center w-full max-w-xs mx-auto -mt-16 text-center">
         <!-- Hero Circle -->
