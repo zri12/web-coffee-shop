@@ -156,6 +156,10 @@
                     @endif
                 </div>
 
+                @if($order->payment_method === 'qris')
+                <p class="text-xs font-semibold text-orange-600 mb-2">Belum Dibayar</p>
+                @endif
+
                 <!-- Action Buttons - Push to bottom -->
                 <div class="mt-auto pt-3 space-y-2">
                     @if($order->payment_method === 'cash')

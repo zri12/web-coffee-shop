@@ -166,7 +166,10 @@ class PaymentController extends Controller
             } else {
                 // deny/expire/cancel/failure
                 $payment->markAsFailed();
-                $order->update(['payment_status' => 'failed']);
+                $order->update([
+                    'payment_status' => 'failed',
+                    'status' => 'waiting_payment',
+                ]);
             }
 
             // Store Midtrans response

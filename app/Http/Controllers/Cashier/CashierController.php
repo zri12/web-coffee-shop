@@ -463,13 +463,26 @@ class CashierController extends Controller
     public function processPayment(Request $request, $id)
     {
         $order = \App\Models\Order::with('payment')->findOrFail($id);
+
+        if ($order->payment_method !== 'cash') {
+            return response()->json([
+                'success' => false,
+                'message' => 'QRIS payment must be confirmed by Midtrans callback.'
+            ], 400);
+        }
         
         // Update order payment status
-        $order->update(['payment_status' => 'paid']);
+        $order->update([
+            'payment_status' => 'paid',
+            'status' => 'paid'
+        ]);
         
         // Update payment record status
         if ($order->payment) {
-            $order->payment->update(['status' => 'paid']);
+            $order->payment->update([
+                'status' => 'paid',
+                'paid_at' => now()
+            ]);
         }
         
         return response()->json([
