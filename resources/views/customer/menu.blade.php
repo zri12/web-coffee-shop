@@ -125,28 +125,19 @@
         x-transition.opacity
         x-cloak
     >
-        <div class="bg-[#2f2d2c] text-white rounded-2xl shadow-xl flex items-center justify-between px-4 py-3">
-            <div>
-                <div class="text-xs text-white/70">Items</div>
-                <div class="text-lg font-semibold" x-text="cartCount + ' • ' + formatRupiah(cartTotal)"></div>
+        <button
+            type="button"
+            @click="goToCart()"
+            class="w-full bg-[#c67c4e] text-white rounded-2xl shadow-xl flex items-center justify-between px-4 py-3 active:scale-[0.99] transition"
+        >
+            <div class="flex items-center gap-3">
+                <div class="bg-[#2f2d2c] min-w-[28px] h-[28px] rounded-md text-xs font-bold flex items-center justify-center">
+                    <span x-text="cartCount"></span>
+                </div>
+                <span class="text-sm font-semibold">View Cart</span>
             </div>
-                <div class="flex items-center gap-3">
-                    <button
-                        type="button"
-                        @click="clearCart()"
-                        class="text-white/70 hover:text-white transition"
-                        >
-                    <span class="material-symbols-outlined">delete</span>
-                </button>
-                <button
-                    type="button"
-                    @click="goToCart()"
-                    class="bg-white text-[#2f2d2c] px-4 py-2 rounded-full text-sm font-semibold hover:bg-[#f6f2ed] transition"
-                >
-                    View Cart
-                </button>
-            </div>
-        </div>
+            <span class="text-sm font-semibold" x-text="formatRupiah(cartTotal)"></span>
+        </button>
     </div>
 
     <!-- Toast -->
@@ -207,6 +198,9 @@
             formatRupiah(value) {
                 const number = Number(value || 0);
                 return 'Rp ' + number.toLocaleString('id-ID');
+            },
+            formatPrice(value) {
+                return this.formatRupiah(value);
             },
             resolveType(slug = '') {
                 const s = (slug || '').toLowerCase();

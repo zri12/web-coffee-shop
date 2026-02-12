@@ -48,7 +48,7 @@
             <div class="mb-5">
                 <h2 class="text-[20px] font-bold text-[#2F2D2C] mb-2" x-text="selectedProduct.name"></h2>
                 <div class="flex items-center gap-3 mb-3">
-                    <span class="text-[28px] font-bold text-[#C67C4E]" x-text="selectedProduct.price"></span>
+                    <span class="text-[28px] font-bold text-[#C67C4E]" x-text="(typeof formatPrice === 'function' ? formatPrice(calculateItemPrice()) : calculateItemPrice())"></span>
                     <span x-show="selectedProduct.isFeatured" 
                           class="bg-[#ED5151] text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide">
                         Best Seller
@@ -375,7 +375,7 @@
                     class="w-full py-4 rounded-2xl font-bold text-[16px] shadow-lg transition-all flex items-center justify-center gap-2"
                     :class="canAddToCart() ? 'bg-[#C67C4E] text-white hover:bg-[#A05E35] active:scale-[0.99]' : 'bg-gray-300 text-gray-500 cursor-not-allowed'">
                 <span class="material-symbols-outlined">add_shopping_cart</span>
-                <span x-text="canAddToCart() ? `Add to Cart · ${formatPrice(calculateItemPrice())}` : 'Pilih varian dulu'"></span>
+                <span x-text="canAddToCart() ? `Add to Cart · ${(typeof formatPrice === 'function' ? formatPrice(calculateItemPrice()) : calculateItemPrice())}` : 'Pilih varian dulu'"></span>
             </button>
             <p class="text-[12px] text-center text-[#9B9B9B] mt-2">Each item added individually with chosen options</p>
         </div>
