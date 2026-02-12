@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\OrderController;
@@ -19,6 +21,37 @@ use App\Http\Controllers\Dashboard\UserController as DashboardUserController;
 
 // Public Routes
 Route::get('/ping', fn () => 'Laravel OK');
+Route::get('/db-check', function () {
+    try {
+        $dbName = DB::selectOne('select database() as db')->db ?? null;
+
+        $tables = [
+            'categories' => Schema::hasTable('categories'),
+            'menus' => Schema::hasTable('menus'),
+            'users' => Schema::hasTable('users'),
+        ];
+
+        $counts = [
+            'categories' => $tables['categories'] ? DB::table('categories')->count() : null,
+            'menus' => $tables['menus'] ? DB::table('menus')->count() : null,
+            'users' => $tables['users'] ? DB::table('users')->count() : null,
+        ];
+
+        return response()->json([
+            'ok' => true,
+            'db_database_env' => env('DB_DATABASE'),
+            'connected_database' => $dbName,
+            'tables' => $tables,
+            'counts' => $counts,
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'ok' => false,
+            'db_database_env' => env('DB_DATABASE'),
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+});
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/menu', [MenuController::class, 'index'])->name('menu.index');
 Route::get('/menu/{slug}', [MenuController::class, 'show'])->name('menu.show');
