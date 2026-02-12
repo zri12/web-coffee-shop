@@ -63,15 +63,7 @@
                         @foreach($category->menus->where('is_featured', true)->take(2) as $menu)
                         <div class="bg-white rounded-2xl overflow-hidden flex flex-col shadow-sm hover:shadow-md active:scale-[0.98] transition-all">
                             <div class="w-full aspect-square bg-[#F9F9F9] relative overflow-hidden">
-                                @if($menu->image_url)
-                                    <img src="{{ asset('storage/' . $menu->image_url) }}" alt="{{ $menu->name }}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
-                                @elseif($menu->image)
-                                    <img src="{{ asset('images/menus/' . $menu->image) }}" alt="{{ $menu->name }}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
-                                @else
-                                    <div class="w-full h-full flex items-center justify-center text-[#E0E0E0]">
-                                        <span class="material-symbols-outlined text-[50px] md:text-[60px]">local_cafe</span>
-                                    </div>
-                                @endif
+                                <img src="{{ $menu->display_image_url }}" alt="{{ $menu->name }}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300" onerror="this.onerror=null;this.src='{{ $menu->placeholder_image_url }}'">
 
                                 @if($menu->is_featured)
                                 <div class="absolute top-2 left-2 bg-[#ED5151] text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide">
@@ -96,7 +88,7 @@
                                     </span>
                                     
                                     @if($menu->is_available)
-                                    <button @click="showProductDetail({{ $menu->id }}, '{{ addslashes($menu->name) }}', {{ $menu->price }}, '{{ addslashes($menu->description) }}', '{{ $menu->image_url ? asset('storage/' . $menu->image_url) : ($menu->image ? asset('images/menus/' . $menu->image) : '') }}', {{ $menu->is_featured ? 'true' : 'false' }}, '{{ $menu->category->slug }}', '{{ $menu->formatted_price }}')"
+                                    <button @click="showProductDetail({{ $menu->id }}, '{{ addslashes($menu->name) }}', {{ $menu->price }}, '{{ addslashes($menu->description) }}', {{ \Illuminate\Support\Js::from($menu->display_image_url) }}, {{ $menu->is_featured ? 'true' : 'false' }}, '{{ $menu->category->slug }}', '{{ $menu->formatted_price }}')"
                                             class="w-8 h-8 md:w-9 md:h-9 bg-[#C67C4E] text-white rounded-lg flex items-center justify-center hover:bg-[#A05E35] active:bg-[#A05E35] transition-colors shadow-md">
                                         <span class="material-symbols-outlined text-[20px] md:text-[22px]">add</span>
                                     </button>
@@ -124,15 +116,7 @@
                     @foreach($category->menus as $menu)
                     <div class="bg-white rounded-2xl overflow-hidden flex flex-col shadow-sm hover:shadow-md active:scale-[0.98] transition-all">
                         <div class="w-full aspect-square bg-[#F9F9F9] relative overflow-hidden">
-                            @if($menu->image_url)
-                                <img src="{{ asset('storage/' . $menu->image_url) }}" alt="{{ $menu->name }}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
-                            @elseif($menu->image)
-                                <img src="{{ asset('images/menus/' . $menu->image) }}" alt="{{ $menu->name }}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300">
-                            @else
-                                <div class="w-full h-full flex items-center justify-center text-[#E0E0E0]">
-                                    <span class="material-symbols-outlined text-[50px] md:text-[60px]">local_cafe</span>
-                                </div>
-                            @endif
+                            <img src="{{ $menu->display_image_url }}" alt="{{ $menu->name }}" class="w-full h-full object-cover hover:scale-105 transition-transform duration-300" onerror="this.onerror=null;this.src='{{ $menu->placeholder_image_url }}'">
 
                             @if($menu->is_featured)
                             <div class="absolute top-2 left-2 bg-[#ED5151] text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide">
@@ -157,7 +141,7 @@
                                 </span>
                                 
                                 @if($menu->is_available)
-                                <button @click="showProductDetail({{ $menu->id }}, '{{ addslashes($menu->name) }}', {{ $menu->price }}, '{{ addslashes($menu->description) }}', '{{ $menu->image_url ? asset('storage/' . $menu->image_url) : ($menu->image ? asset('images/menus/' . $menu->image) : '') }}', {{ $menu->is_featured ? 'true' : 'false' }}, '{{ $menu->category->slug }}', '{{ $menu->formatted_price }}')"
+                                <button @click="showProductDetail({{ $menu->id }}, '{{ addslashes($menu->name) }}', {{ $menu->price }}, '{{ addslashes($menu->description) }}', {{ \Illuminate\Support\Js::from($menu->display_image_url) }}, {{ $menu->is_featured ? 'true' : 'false' }}, '{{ $menu->category->slug }}', '{{ $menu->formatted_price }}')"
                                         class="w-8 h-8 md:w-9 md:h-9 bg-[#C67C4E] text-white rounded-lg flex items-center justify-center hover:bg-[#A05E35] active:bg-[#A05E35] transition-colors shadow-md">
                                     <span class="material-symbols-outlined text-[20px] md:text-[22px]">add</span>
                                 </button>

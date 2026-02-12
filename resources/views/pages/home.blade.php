@@ -108,15 +108,10 @@
             <!-- Menu Card -->
             <div class="bg-white dark:bg-surface-dark rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group flex flex-col h-full border border-[#f4f2f0] dark:border-[#3E2723]">
                 <div class="aspect-[4/3] overflow-hidden relative bg-gradient-to-br from-primary/10 to-primary/5">
-                    @if($menu->image)
-                    <img src="{{ asset('images/menus/' . $menu->image) }}" 
+                    <img src="{{ $menu->display_image_url }}" 
                          alt="{{ $menu->name }}" 
+                         onerror="this.onerror=null;this.src='{{ $menu->placeholder_image_url }}'"
                          class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
-                    @else
-                    <div class="w-full h-full flex items-center justify-center">
-                        <span class="material-symbols-outlined text-6xl text-primary/30">coffee</span>
-                    </div>
-                    @endif
                     <button onclick="addToCart({{ $menu->id }}, '{{ $menu->name }}', {{ $menu->price }})" 
                             class="absolute bottom-3 right-3 size-10 bg-white/90 dark:bg-black/60 rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors shadow-sm text-text-main dark:text-white">
                         <span class="material-symbols-outlined">add</span>

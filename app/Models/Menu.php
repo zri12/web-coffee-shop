@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Menu extends Model
 {
@@ -31,6 +32,44 @@ class Menu extends Model
     public function getImageAttribute()
     {
         return $this->image_url;
+    }
+
+    /**
+     * Resolve menu image URL with resilient fallbacks for serverless deployments.
+     */
+    public function getDisplayImageUrlAttribute(): string
+    {
+        foreach ([$this->image_url, $this->image] as $candidate) {
+            if (!$candidate || !is_string($candidate)) {
+                continue;
+            }
+
+            if (Str::startsWith($candidate, ['http://', 'https://'])) {
+                return $candidate;
+            }
+
+            $normalized = ltrim($candidate, '/');
+
+            if (str_contains($normalized, 'menu-images/')) {
+                return asset('storage/' . $normalized);
+            }
+
+            return asset('images/menus/' . basename($normalized));
+        }
+
+        $prompt = rawurlencode(
+            'professional cafe menu photography of ' . $this->name . ', soft lighting, high detail'
+        );
+
+        return 'https://image.pollinations.ai/prompt/' . $prompt . '?width=1024&height=1024&seed=' . $this->id;
+    }
+
+    /**
+     * Local placeholder image when remote AI image fails.
+     */
+    public function getPlaceholderImageUrlAttribute(): string
+    {
+        return 'https://placehold.co/800x800/F4EDE6/6A4B2A?text=' . rawurlencode($this->name);
     }
 
     /**
