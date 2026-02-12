@@ -86,26 +86,20 @@
             <div class="relative">
                 <!-- Payment Status Badge -->
                 <div class="absolute top-3 left-3 z-10 flex flex-col gap-2">
-                    @if($order->order_type === 'dine_in')
-                        <!-- Walk-in orders should be paid - this is old data -->
+                    @if($order->payment_method === 'qris')
+                        <span class="px-2.5 py-1.5 bg-orange-500 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-md animate-pulse">
+                            <span class="material-symbols-outlined text-[14px]">qr_code_2</span>
+                            MENUNGGU PEMBAYARAN QRIS
+                        </span>
+                    @else
                         <span class="px-2.5 py-1.5 bg-yellow-500 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-md">
                             <span class="material-symbols-outlined text-[14px]">warning</span>
                             PERLU KONFIRMASI PEMBAYARAN
                         </span>
-                    @elseif($order->payment_method === 'cash')
-                        <span class="px-2.5 py-1.5 bg-orange-500 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-md">
-                            <span class="material-symbols-outlined text-[14px]">payments</span>
-                            MENUNGGU PEMBAYARAN TUNAI
-                        </span>
-                    @else
-                        <span class="px-2.5 py-1.5 bg-blue-500 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-md animate-pulse">
-                            <span class="material-symbols-outlined text-[14px]">qr_code_2</span>
-                            MENUNGGU PEMBAYARAN QRIS
-                        </span>
                     @endif
                     
                     <!-- Walk-in Badge for Manual Orders -->
-                    @if($order->order_type === 'dine_in')
+                    @if($order->payment_method === 'cash')
                         <span class="px-2 py-1 bg-purple-600 dark:bg-purple-500 text-white text-[10px] font-bold rounded-md flex items-center gap-1 shadow-sm w-fit">
                             <span class="material-symbols-outlined text-[12px]">storefront</span>
                             WALK-IN
@@ -164,28 +158,14 @@
 
                 <!-- Action Buttons - Push to bottom -->
                 <div class="mt-auto pt-3 space-y-2">
-                    @if($order->order_type === 'dine_in')
-                        <!-- Walk-in orders should always be paid at cashier -->
-                        <!-- If appearing here, it's old data - provide quick fix button -->
+                    @if($order->payment_method === 'cash')
                         <button onclick="confirmCashPayment({{ $order->id }})" 
                                 class="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 rounded-xl transition-all text-sm flex items-center justify-center gap-2 shadow-lg hover:shadow-xl active:scale-[0.98]">
                             <span class="material-symbols-outlined text-[20px]">check_circle</span>
                             Konfirmasi Pembayaran Walk-in
                         </button>
-                    @elseif($order->payment_method === 'cash')
-                        <!-- Online Cash Payment Confirmation Button -->
-                        <button onclick="confirmCashPayment({{ $order->id }})" 
-                                class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition-all text-sm flex items-center justify-center gap-2 shadow-lg hover:shadow-xl active:scale-[0.98]">
-                            <span class="material-symbols-outlined text-[20px]">account_balance_wallet</span>
-                            Konfirmasi Pembayaran Tunai
-                        </button>
-                        <button onclick="printBill({{ $order->id }})" 
-                                class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-2.5 rounded-lg transition-all text-sm flex items-center justify-center gap-2">
-                            <span class="material-symbols-outlined text-[18px]">receipt</span>
-                            Print Bill
-                        </button>
                     @else
-                        <!-- QRIS Waiting - Info Only -->
+                        <!-- QRIS waiting: no start preparing until payment callback success -->
                         <div class="w-full bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">
                             <span class="material-symbols-outlined text-[20px] animate-pulse">schedule</span>
                             Menunggu Pembayaran QRIS
@@ -210,7 +190,7 @@
                 <div class="absolute top-3 left-3 z-10 flex flex-col gap-2">
                     <span class="px-2.5 py-1.5 bg-green-500 text-white text-xs font-bold rounded-lg flex items-center gap-1.5 shadow-md">
                         <span class="material-symbols-outlined text-[14px]">check_circle</span>
-                        SUDAH DIBAYAR
+                        SUDAH DIBAYAR ({{ strtoupper($order->payment_method) }})
                     </span>
                     
                     <!-- Walk-in Badge for Manual Orders -->

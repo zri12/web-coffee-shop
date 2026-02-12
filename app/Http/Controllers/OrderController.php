@@ -44,10 +44,11 @@ class OrderController extends Controller
             // Map order_type: dine_in for orders with table number, takeaway for no table
             $orderType = $request->table_number ? 'dine_in' : 'takeaway';
             
-            // Payment status policy:
-            // - cash  : unpaid (paid at cashier confirmation)
-            // - qris  : waiting_payment (must not be paid on creation)
-            $paymentStatus = $request->payment_method === 'cash' ? 'unpaid' : 'waiting_payment';
+            // Payment policy:
+            // - QRIS online: pending + waiting_payment
+            // - Cash (pay at cashier): unpaid + waiting_cashier_confirmation
+            $paymentStatus = $request->payment_method === 'cash' ? 'unpaid' : 'pending';
+            $orderStatus = $request->payment_method === 'cash' ? 'waiting_cashier_confirmation' : 'waiting_payment';
             
             $order = Order::create([
                 'customer_name' => $request->customer_name,
@@ -57,7 +58,7 @@ class OrderController extends Controller
                 'order_type' => $orderType,
                 'payment_method' => $request->payment_method,
                 'payment_status' => $paymentStatus,
-                'status' => 'pending',
+                'status' => $orderStatus,
                 'total_amount' => 0,
             ]);
 
@@ -198,7 +199,7 @@ class OrderController extends Controller
 
             // Create payment record
             // Keep payment record status aligned with order payment_status
-            $paymentStatus = $request->payment_method === 'cash' ? 'unpaid' : 'waiting_payment';
+            $paymentStatus = $request->payment_method === 'cash' ? 'unpaid' : 'pending';
             
             $payment = Payment::create([
                 'order_id' => $order->id,

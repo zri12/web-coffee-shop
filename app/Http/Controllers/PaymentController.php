@@ -29,7 +29,7 @@ class PaymentController extends Controller
                 'order_id' => $order->id,
                 'amount' => $order->total_amount,
                 'method' => 'qris',
-                'status' => 'waiting_payment',
+                'status' => 'pending',
             ]);
 
             // Prepare Midtrans parameters
@@ -84,8 +84,7 @@ class PaymentController extends Controller
 
                 $order->update([
                     'payment_status' => 'paid',
-                    // keep pending so cashier can move to preparing via Start Preparing
-                    'status' => 'pending',
+                    'status' => 'paid',
                 ]);
 
                 return redirect()->route('order.success', $order->order_number)
@@ -152,18 +151,18 @@ class PaymentController extends Controller
             // Handle based on Midtrans transaction status
             if (in_array($transactionStatus, ['settlement', 'capture'])) {
                 if ($fraud === 'challenge') {
-                    $payment->update(['status' => 'challenge']);
-                    $order->update(['payment_status' => 'waiting_payment']);
+                    $payment->update(['status' => 'pending']);
+                    $order->update(['payment_status' => 'pending']);
                 } else {
                     $payment->markAsPaid();
                     $order->update([
                         'payment_status' => 'paid',
-                        'status' => 'pending',
+                        'status' => 'paid',
                     ]);
                 }
             } elseif (in_array($transactionStatus, ['pending'])) {
-                $payment->update(['status' => 'waiting_payment']);
-                $order->update(['payment_status' => 'waiting_payment']);
+                $payment->update(['status' => 'pending']);
+                $order->update(['payment_status' => 'pending', 'status' => 'waiting_payment']);
             } else {
                 // deny/expire/cancel/failure
                 $payment->markAsFailed();

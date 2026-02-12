@@ -115,7 +115,7 @@ class Payment extends Model
     {
         return match ($this->status) {
             'waiting_payment' => 'Menunggu Pembayaran',
-            'pending' => 'Menunggu',
+            'pending' => 'Menunggu Pembayaran',
             'paid' => 'Lunas',
             'failed' => 'Gagal',
             'refunded' => 'Refund',

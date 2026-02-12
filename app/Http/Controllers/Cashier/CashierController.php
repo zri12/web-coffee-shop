@@ -42,9 +42,19 @@ class CashierController extends Controller
         
         // Categorize orders
         $waitingPaymentOrders = $allActiveOrders->filter(function($order) {
+            $paymentMethod = strtolower((string)$order->payment_method);
             $paymentStatus = strtolower((string)$order->payment_status);
-            $isWaitingPayment = in_array($paymentStatus, ['unpaid', 'pending', 'waiting_payment']);
-            return $isWaitingPayment && strtolower((string)$order->status) !== 'processing';
+            $status = strtolower((string)$order->status);
+
+            $isQrisWaiting = $paymentMethod === 'qris'
+                && in_array($paymentStatus, ['pending', 'waiting_payment'])
+                && $status === 'waiting_payment';
+
+            $isCashWaiting = $paymentMethod === 'cash'
+                && $paymentStatus === 'unpaid'
+                && in_array($status, ['waiting_cashier_confirmation', 'waiting_payment']);
+
+            return $isQrisWaiting || $isCashWaiting;
         });
         
         $paidOrders = $allActiveOrders->filter(function($order) {
@@ -166,8 +176,8 @@ class CashierController extends Controller
             // 
             // Therefore: ALL payment_method → payment_status = 'paid'
             // =====================================================================
-            $paymentStatus = 'paid'; // ALWAYS paid for walk-in orders
-            $orderStatus = 'pending'; // Ready to be prepared by kitchen
+            $paymentStatus = 'unpaid';
+            $orderStatus = 'waiting_cashier_confirmation';
 
             // Create order with correct structure
             $order = \App\Models\Order::create([
@@ -214,13 +224,13 @@ class CashierController extends Controller
         $order->update(['total_amount' => $totalWithTax]);
 
             // Create payment record
-            $paymentRecordStatus = ($paymentStatus === 'paid') ? 'paid' : 'pending';
+            $paymentRecordStatus = 'unpaid';
             \App\Models\Payment::create([
                 'order_id' => $order->id,
                 'amount' => $totalWithTax,
                 'method' => $validated['payment_method'],
                 'status' => $paymentRecordStatus,
-                'paid_at' => ($paymentStatus === 'paid') ? now() : null,
+                'paid_at' => null,
             ]);
 
             return response()->json([
@@ -413,10 +423,10 @@ class CashierController extends Controller
         // Valid status constants: Support both old and new status values
         // OLD: pending, processing, completed, cancelled
         // NEW: waiting_payment, paid, preparing, completed, cancelled
-        $validStatuses = ['waiting_payment', 'paid', 'preparing', 'completed', 'cancelled', 'pending', 'processing'];
+        $validStatuses = ['waiting_payment', 'waiting_cashier_confirmation', 'paid', 'preparing', 'completed', 'cancelled', 'pending', 'processing'];
         
         $validated = $request->validate([
-            'status' => 'required|in:waiting_payment,paid,preparing,completed,cancelled,pending,processing'
+            'status' => 'required|in:waiting_payment,waiting_cashier_confirmation,paid,preparing,completed,cancelled,pending,processing'
         ]);
         
         // Ensure status is clean and valid
