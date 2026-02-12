@@ -126,13 +126,13 @@
                 <div class="text-xs text-white/70">Items</div>
                 <div class="text-lg font-semibold" x-text="cartCount + ' • ' + formatRupiah(cartTotal)"></div>
             </div>
-            <div class="flex items-center gap-3">
-                <button
-                    type="button"
-                    @click="refreshCart()"
-                    class="text-white/70 hover:text-white transition"
-                >
-                    <span class="material-symbols-outlined">refresh</span>
+                <div class="flex items-center gap-3">
+                    <button
+                        type="button"
+                        @click="clearCart()"
+                        class="text-white/70 hover:text-white transition"
+                        >
+                    <span class="material-symbols-outlined">delete</span>
                 </button>
                 <button
                     type="button"
@@ -288,12 +288,20 @@
 
                     this.refreshCart();
                     this.showToast('Ditambahkan', `${menu.name} masuk keranjang.`, 'check_circle', 'success');
-                    setTimeout(() => this.goToCart(), 150);
                 } catch (error) {
                     this.showToast('Error', 'Terjadi kendala. Coba lagi.', 'error', 'error');
                 } finally {
                     this.busy = false;
                 }
+            },
+            clearCart() {
+                if (window.Cart?.clear) {
+                    window.Cart.clear();
+                } else {
+                    localStorage.removeItem('cart');
+                    window.dispatchEvent(new CustomEvent('cart-cleared'));
+                }
+                this.refreshCart();
             },
             goToCart() {
                 window.location.href = "{{ route('cart') }}";
