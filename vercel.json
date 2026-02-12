@@ -1,42 +1,9 @@
 {
-  "functions": {
-    "api/index.php": {
-      "runtime": "vercel-php@0.9.0",
-      "includeFiles": [
-        "app/**",
-        "bootstrap/**",
-        "config/**",
-        "database/**",
-        "public-laravel/**",
-        "resources/**",
-        "routes/**",
-        "storage/**",
-        "vendor/**",
-        "artisan",
-        "composer.json",
-        "composer.lock"
-      ]
-    }
-  },
-  "rewrites": [
-    { "source": "/build/:path*", "destination": "/public-laravel/build/:path*" },
-    { "source": "/favicon.ico", "destination": "/public-laravel/favicon.ico" },
-    { "source": "/robots.txt", "destination": "/public-laravel/robots.txt" },
-    { "source": "/:path*.css", "destination": "/public-laravel/:path*.css" },
-    { "source": "/:path*.js", "destination": "/public-laravel/:path*.js" },
-    { "source": "/:path*.mjs", "destination": "/public-laravel/:path*.mjs" },
-    { "source": "/:path*.png", "destination": "/public-laravel/:path*.png" },
-    { "source": "/:path*.jpg", "destination": "/public-laravel/:path*.jpg" },
-    { "source": "/:path*.jpeg", "destination": "/public-laravel/:path*.jpeg" },
-    { "source": "/:path*.gif", "destination": "/public-laravel/:path*.gif" },
-    { "source": "/:path*.svg", "destination": "/public-laravel/:path*.svg" },
-    { "source": "/:path*.ico", "destination": "/public-laravel/:path*.ico" },
-    { "source": "/:path*.webp", "destination": "/public-laravel/:path*.webp" },
-    { "source": "/:path*.woff", "destination": "/public-laravel/:path*.woff" },
-    { "source": "/:path*.woff2", "destination": "/public-laravel/:path*.woff2" },
-    { "source": "/:path*.ttf", "destination": "/public-laravel/:path*.ttf" },
-    { "source": "/:path*.eot", "destination": "/public-laravel/:path*.eot" },
-    { "source": "/:path*.map", "destination": "/public-laravel/:path*.map" },
-    { "source": "/:path*", "destination": "/api/index.php" }
+  "version": 2,
+  "builds": [
+    { "src": "api/index.php", "use": "vercel-php@0.9.0" }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "/api/index.php" }
   ]
 }
