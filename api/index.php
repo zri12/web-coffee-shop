@@ -1,15 +1,28 @@
 <?php
+header('Content-Type: application/json');
 
-require __DIR__ . '/../vendor/autoload.php';
+$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$path = preg_replace('#^/api#', '', $path);
 
-$app = require __DIR__ . '/../bootstrap/app.php';
+if ($path === '/ping') {
+    require __DIR__ . '/ping.php';
+    exit;
+}
 
-$kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+if ($path === '/menus') {
+    require_once __DIR__ . '/db.php';
+    try {
+        $pdo = getPDO();
+        $stmt = $pdo->query('SELECT * FROM menus');
+        $menus = $stmt->fetchAll();
+        echo json_encode(['menus' => $menus]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Failed to fetch menus']);
+    }
+    exit;
+}
 
-$response = $kernel->handle(
-    $request = Illuminate\Http\Request::capture()
-);
-
-$response->send();
-
-$kernel->terminate($request, $response);
+// 404 fallback
+http_response_code(404);
+echo json_encode(['error' => 'Not found']);

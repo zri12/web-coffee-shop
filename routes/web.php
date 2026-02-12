@@ -18,6 +18,7 @@ use App\Http\Controllers\Dashboard\UserController as DashboardUserController;
 */
 
 // Public Routes
+Route::get('/ping', fn () => 'Laravel OK');
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/menu', [MenuController::class, 'index'])->name('menu.index');
 Route::get('/menu/{menu:slug}', [MenuController::class, 'show'])->name('menu.show');
