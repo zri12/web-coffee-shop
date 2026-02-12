@@ -275,24 +275,20 @@
             },
             syncCartTotals(cart) {
                 const safeCart = cart || [];
-                // Prefer Cart's computed count/total if available
-                if (window.Cart?.getCount) {
-                    this.cartCount = window.Cart.getCount();
-                } else {
-                    this.cartCount = safeCart.reduce((sum, item) => sum + (parseInt(item.quantity ?? 1, 10) || 1), 0);
-                }
+                const lsCount = safeCart.reduce((sum, item) => sum + (parseInt(item.quantity ?? 1, 10) || 1), 0);
+                const lsTotal = safeCart.reduce((sum, item) => {
+                    const qty = parseInt(item.quantity ?? 1, 10) || 1;
+                    const price = Number(
+                        item.total_price ?? item.totalPrice ?? item.final_price ?? item.finalPrice ?? item.price ?? item.base_price ?? 0
+                    ) || 0;
+                    return sum + price * qty;
+                }, 0);
 
-                if (window.Cart?.getTotal) {
-                    this.cartTotal = window.Cart.getTotal();
-                } else {
-                    this.cartTotal = safeCart.reduce((sum, item) => {
-                        const qty = parseInt(item.quantity ?? 1, 10) || 1;
-                        const price = Number(
-                            item.total_price ?? item.totalPrice ?? item.final_price ?? item.finalPrice ?? item.price ?? item.base_price ?? 0
-                        ) || 0;
-                        return sum + price * qty;
-                    }, 0);
-                }
+                const cartCount = window.Cart?.getCount ? window.Cart.getCount() : 0;
+                const cartTotal = window.Cart?.getTotal ? window.Cart.getTotal() : 0;
+
+                this.cartCount = Math.max(lsCount, cartCount);
+                this.cartTotal = Math.max(lsTotal, cartTotal);
             },
             refreshCart() {
                 const cart = this.loadCartPreferred();
