@@ -213,14 +213,6 @@
                 if (s.includes('dessert')) return 'dessert';
                 return 'food';
             },
-            getProductType(slug = '') {
-                const s = (slug || '').toLowerCase();
-                if (s.includes('coffee') || s.includes('kopi') || s.includes('drink')) return 'beverage';
-                if (s.includes('snack')) return 'snack';
-                if (s.includes('dessert')) return 'dessert';
-                if (s.includes('food') || s.includes('makanan')) return 'food';
-                return 'food';
-            },
             loadCart() {
                 if (window.Cart?.getItems) return window.Cart.getItems();
                 try {
@@ -263,6 +255,14 @@
                 this.refreshCart();
             },
             showProductDetail(payload) {
+                const type = (() => {
+                    const s = (payload.category || '').toLowerCase();
+                    if (s.includes('coffee') || s.includes('kopi') || s.includes('drink')) return 'beverage';
+                    if (s.includes('snack')) return 'snack';
+                    if (s.includes('dessert')) return 'dessert';
+                    if (s.includes('food') || s.includes('makanan')) return 'food';
+                    return 'food';
+                })();
                 this.selectedProduct = {
                     id: payload.id,
                     name: payload.name,
@@ -271,7 +271,7 @@
                     description: payload.description || '',
                     image: payload.image || '',
                     isFeatured: payload.isFeatured || false,
-                    type: this.getProductType(payload.category || '')
+                    type
                 };
                 this.resetOptions();
                 this.showDetail = true;
