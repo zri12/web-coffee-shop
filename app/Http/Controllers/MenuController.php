@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Menu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class MenuController extends Controller
 {
@@ -14,14 +15,35 @@ class MenuController extends Controller
         $categories = collect();
 
         try {
-            $categories = Category::active()
-                ->ordered()
-                ->with(['menus' => function ($query) {
-                    $query->available()
-                        ->orderBy('is_featured', 'desc')
-                        ->orderBy('name');
-                }])
-                ->get();
+            $categoriesQuery = Category::query();
+
+            if (Schema::hasColumn('categories', 'is_active')) {
+                $categoriesQuery->where('is_active', true);
+            }
+            if (Schema::hasColumn('categories', 'sort_order')) {
+                $categoriesQuery->orderBy('sort_order');
+            }
+            $categoriesQuery->orderBy('name');
+
+            $categoriesQuery->with(['menus' => function ($query) {
+                if (Schema::hasColumn('menus', 'is_available')) {
+                    $query->where('is_available', true);
+                }
+                if (Schema::hasColumn('menus', 'is_featured')) {
+                    $query->orderBy('is_featured', 'desc');
+                }
+                $query->orderBy('name');
+            }]);
+
+            $categories = $categoriesQuery->get();
+
+            // Fallback for legacy datasets where active/available flags are not populated.
+            if ($categories->isEmpty()) {
+                $categories = Category::query()
+                    ->orderBy('name')
+                    ->with(['menus' => fn ($query) => $query->orderBy('name')])
+                    ->get();
+            }
         } catch (\Throwable $e) {
             Log::warning('Menu page loaded without database data', [
                 'error' => $e->getMessage(),
