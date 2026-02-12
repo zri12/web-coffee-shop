@@ -88,8 +88,13 @@
                                     @if($menu->is_available)
                                         <button
                                             type="button"
-                                            @click.prevent.stop='addToCart(@js($menuPayload))'
-                                            class="px-4 py-2 rounded-full bg-[#c67c4e] text-white text-sm font-semibold hover:bg-[#b06b3e] active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                                            class="px-4 py-2 rounded-full bg-[#c67c4e] text-white text-sm font-semibold hover:bg-[#b06b3e] active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed js-add-menu"
+                                            data-id="{{ $menu->id }}"
+                                            data-name="{{ e($menu->name) }}"
+                                            data-price="{{ (float) $menu->price }}"
+                                            data-image="{{ e($menu->display_image_url) }}"
+                                            data-category="{{ e($menu->category->slug ?? $category->slug ?? '') }}"
+                                            @click.prevent.stop="addFromDataset($event)"
                                             :disabled="busy"
                                         >
                                             <span class="material-symbols-outlined align-middle text-base">add</span>
@@ -235,6 +240,17 @@
             refreshCart() {
                 const cart = this.loadCart();
                 this.syncCartTotals(cart);
+            },
+            addFromDataset(event) {
+                const t = event.currentTarget;
+                const menu = {
+                    id: Number(t.dataset.id),
+                    name: t.dataset.name,
+                    price: Number(t.dataset.price),
+                    image: t.dataset.image,
+                    category: t.dataset.category
+                };
+                this.addToCart(menu);
             },
             addToCart(menu) {
                 if (this.busy) return;
