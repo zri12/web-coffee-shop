@@ -30,6 +30,10 @@ $app = Application::configure(basePath: dirname(__DIR__))
         //
     })->create();
 
+if (($storagePath = env('APP_STORAGE_PATH')) && is_string($storagePath)) {
+    $app->useStoragePath($storagePath);
+}
+
 // Set custom public path (temporary until folder rename)
 $app->usePublicPath($app->basePath('public-laravel'));
 
