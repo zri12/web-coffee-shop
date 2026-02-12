@@ -58,8 +58,8 @@
                          @click="addToCart({{ $menu }})"
                          class="group flex flex-col rounded-xl bg-white dark:bg-surface-dark shadow-sm border border-[#e6e2de] dark:border-[#3e362e] overflow-hidden hover:shadow-md transition-all cursor-pointer transform active:scale-[0.98]">
                         <div class="h-32 w-full bg-center bg-cover bg-no-repeat relative bg-coffee-100" 
-                             style="background-image: url('{{ $menu->image_url ? asset('storage/' . $menu->image_url) : '' }}');">
-                             @if(!$menu->image_url)
+                             style="background-image: url('{{ $menu->display_image_url }}');">
+                             @if(!$menu->display_image_url)
                              <div class="absolute inset-0 flex items-center justify-center text-4xl">☕</div>
                              @endif
                             <div class="absolute inset-0 bg-black/5 group-hover:bg-black/0 transition-colors"></div>
@@ -140,7 +140,7 @@
             <template x-for="(item, index) in cart" :key="index">
                 <div class="flex gap-3 items-center group">
                     <div class="w-12 h-12 rounded-lg bg-cover bg-center shrink-0 bg-coffee-100" 
-                         :style="item.image_url ? `background-image: url('/storage/' + item.image_url)` : ''">
+                         :style="item.image_url ? `background-image: url('${resolveMenuImage(item.image_url)}')` : ''">
                          <span x-show="!item.image_url" class="block w-full h-full text-center leading-[3rem]">☕</span>
                     </div>
                     <div class="flex-1 min-w-0">
@@ -219,6 +219,15 @@
             paymentMethod: 'cash',
             isLoading: false,
 
+            resolveMenuImage(image) {
+                if (!image) return '';
+                const raw = String(image);
+                if (/^(https?:)?\/\//.test(raw) || raw.startsWith('/')) {
+                    return raw;
+                }
+                return `/storage/${raw.replace(/^\/+/, '')}`;
+            },
+
             addToCart(menu) {
                 const existingItem = this.cart.find(item => item.id === menu.id);
                 if (existingItem) {
@@ -228,7 +237,7 @@
                         id: menu.id,
                         name: menu.name,
                         price: Number(menu.price),
-                        image_url: menu.image_url,
+                        image_url: menu.display_image_url || menu.image_url || '',
                         quantity: 1
                     });
                 }

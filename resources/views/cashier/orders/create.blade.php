@@ -53,13 +53,7 @@
                         @click="addToCart({{ $menu }})"
                     >
                         <div class="aspect-square bg-gray-100 dark:bg-[#2c241b] relative overflow-hidden">
-                            @if($menu->image)
-                                <img src="{{ asset('storage/' . $menu->image) }}" alt="{{ $menu->name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-                            @else
-                                <div class="flex items-center justify-center h-full text-[#897561]">
-                                    <span class="material-symbols-outlined text-4xl">restaurant</span>
-                                </div>
-                            @endif
+                            <img src="{{ $menu->display_image_url }}" alt="{{ $menu->name }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" onerror="this.onerror=null;this.src='{{ $menu->placeholder_image_url }}'">
                             <button class="absolute bottom-2 right-2 bg-white dark:bg-[#1a1612] p-2 rounded-full shadow-lg text-primary hover:bg-primary hover:text-white transition-colors">
                                 <span class="material-symbols-outlined text-[20px]">add</span>
                             </button>
@@ -109,7 +103,7 @@
                 <div class="flex gap-3">
                     <div class="h-12 w-12 rounded-lg bg-gray-100 dark:bg-[#2c241b] overflow-hidden shrink-0">
                          <template x-if="item.image">
-                            <img :src="'/storage/' + item.image" class="w-full h-full object-cover">
+                            <img :src="resolveMenuImage(item.image)" class="w-full h-full object-cover">
                          </template>
                     </div>
                     <div class="flex-1">
@@ -198,6 +192,15 @@
                 return this.subtotal + this.tax;
             },
 
+            resolveMenuImage(image) {
+                if (!image) return '';
+                const raw = String(image);
+                if (/^(https?:)?\/\//.test(raw) || raw.startsWith('/')) {
+                    return raw;
+                }
+                return `/storage/${raw.replace(/^\/+/, '')}`;
+            },
+
             addToCart(menu) {
                 const existingItem = this.cart.find(item => item.id === menu.id);
                 if (existingItem) {
@@ -207,7 +210,7 @@
                         id: menu.id,
                         name: menu.name,
                         price: menu.price,
-                        image: menu.image,
+                        image: menu.display_image_url || menu.image_url || menu.image,
                         quantity: 1
                     });
                 }

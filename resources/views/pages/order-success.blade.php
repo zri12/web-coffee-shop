@@ -88,8 +88,8 @@
                     <div class="flex items-start gap-3 md:gap-4">
                         <!-- Item Image (if available) -->
                         <div class="w-14 h-14 md:w-16 md:h-16 bg-[#F9F9F9] rounded-xl flex-shrink-0 flex items-center justify-center overflow-hidden">
-                            @if($item->menu && $item->menu->image)
-                                <img src="/images/menus/{{ $item->menu->image }}" alt="{{ $item->menu_name }}" class="w-full h-full object-cover">
+                            @if($item->menu)
+                                <img src="{{ $item->menu->display_image_url }}" alt="{{ $item->menu_name }}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='{{ $item->menu->placeholder_image_url }}'">
                             @else
                                 <span class="material-symbols-outlined text-[#E0E0E0] text-2xl md:text-3xl">local_cafe</span>
                             @endif

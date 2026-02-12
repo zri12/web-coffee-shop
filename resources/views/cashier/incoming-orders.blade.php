@@ -114,11 +114,17 @@
                     </span>
                 </div>
                 
-                <!-- Order Image - ALWAYS SAME -->
+                <!-- Order Image -->
                 <div class="h-36 bg-gradient-to-br from-[#f9f2ec] to-[#f4ebe0] dark:from-[#2c241b] dark:to-[#1a1612] flex items-center justify-center overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1511920170033-f8396924c348?w=500&h=350&fit=crop&q=80" 
-                         alt="Coffee Order" 
-                         class="h-full w-full object-cover">
+                    @php
+                        $coverImage = optional(optional($order->items->first())->menu)->display_image_url;
+                        $coverFallback = optional(optional($order->items->first())->menu)->placeholder_image_url
+                            ?? route('menu.ai-image', ['menu' => 'incoming-order-' . $order->id, 'name' => 'Coffee Order']);
+                    @endphp
+                    <img src="{{ $coverImage ?: $coverFallback }}"
+                         alt="Order Image"
+                         class="h-full w-full object-cover"
+                         onerror="this.onerror=null;this.src='{{ $coverFallback }}'">
                 </div>
             </div>
 
@@ -215,9 +221,15 @@
                 
                 <!-- Order Image -->
                 <div class="h-36 bg-gradient-to-br from-[#f9f2ec] to-[#f4ebe0] dark:from-[#2c241b] dark:to-[#1a1612] flex items-center justify-center overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1511920170033-f8396924c348?w=500&h=350&fit=crop&q=80" 
-                         alt="Coffee Order" 
-                         class="h-full w-full object-cover">
+                    @php
+                        $coverImage = optional(optional($order->items->first())->menu)->display_image_url;
+                        $coverFallback = optional(optional($order->items->first())->menu)->placeholder_image_url
+                            ?? route('menu.ai-image', ['menu' => 'incoming-order-' . $order->id, 'name' => 'Coffee Order']);
+                    @endphp
+                    <img src="{{ $coverImage ?: $coverFallback }}"
+                         alt="Order Image"
+                         class="h-full w-full object-cover"
+                         onerror="this.onerror=null;this.src='{{ $coverFallback }}'">
                 </div>
             </div>
 
@@ -302,9 +314,15 @@
                 
                 <!-- Order Image -->
                 <div class="h-36 bg-gradient-to-br from-[#f9f2ec] to-[#f4ebe0] dark:from-[#2c241b] dark:to-[#1a1612] flex items-center justify-center overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1511920170033-f8396924c348?w=500&h=350&fit=crop&q=80" 
-                         alt="Coffee Order" 
-                         class="h-full w-full object-cover">
+                    @php
+                        $coverImage = optional(optional($order->items->first())->menu)->display_image_url;
+                        $coverFallback = optional(optional($order->items->first())->menu)->placeholder_image_url
+                            ?? route('menu.ai-image', ['menu' => 'incoming-order-' . $order->id, 'name' => 'Coffee Order']);
+                    @endphp
+                    <img src="{{ $coverImage ?: $coverFallback }}"
+                         alt="Order Image"
+                         class="h-full w-full object-cover"
+                         onerror="this.onerror=null;this.src='{{ $coverFallback }}'">
                 </div>
             </div>
 
@@ -384,9 +402,15 @@
                 
                 <!-- Order Image -->
                 <div class="h-36 bg-gradient-to-br from-[#f9f2ec] to-[#f4ebe0] dark:from-[#2c241b] dark:to-[#1a1612] flex items-center justify-center overflow-hidden">
-                    <img src="https://images.unsplash.com/photo-1511920170033-f8396924c348?w=500&h=350&fit=crop&q=80" 
-                         alt="Coffee Order" 
-                         class="h-full w-full object-cover">
+                    @php
+                        $coverImage = optional(optional($order->items->first())->menu)->display_image_url;
+                        $coverFallback = optional(optional($order->items->first())->menu)->placeholder_image_url
+                            ?? route('menu.ai-image', ['menu' => 'incoming-order-' . $order->id, 'name' => 'Coffee Order']);
+                    @endphp
+                    <img src="{{ $coverImage ?: $coverFallback }}"
+                         alt="Order Image"
+                         class="h-full w-full object-cover"
+                         onerror="this.onerror=null;this.src='{{ $coverFallback }}'">
                 </div>
             </div>
 

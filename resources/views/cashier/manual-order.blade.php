@@ -46,16 +46,10 @@
             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 @foreach($categories as $category)
                     @foreach($category->menus as $menu)
-                    <div x-show="selectedCategory === 'all' || selectedCategory === {{ $category->id }}" class="bg-white dark:bg-[#2d2115] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer group" @click="openMenuDetail({{ $menu->id }}, '{{ addslashes($menu->name) }}', {{ $menu->price }}, '{{ addslashes($category->name) }}', '{{ addslashes($menu->description ?? '') }}', '{{ $menu->image_url ?? '' }}', '{{ $category->slug }}')">
+                    <div x-show="selectedCategory === 'all' || selectedCategory === {{ $category->id }}" class="bg-white dark:bg-[#2d2115] rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer group" @click="openMenuDetail({{ $menu->id }}, '{{ addslashes($menu->name) }}', {{ $menu->price }}, '{{ addslashes($category->name) }}', '{{ addslashes($menu->description ?? '') }}', {{ \Illuminate\Support\Js::from($menu->display_image_url) }}, '{{ $category->slug }}')">
                         <!-- Image -->
                         <div class="aspect-square bg-gradient-to-br from-[#fdfbf7] to-[#f4f2f0] dark:from-[#221910] dark:to-[#2c241b] relative overflow-hidden">
-                            @if($menu->image_url)
-                            <img src="{{ asset('storage/' . $menu->image_url) }}" alt="{{ $menu->name }}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300">
-                            @else
-                            <div class="w-full h-full flex items-center justify-center">
-                                <span class="material-symbols-outlined text-[64px] text-[#897561] dark:text-[#a89c92]">restaurant</span>
-                            </div>
-                            @endif
+                            <img src="{{ $menu->display_image_url }}" alt="{{ $menu->name }}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" onerror="this.onerror=null;this.src='{{ $menu->placeholder_image_url }}'">
                             
                             <!-- Category Badge -->
                             <div class="absolute top-2 left-2 px-2 py-1 bg-white/90 dark:bg-[#2d2115]/90 backdrop-blur-sm rounded-full">
@@ -122,9 +116,14 @@
             <div class="p-4 space-y-3">
                 <template x-for="(item, index) in items" :key="index">
                     <div class="flex items-start gap-2 p-3 bg-[#fdfbf7] dark:bg-[#221910] rounded-xl shadow-sm">
-                        <!-- Item Image Placeholder -->
-                        <div class="size-10 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0">
-                            <span class="material-symbols-outlined text-primary text-[18px]">restaurant</span>
+                        <!-- Item Image -->
+                        <div class="size-10 rounded-lg overflow-hidden bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0">
+                            <template x-if="item.image">
+                                <img :src="resolveMenuImage(item.image)" :alt="item.name" class="w-full h-full object-cover">
+                            </template>
+                            <template x-if="!item.image">
+                                <span class="material-symbols-outlined text-primary text-[18px]">restaurant</span>
+                            </template>
                         </div>
                         
                         <div class="flex-1 min-w-0">
@@ -441,7 +440,7 @@
             <!-- Menu Image -->
             <div class="aspect-[16/10] bg-gradient-to-br from-[#fdfbf7] to-[#f4f2f0] dark:from-[#221910] dark:to-[#2c241b] relative overflow-hidden">
                 <template x-if="selectedMenu.image">
-                    <img :src="'/storage/' + selectedMenu.image" :alt="selectedMenu.name" class="w-full h-full object-cover">
+                    <img :src="resolveMenuImage(selectedMenu.image)" :alt="selectedMenu.name" class="w-full h-full object-cover">
                 </template>
                 <template x-if="!selectedMenu.image">
                     <div class="w-full h-full flex items-center justify-center">
@@ -819,6 +818,15 @@ function manualOrder() {
             document.body.style.overflow = 'hidden';
         },
 
+        resolveMenuImage(image) {
+            if (!image) return '';
+            const raw = String(image);
+            if (/^(https?:)?\/\//.test(raw) || raw.startsWith('/')) {
+                return raw;
+            }
+            return `/storage/${raw.replace(/^\/+/, '')}`;
+        },
+
         closeMenuDetail() {
             this.showMenuDetail = false;
             document.body.style.overflow = 'auto';
@@ -979,6 +987,7 @@ function manualOrder() {
                     name: this.selectedMenu.name,
                     price: itemPrice,
                     category: this.selectedMenu.category,
+                    image: this.selectedMenu.image || '',
                     quantity: this.modalQuantity,
                     notes: itemNotes
                 });
@@ -998,6 +1007,7 @@ function manualOrder() {
                     name: name,
                     price: price,
                     category: category,
+                    image: '',
                     quantity: 1,
                     notes: ''
                 });

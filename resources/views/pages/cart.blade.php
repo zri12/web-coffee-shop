@@ -392,10 +392,26 @@ function cartPage() {
 
         resolveImageUrl(image) {
             if (!image) return '';
-            if (/^(https?:)?\/\//.test(image) || image.startsWith('/')) {
+            const raw = String(image);
+            if (/^(https?:)?\/\//.test(raw) || raw.startsWith('/')) {
+                return raw;
+            }
+            if (raw.includes('menu-images/')) {
+                return `/storage/${raw.replace(/^\/+/, '')}`;
+            }
+            if (raw.startsWith('storage/')) {
+                return `/${raw}`;
+            }
+            if (raw.startsWith('images/')) {
+                return `/${raw}`;
+            }
+            if (raw.includes('/')) {
+                return `/storage/${raw.replace(/^\/+/, '')}`;
+            }
+            if (/\.(png|jpe?g|webp|gif|avif|svg)$/i.test(raw)) {
                 return image;
             }
-            return `/images/menus/${image}`;
+            return `/images/menus/${raw}`;
         },
 
         getUnitPrice(item) {
