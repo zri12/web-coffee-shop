@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 define('LARAVEL_START', microtime(true));
+define('APP_RELEASE', '2026-02-12-r3');
 
 /**
  * Vercel functions run on a read-only filesystem except /tmp.
@@ -49,6 +50,15 @@ setRuntimeEnv('LOG_STACK', 'stderr');
 setRuntimeEnv('CACHE_STORE', getenv('CACHE_STORE') ?: 'array');
 setRuntimeEnv('SESSION_DRIVER', getenv('SESSION_DRIVER') ?: 'cookie');
 
+if (isset($_GET['__ver'])) {
+    header('Content-Type: text/plain; charset=UTF-8');
+    echo APP_RELEASE."\n";
+    echo 'LOG_CHANNEL='.getenv('LOG_CHANNEL')."\n";
+    echo 'APP_CONFIG_CACHE='.getenv('APP_CONFIG_CACHE')."\n";
+    echo 'APP_SERVICES_CACHE='.getenv('APP_SERVICES_CACHE')."\n";
+    exit;
+}
+
 try {
     require __DIR__.'/../vendor/autoload.php';
 
@@ -60,6 +70,7 @@ try {
     header('Content-Type: text/plain; charset=UTF-8');
 
     echo "Bootstrap error\n";
+    echo "release=".APP_RELEASE."\n";
     echo $e->getMessage()."\n";
     echo $e->getFile().':'.$e->getLine()."\n";
 }
