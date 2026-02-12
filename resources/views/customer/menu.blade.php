@@ -176,11 +176,12 @@
                 icon: 'check_circle'
             },
             init() {
-                // persist table number for cart page
-                localStorage.setItem('table_number', this.tableNumber);
-                if (window.Cart?.setTable) {
-                    window.Cart.setTable(this.tableNumber);
+                const previousTable = localStorage.getItem('table_number');
+                if (previousTable && previousTable !== String(this.tableNumber)) {
+                    localStorage.removeItem('cart'); // clear cart when switching tables
                 }
+                localStorage.setItem('table_number', this.tableNumber);
+                window.Cart?.setTable?.(this.tableNumber);
                 this.refreshCart();
             },
             scrollToSection(id) {
@@ -236,35 +237,18 @@
                 if (this.busy) return;
                 this.busy = true;
                 try {
-                    const payload = {
-                        id: menu.id,
-                        name: menu.name,
-                        price: menu.price,
-                        base_price: menu.price,
-                        final_price: menu.price,
-                        finalPrice: menu.price,
-                        quantity: 1,
-                        image: menu.image,
-                        type: this.resolveType(menu.category)
-                    };
-
-                    if (window.Cart?.add) {
-                        window.Cart.setTable?.(this.tableNumber);
-                        window.Cart.add(payload);
-                        this.syncCartTotals(window.Cart.getItems());
-                    } else {
-                        const cart = this.loadCart();
-                        const idx = cart.findIndex(item => (item.id ?? item.menu_id) === menu.id);
-                        if (idx >= 0) {
-                            const currentQty = parseInt(cart[idx].quantity ?? 1, 10) || 1;
-                            cart[idx].quantity = currentQty + 1;
-                            cart[idx].final_price = cart[idx].finalPrice = cart[idx].price ?? menu.price;
-                        } else {
-                            cart.push(payload);
-                        }
-                        this.saveCart(cart);
-                        this.syncCartTotals(cart);
-                    }
+                    const type = this.resolveType(menu.category);
+                    window.Cart?.setTable?.(this.tableNumber);
+                    window.Cart?.add(
+                        menu.id,
+                        menu.name,
+                        menu.price,
+                        menu.image,
+                        1,
+                        { type }
+                    );
+                    const updated = this.loadCart();
+                    this.syncCartTotals(updated);
 
                     this.showToast('Ditambahkan', `${menu.name} masuk keranjang.`, 'check_circle', 'success');
                     setTimeout(() => this.goToCart(), 200);

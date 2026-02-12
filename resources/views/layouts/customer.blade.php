@@ -44,94 +44,84 @@
     </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script>
-        // Lightweight cart helper for QR customer flow (localStorage only)
+        // Lightweight Cart shim (matches signature used by main app Cart)
         (function () {
             const key = 'cart';
             const tableKey = 'table_number';
-            const uid = () => 'cart_' + Math.random().toString(36).slice(2);
+            const uid = () => Date.now() + Math.random();
 
-            const state = {
-                items: [],
-                tableNumber: null,
-            };
-
-            function load() {
+            function loadCart() {
                 try {
-                    state.items = JSON.parse(localStorage.getItem(key) || '[]');
+                    const raw = JSON.parse(localStorage.getItem(key) || '[]');
+                    return Array.isArray(raw) ? raw : [];
                 } catch (e) {
-                    state.items = [];
+                    return [];
                 }
-                state.items = state.items.map(normalize);
-                state.tableNumber = localStorage.getItem(tableKey) || null;
             }
 
-            function persist() {
-                localStorage.setItem(key, JSON.stringify(state.items));
-                if (state.tableNumber) {
-                    localStorage.setItem(tableKey, state.tableNumber);
-                }
-                window.dispatchEvent(new CustomEvent('cart-updated', { detail: state.items }));
+            function saveCart(cart) {
+                localStorage.setItem(key, JSON.stringify(cart));
+                window.dispatchEvent(new CustomEvent('cart-updated', { detail: cart }));
             }
 
             function normalize(item) {
-                if (!item.cartItemId) item.cartItemId = uid();
-                if (!item.quantity || item.quantity < 1) item.quantity = 1;
-                if (item.price === undefined) item.price = item.final_price ?? item.finalPrice ?? 0;
-                if (item.final_price === undefined) item.final_price = item.price;
-                if (item.finalPrice === undefined) item.finalPrice = item.final_price;
-                return item;
+                const qty = Math.max(1, parseInt(item.quantity ?? 1, 10) || 1);
+                const base = Number(item.base_price ?? item.price ?? item.total_price ?? item.final_price ?? 0) || 0;
+                const totalPerItem = Number(item.final_price_per_item ?? item.final_price ?? item.total_price ?? base) || 0;
+                return {
+                    ...item,
+                    id: item.id,
+                    product_id: item.id,
+                    name: item.name,
+                    product_name: item.name,
+                    quantity: qty,
+                    base_price: base,
+                    price: base,
+                    total_price: totalPerItem,
+                    final_price: totalPerItem,
+                    final_price_per_item: totalPerItem,
+                    final_price_total: totalPerItem * qty,
+                    subtotal: totalPerItem * qty,
+                    cartItemId: item.cartItemId || uid(),
+                };
             }
 
-            load();
+            if (!window.Cart) window.Cart = {};
 
-            window.Cart = {
-                setTable(number) {
-                    state.tableNumber = number;
-                    persist();
-                },
-                save: persist,
-                add(item) {
-                    const normalized = normalize({ ...item });
-                    const idx = state.items.findIndex(i => (i.id ?? i.menu_id) === normalized.id);
-                    if (idx >= 0) {
-                        state.items[idx].quantity = (parseInt(state.items[idx].quantity || 1, 10) || 1) + 1;
-                    } else {
-                        state.items.push(normalized);
-                    }
-                    persist();
-                },
-                remove(cartItemId) {
-                    state.items = state.items.filter(i => (i.cartItemId ?? '') !== cartItemId);
-                    persist();
-                },
-                clear() {
-                    state.items = [];
-                    persist();
-                },
-                items: state.items,
-                getItems() {
-                    return state.items;
-                },
-                getCount() {
-                    return state.items.reduce((s, i) => s + (parseInt(i.quantity || 1, 10) || 1), 0);
-                },
-                getTotal() {
-                    return state.items.reduce((s, i) => {
-                        const qty = parseInt(i.quantity || 1, 10) || 1;
-                        const price = Number(i.final_price ?? i.finalPrice ?? i.price ?? 0) || 0;
-                        return s + price * qty;
-                    }, 0);
-                },
-                formatPrice(v) {
-                    const n = Number(v) || 0;
-                    return 'Rp ' + n.toLocaleString('id-ID');
-                },
-                recalculateItem(item) {
-                    return item;
-                },
-                updateBadge() {}, // no-op in mobile layout
-                tableNumber: () => state.tableNumber,
+            window.Cart.add = function (id, name, basePrice, image = null, quantity = 1, options = {}) {
+                const cart = loadCart();
+                const normalized = normalize({
+                    id,
+                    name,
+                    image,
+                    quantity,
+                    type: options.type || 'beverage',
+                    options,
+                    base_price: basePrice,
+                });
+                cart.push(normalized);
+                saveCart(cart);
+                return normalized;
             };
+
+            window.Cart.remove = function (identifier) {
+                const cart = loadCart().filter(item => item.cartItemId !== identifier && item.id !== identifier);
+                saveCart(cart);
+            };
+
+            window.Cart.clear = function () {
+                saveCart([]);
+            };
+
+            window.Cart.items = loadCart();
+            window.Cart.getItems = () => loadCart();
+            window.Cart.getCount = () => loadCart().reduce((s, i) => s + (parseInt(i.quantity || 1, 10) || 1), 0);
+            window.Cart.getTotal = () => loadCart().reduce((s, i) => s + (Number(i.final_price_total ?? i.subtotal ?? 0) || 0), 0);
+            window.Cart.save = saveCart;
+            window.Cart.setTable = function (number) { localStorage.setItem(tableKey, number); };
+            window.Cart.tableNumber = () => localStorage.getItem(tableKey);
+            window.Cart.formatPrice = v => 'Rp ' + (Number(v) || 0).toLocaleString('id-ID');
+            window.Cart.updateBadge = function () {}; // no-op here
         })();
     </script>
     

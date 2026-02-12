@@ -42,7 +42,8 @@
                         </div>
                         <h3 class="text-lg font-bold text-text-main dark:text-white mb-2">Keranjang kosong</h3>
                         <p class="text-text-subtle dark:text-gray-400 mb-6">Belum ada item di keranjang Anda.</p>
-                        <a :href="window.appTableNumber ? `/order/${window.appTableNumber}/menu` : '{{ route('menu.index') }}'" class="inline-flex items-center justify-center h-12 px-8 rounded-full bg-primary hover:bg-primary-dark text-white text-sm font-bold transition-colors shadow-sm">
+                        <a x-data x-bind:href="(localStorage.getItem('table_number') ? `/order/${localStorage.getItem('table_number')}/menu` : '{{ route('menu.index') }}')"
+                           class="inline-flex items-center justify-center h-12 px-8 rounded-full bg-primary hover:bg-primary-dark text-white text-sm font-bold transition-colors shadow-sm">
                             Lihat Menu
                         </a>
                     </div>
