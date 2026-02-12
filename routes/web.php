@@ -25,7 +25,17 @@ use App\Http\Controllers\Dashboard\UserController as DashboardUserController;
 Route::get('/ping', fn () => 'Laravel OK');
 Route::get('/menu-ai-image/{menu}', function ($menu, Request $request) {
     $name = trim((string) $request->query('name', 'Cafe Menu'));
+    $hint = trim((string) $request->query('hint', 'food photography'));
     $safeName = htmlspecialchars(Str::limit($name, 28), ENT_QUOTES, 'UTF-8');
+
+    // Real AI image endpoint for menu cards.
+    if (!str_starts_with((string) $menu, 'placeholder-')) {
+        $prompt = rawurlencode("{$hint}, {$name}, realistic, studio lighting, no text, high detail");
+        $seed = abs(crc32((string) $menu));
+        $url = "https://image.pollinations.ai/prompt/{$prompt}?width=1024&height=1024&seed={$seed}&model=flux";
+
+        return redirect()->away($url);
+    }
 
     $hash = abs(crc32((string) $menu));
     $palettes = [

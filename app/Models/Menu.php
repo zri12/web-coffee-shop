@@ -53,13 +53,31 @@ class Menu extends Model
             if (str_contains($normalized, 'menu-images/')) {
                 return asset('storage/' . $normalized);
             }
+        }
 
-            return asset('images/menus/' . basename($normalized));
+        return $this->ai_image_url;
+    }
+
+    /**
+     * AI photo URL based on menu name/category.
+     */
+    public function getAiImageUrlAttribute(): string
+    {
+        $typeHint = 'food photography';
+        $name = strtolower($this->name ?? '');
+
+        if (str_contains($name, 'latte') || str_contains($name, 'coffee') || str_contains($name, 'brew') || str_contains($name, 'espresso') || str_contains($name, 'cappuccino')) {
+            $typeHint = 'coffee drink product photography';
+        } elseif (str_contains($name, 'cake') || str_contains($name, 'dessert') || str_contains($name, 'tiramisu')) {
+            $typeHint = 'dessert product photography';
+        } elseif (str_contains($name, 'croissant') || str_contains($name, 'bread') || str_contains($name, 'snack')) {
+            $typeHint = 'bakery food photography';
         }
 
         return route('menu.ai-image', [
-            'menu' => $this->id,
+            'menu' => 'ai-' . $this->id,
             'name' => $this->name,
+            'hint' => $typeHint,
         ]);
     }
 
@@ -70,7 +88,7 @@ class Menu extends Model
     {
         return route('menu.ai-image', [
             'menu' => 'placeholder-' . $this->id,
-            'name' => $this->name,
+            'name' => $this->name ?: 'Menu',
         ]);
     }
 
