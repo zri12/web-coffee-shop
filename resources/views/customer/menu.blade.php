@@ -169,6 +169,8 @@
             </button>
         </div>
     </div>
+
+    @include('components.product-detail-modal')
 </div>
 @endsection
 
