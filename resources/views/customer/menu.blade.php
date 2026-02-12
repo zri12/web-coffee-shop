@@ -266,12 +266,11 @@
             },
             saveCart(cart) {
                 if (window.Cart?.save) {
-                    window.Cart.items = cart;
-                    window.Cart.save();
-                } else {
-                    localStorage.setItem('cart', JSON.stringify(cart));
-                    window.dispatchEvent(new CustomEvent('cart-updated', { detail: cart }));
+                    window.Cart.save(cart);
+                    return;
                 }
+                localStorage.setItem('cart', JSON.stringify(cart));
+                window.dispatchEvent(new CustomEvent('cart-updated', { detail: cart }));
             },
             syncCartTotals(cart) {
                 const safeCart = cart || [];
@@ -404,25 +403,41 @@
 
                     const options = this.buildOptions();
                     options.type = this.selectedProduct.type;
-                    const finalPrice = this.calculatePriceWithOptions(this.selectedProduct.priceRaw, this.selectedProduct.type, options);
-
-                    const cart = this.loadCart();
-                    cart.push({
-                        id: this.selectedProduct.id,
-                        name: this.selectedProduct.name,
-                        price: this.selectedProduct.priceRaw,
-                        base_price: this.selectedProduct.priceRaw,
-                        final_price: finalPrice,
-                        final_price_per_item: finalPrice,
-                        final_price_total: finalPrice,
-                        quantity: 1,
-                        image: this.selectedProduct.image,
-                        type: this.selectedProduct.type,
+                    const finalPrice = this.calculatePriceWithOptions(
+                        this.selectedProduct.priceRaw,
+                        this.selectedProduct.type,
                         options
-                    });
-                    this.saveCart(cart);
-                    // Immediately sync bar without waiting for events
-                    this.syncCartTotals(cart);
+                    );
+
+                    if (window.Cart?.add) {
+                        window.Cart.add(
+                            this.selectedProduct.id,
+                            this.selectedProduct.name,
+                            this.selectedProduct.priceRaw,
+                            this.selectedProduct.image,
+                            1,
+                            options
+                        );
+                        const cart = this.loadCartPreferred();
+                        this.syncCartTotals(cart);
+                    } else {
+                        const cart = this.loadCartPreferred();
+                        cart.push({
+                            id: this.selectedProduct.id,
+                            name: this.selectedProduct.name,
+                            price: this.selectedProduct.priceRaw,
+                            base_price: this.selectedProduct.priceRaw,
+                            final_price: finalPrice,
+                            final_price_per_item: finalPrice,
+                            final_price_total: finalPrice,
+                            quantity: 1,
+                            image: this.selectedProduct.image,
+                            type: this.selectedProduct.type,
+                            options
+                        });
+                        this.saveCart(cart);
+                        this.syncCartTotals(cart);
+                    }
                     this.showDetail = false;
                     document.body.style.overflow = '';
                     this.showToast('Ditambahkan', `${this.selectedProduct.name} masuk keranjang.`, 'check_circle', 'success');
