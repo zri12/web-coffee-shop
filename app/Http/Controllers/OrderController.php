@@ -44,11 +44,11 @@ class OrderController extends Controller
             // Map order_type: dine_in for orders with table number, takeaway for no table
             $orderType = $request->table_number ? 'dine_in' : 'takeaway';
             
-            // Payment policy:
-            // - QRIS online: pending + waiting_payment
-            // - Cash (pay at cashier): unpaid + waiting_cashier_confirmation
+            // Payment policy (aligned with DB enum: pending/processing/completed/cancelled)
+            // - QRIS online: payment_status pending, order status pending
+            // - Cash (pay at cashier): payment_status unpaid, order status pending
             $paymentStatus = $request->payment_method === 'cash' ? 'unpaid' : 'pending';
-            $orderStatus = $request->payment_method === 'cash' ? 'waiting_cashier_confirmation' : 'waiting_payment';
+            $orderStatus = 'pending';
             
             $order = Order::create([
                 'customer_name' => $request->customer_name,
