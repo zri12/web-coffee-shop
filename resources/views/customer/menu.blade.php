@@ -89,7 +89,6 @@
                                         <button
                                             type="button"
                                             @click.prevent.stop='addToCart(@js($menuPayload))'
-                                            onclick='return window.addMenuItem && addMenuItem(@js($menuPayload), {{ (int) $table->table_number }});'
                                             class="px-4 py-2 rounded-full bg-[#c67c4e] text-white text-sm font-semibold hover:bg-[#b06b3e] active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed"
                                             :disabled="busy"
                                         >
@@ -241,8 +240,36 @@
                 if (this.busy) return;
                 this.busy = true;
                 try {
+                    // ensure table stored
                     window.Cart?.setTable?.(this.tableNumber);
-                    addMenuItem(menu, this.tableNumber);
+                    localStorage.setItem('table_number', this.tableNumber);
+
+                    const cat = (menu.category || '').toLowerCase();
+                    const type = cat.includes('coffee') || cat.includes('kopi') ? 'beverage'
+                               : cat.includes('snack') ? 'snack'
+                               : cat.includes('dessert') ? 'dessert'
+                               : 'food';
+
+                    if (window.Cart?.add) {
+                        window.Cart.add(menu.id, menu.name, menu.price, menu.image, 1, { type });
+                    } else {
+                        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+                        cart.push({
+                            id: menu.id,
+                            name: menu.name,
+                            price: menu.price,
+                            base_price: menu.price,
+                            final_price: menu.price,
+                            final_price_per_item: menu.price,
+                            final_price_total: menu.price,
+                            quantity: 1,
+                            image: menu.image,
+                            type,
+                        });
+                        localStorage.setItem('cart', JSON.stringify(cart));
+                        window.dispatchEvent(new CustomEvent('cart-updated', { detail: cart }));
+                    }
+
                     this.refreshCart();
                     this.showToast('Ditambahkan', `${menu.name} masuk keranjang.`, 'check_circle', 'success');
                     setTimeout(() => this.goToCart(), 150);
@@ -265,59 +292,6 @@
 @endpush
 
 @push('scripts')
-<script>
-    // Global fallback so click still works if Alpine fails
-    window.addMenuItem = function(menu, tableNumber) {
-        try {
-            // Normalize payload
-            if (!menu || typeof menu !== 'object') throw new Error('Invalid payload');
-
-            if (tableNumber) {
-                const prev = localStorage.getItem('table_number');
-                if (prev && prev !== String(tableNumber)) {
-                    localStorage.removeItem('cart');
-                }
-                localStorage.setItem('table_number', tableNumber);
-            }
-            const cat = (menu.category || '').toLowerCase();
-            const type = cat.includes('coffee') || cat.includes('kopi') ? 'beverage'
-                       : cat.includes('snack') ? 'snack'
-                       : cat.includes('dessert') ? 'dessert'
-                       : 'food';
-
-            const add = window.Cart && typeof window.Cart.add === 'function'
-                ? window.Cart.add.bind(window.Cart)
-                : null;
-
-            if (add) {
-                window.Cart.setTable?.(tableNumber);
-                add(menu.id, menu.name, menu.price, menu.image, 1, { type });
-            } else {
-                const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-                cart.push({
-                    id: menu.id,
-                    name: menu.name,
-                    price: menu.price,
-                    base_price: menu.price,
-                    final_price: menu.price,
-                    final_price_per_item: menu.price,
-                    final_price_total: menu.price,
-                    quantity: 1,
-                    image: menu.image,
-                    type
-                });
-                localStorage.setItem('cart', JSON.stringify(cart));
-                window.dispatchEvent(new CustomEvent('cart-updated', { detail: cart }));
-            }
-            // navigate to cart page
-            window.location.href = "{{ route('cart') }}";
-            return false;
-        } catch (e) {
-            console.error(e);
-            alert('Tidak bisa menambah item, coba lagi.');
-            return false;
-        }
-    }
-</script>
+<!-- no extra scripts -->
 @endpush
 
