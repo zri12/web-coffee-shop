@@ -213,6 +213,14 @@
                 if (s.includes('dessert')) return 'dessert';
                 return 'food';
             },
+            getProductType(slug = '') {
+                const s = (slug || '').toLowerCase();
+                if (s.includes('coffee') || s.includes('kopi') || s.includes('drink')) return 'beverage';
+                if (s.includes('snack')) return 'snack';
+                if (s.includes('dessert')) return 'dessert';
+                if (s.includes('food') || s.includes('makanan')) return 'food';
+                return 'food';
+            },
             loadCart() {
                 if (window.Cart?.getItems) return window.Cart.getItems();
                 try {
