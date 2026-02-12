@@ -238,12 +238,21 @@
                 return 'food';
             },
             loadCart() {
-                if (window.Cart?.getItems) return window.Cart.getItems();
                 try {
-                    return JSON.parse(localStorage.getItem('cart') || '[]');
-                } catch (e) {
-                    return [];
+                    const raw = localStorage.getItem('cart');
+                    if (raw) {
+                        const parsed = JSON.parse(raw);
+                        if (Array.isArray(parsed)) return parsed;
+                    }
+                } catch (e) { /* ignore */ }
+
+                if (window.Cart?.getItems) {
+                    try {
+                        const items = window.Cart.getItems();
+                        if (Array.isArray(items)) return items;
+                    } catch (e) { /* ignore */ }
                 }
+                return [];
             },
             saveCart(cart) {
                 if (window.Cart?.save) {
