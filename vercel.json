@@ -1,5 +1,12 @@
 {
+  "version": 2,
+  "builds": [
+    { "src": "api/index.php", "use": "@vercel/php" }
+  ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "/api/index.php" }
+    { "src": "/build/(.*)", "dest": "/public-laravel/build/$1" },
+    { "src": "/(favicon\\.ico|robots\\.txt)$", "dest": "/public-laravel/$1" },
+    { "src": "/(.*\\.(css|js|mjs|png|jpg|jpeg|gif|svg|ico|webp|woff|woff2|ttf|eot|map))$", "dest": "/public-laravel/$1" },
+    { "src": "/(.*)", "dest": "/api/index.php" }
   ]
 }
