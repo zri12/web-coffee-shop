@@ -42,12 +42,15 @@ class CashierController extends Controller
         
         // Categorize orders
         $waitingPaymentOrders = $allActiveOrders->filter(function($order) {
-            return in_array($order->status, ['waiting_payment', 'pending']) && $order->payment_status === 'unpaid';
+            $paymentStatus = strtolower((string)$order->payment_status);
+            $isWaitingPayment = in_array($paymentStatus, ['unpaid', 'pending', 'waiting_payment']);
+            return $isWaitingPayment && strtolower((string)$order->status) !== 'processing';
         });
         
         $paidOrders = $allActiveOrders->filter(function($order) {
-            return ($order->status === 'paid') || 
-                   ($order->status === 'pending' && $order->payment_status === 'paid');
+            $paymentStatus = strtolower((string)$order->payment_status);
+            $status = strtolower((string)$order->status);
+            return $paymentStatus === 'paid' && in_array($status, ['pending', 'paid']);
         });
         
         $preparingOrders = $allActiveOrders->filter(function($order) {

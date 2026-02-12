@@ -144,7 +144,7 @@
                             @endif
                         </div>
                     </div>
-                    <span class="text-lg font-black text-primary">Rp {{ number_format($order->total_amount, 0, ',', '.') }}</span>
+                    <span class="text-lg font-black text-primary">Rp {{ number_format($order->display_total_amount, 0, ',', '.') }}</span>
                 </div>
 
                 <!-- Items List (Max 2) -->
@@ -253,7 +253,7 @@
                             @endif
                         </div>
                     </div>
-                    <span class="text-lg font-black text-primary">Rp {{ number_format($order->total_amount, 0, ',', '.') }}</span>
+                    <span class="text-lg font-black text-primary">Rp {{ number_format($order->display_total_amount, 0, ',', '.') }}</span>
                 </div>
 
                 <!-- Items List -->
@@ -340,7 +340,7 @@
                             @endif
                         </div>
                     </div>
-                    <span class="text-lg font-black text-primary">Rp {{ number_format($order->total_amount, 0, ',', '.') }}</span>
+                    <span class="text-lg font-black text-primary">Rp {{ number_format($order->display_total_amount, 0, ',', '.') }}</span>
                 </div>
 
                 <!-- Items List -->
@@ -422,7 +422,7 @@
                             @endif
                         </div>
                     </div>
-                    <span class="text-lg font-black text-primary">Rp {{ number_format($order->total_amount, 0, ',', '.') }}</span>
+                    <span class="text-lg font-black text-primary">Rp {{ number_format($order->display_total_amount, 0, ',', '.') }}</span>
                 </div>
 
                 <!-- Items List -->

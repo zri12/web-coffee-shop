@@ -44,8 +44,10 @@ class OrderController extends Controller
             // Map order_type: dine_in for orders with table number, takeaway for no table
             $orderType = $request->table_number ? 'dine_in' : 'takeaway';
             
-            // Determine payment status based on method
-            $paymentStatus = $request->payment_method === 'cash' ? 'unpaid' : 'pending';
+            // Payment status policy:
+            // - cash  : unpaid (paid at cashier confirmation)
+            // - qris  : waiting_payment (must not be paid on creation)
+            $paymentStatus = $request->payment_method === 'cash' ? 'unpaid' : 'waiting_payment';
             
             $order = Order::create([
                 'customer_name' => $request->customer_name,
@@ -69,9 +71,29 @@ class OrderController extends Controller
                     throw new \Exception("Menu {$item['name']} tidak tersedia");
                 }
                 
-                // Use finalPrice from cart if available, otherwise use menu price
-                $unitPrice = isset($item['finalPrice']) ? $item['finalPrice'] : $menu->price;
-                $itemSubtotal = $unitPrice * $item['quantity'];
+                $quantity = max(1, (int)($item['quantity'] ?? 1));
+                $unitPrice = (float) (
+                    $item['final_price_per_item']
+                    ?? $item['finalPrice']
+                    ?? $item['final_price']
+                    ?? $item['total_price']
+                    ?? $item['price']
+                    ?? $menu->price
+                );
+
+                if ($unitPrice <= 0) {
+                    throw new \Exception("Harga item {$menu->name} tidak valid.");
+                }
+
+                $itemSubtotal = (float) (
+                    $item['final_price_total']
+                    ?? $item['subtotal']
+                    ?? ($unitPrice * $quantity)
+                );
+
+                if ($itemSubtotal <= 0) {
+                    $itemSubtotal = $unitPrice * $quantity;
+                }
                 
                 // Format options/customizations for notes
                 $notes = '';
@@ -143,7 +165,7 @@ class OrderController extends Controller
                 $orderItemData = [
                     'order_id' => $order->id,
                     'menu_id' => $menu->id,
-                    'quantity' => $item['quantity'],
+                    'quantity' => $quantity,
                     'unit_price' => $unitPrice,
                     'subtotal' => $itemSubtotal,
                     'notes' => $notes,
@@ -160,20 +182,23 @@ class OrderController extends Controller
                 $itemsDetails[] = [
                     'id' => $menu->id,
                     'price' => $unitPrice,
-                    'quantity' => $item['quantity'],
+                    'quantity' => $quantity,
                     'name' => substr($menu->name . ' ' . $notes, 0, 50), // Midtrans name limit
                 ];
 
                 $totalAmount += $itemSubtotal;
             }
 
+            if ($totalAmount <= 0) {
+                throw new \Exception('Total pesanan tidak valid. Silakan ulangi pemesanan.');
+            }
+
             // Update order total
             $order->update(['total_amount' => $totalAmount]);
 
             // Create payment record
-            // For cash: status = 'unpaid' (will be paid at cashier)
-            // For QRIS: status = 'pending' (waiting for online payment)
-            $paymentStatus = $request->payment_method === 'cash' ? 'unpaid' : 'pending';
+            // Keep payment record status aligned with order payment_status
+            $paymentStatus = $request->payment_method === 'cash' ? 'unpaid' : 'waiting_payment';
             
             $payment = Payment::create([
                 'order_id' => $order->id,

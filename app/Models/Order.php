@@ -123,6 +123,30 @@ class Order extends Model
         return 'Rp ' . number_format($this->total_amount, 0, ',', '.');
     }
 
+    public function getDisplayTotalAmountAttribute(): float
+    {
+        $storedTotal = (float) $this->total_amount;
+        if ($storedTotal > 0) {
+            return $storedTotal;
+        }
+
+        if (!$this->relationLoaded('items')) {
+            return $storedTotal;
+        }
+
+        $fallback = $this->items->sum(function ($item) {
+            if (!is_null($item->subtotal) && (float)$item->subtotal > 0) {
+                return (float) $item->subtotal;
+            }
+
+            $unitPrice = (float) ($item->unit_price ?? $item->price ?? 0);
+            $qty = max(1, (int) ($item->quantity ?? 1));
+            return $unitPrice * $qty;
+        });
+
+        return (float) $fallback;
+    }
+
     /**
      * Get status label
      */

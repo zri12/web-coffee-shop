@@ -29,7 +29,7 @@ class PaymentController extends Controller
                 'order_id' => $order->id,
                 'amount' => $order->total_amount,
                 'method' => 'qris',
-                'status' => 'pending',
+                'status' => 'waiting_payment',
             ]);
 
             // Prepare Midtrans parameters
@@ -84,7 +84,8 @@ class PaymentController extends Controller
 
                 $order->update([
                     'payment_status' => 'paid',
-                    'status' => 'confirmed',
+                    // keep pending so cashier can move to preparing via Start Preparing
+                    'status' => 'pending',
                 ]);
 
                 return redirect()->route('order.success', $order->order_number)
@@ -146,24 +147,25 @@ class PaymentController extends Controller
 
             $payment = $order->payment;
 
-            // Handle based on transaction status
-            if ($statusCode == 200) {
-                if ($fraud == 'challenge') {
-                    // Fraud challenge, payment in review
+            $transactionStatus = strtolower((string)($notif->transaction_status ?? ''));
+
+            // Handle based on Midtrans transaction status
+            if (in_array($transactionStatus, ['settlement', 'capture'])) {
+                if ($fraud === 'challenge') {
                     $payment->update(['status' => 'challenge']);
+                    $order->update(['payment_status' => 'waiting_payment']);
                 } else {
-                    // Settlement or successful payment
                     $payment->markAsPaid();
                     $order->update([
                         'payment_status' => 'paid',
-                        'status' => 'confirmed',
+                        'status' => 'pending',
                     ]);
                 }
-            } elseif ($statusCode == 201 || $statusCode == 202) {
-                // Pending payment
-                $payment->update(['status' => 'pending']);
+            } elseif (in_array($transactionStatus, ['pending'])) {
+                $payment->update(['status' => 'waiting_payment']);
+                $order->update(['payment_status' => 'waiting_payment']);
             } else {
-                // Denied or failed
+                // deny/expire/cancel/failure
                 $payment->markAsFailed();
                 $order->update(['payment_status' => 'failed']);
             }

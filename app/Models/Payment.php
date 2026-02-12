@@ -66,7 +66,7 @@ class Payment extends Model
      */
     public function isPending(): bool
     {
-        return $this->status === 'pending';
+        return in_array($this->status, ['pending', 'waiting_payment']);
     }
 
     /**
@@ -79,7 +79,7 @@ class Payment extends Model
 
     public function scopePending($query)
     {
-        return $query->where('status', 'pending');
+        return $query->whereIn('status', ['pending', 'waiting_payment']);
     }
 
     public function scopeFailed($query)
@@ -114,6 +114,7 @@ class Payment extends Model
     public function getStatusLabelAttribute(): string
     {
         return match ($this->status) {
+            'waiting_payment' => 'Menunggu Pembayaran',
             'pending' => 'Menunggu',
             'paid' => 'Lunas',
             'failed' => 'Gagal',
