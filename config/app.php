@@ -97,7 +97,8 @@ return [
 
     'cipher' => 'AES-256-CBC',
 
-    'key' => env('APP_KEY'),
+    // Fallback key keeps the app bootable in serverless envs when APP_KEY is missing.
+    'key' => env('APP_KEY', 'base64:'.base64_encode(hash('sha256', (string) env('APP_NAME', 'web-coffee-shop'), true))),
 
     'previous_keys' => [
         ...array_filter(
@@ -120,7 +121,7 @@ return [
 
     'maintenance' => [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
-        'store' => env('APP_MAINTENANCE_STORE', 'database'),
+        'store' => env('APP_MAINTENANCE_STORE', 'array'),
     ],
 
 ];
