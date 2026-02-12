@@ -79,13 +79,20 @@
                                     @if($menu->is_available)
                                         <button
                                             type="button"
-                                            @click="addToCart({
+                                            @click.prevent.stop="addToCart({
                                                 id: {{ $menu->id }},
                                                 name: @json($menu->name),
                                                 price: {{ (float) $menu->price }},
                                                 image: @json($menu->display_image_url),
                                                 category: @json($menu->category->slug ?? $category->slug ?? '')
                                             })"
+                                            onclick="return window.addMenuItem && addMenuItem({
+                                                id: {{ $menu->id }},
+                                                name: @json($menu->name),
+                                                price: {{ (float) $menu->price }},
+                                                image: @json($menu->display_image_url),
+                                                category: @json($menu->category->slug ?? $category->slug ?? '')
+                                            }, {{ (int) $table->table_number }});"
                                             class="px-4 py-2 rounded-full bg-[#c67c4e] text-white text-sm font-semibold hover:bg-[#b06b3e] active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed"
                                             :disabled="busy"
                                         >
@@ -237,21 +244,10 @@
                 if (this.busy) return;
                 this.busy = true;
                 try {
-                    const type = this.resolveType(menu.category);
-                    window.Cart?.setTable?.(this.tableNumber);
-                    window.Cart?.add(
-                        menu.id,
-                        menu.name,
-                        menu.price,
-                        menu.image,
-                        1,
-                        { type }
-                    );
-                    const updated = this.loadCart();
-                    this.syncCartTotals(updated);
-
+                    addMenuItem(menu, this.tableNumber);
+                    this.refreshCart();
                     this.showToast('Ditambahkan', `${menu.name} masuk keranjang.`, 'check_circle', 'success');
-                    setTimeout(() => this.goToCart(), 200);
+                    setTimeout(() => this.goToCart(), 150);
                 } catch (error) {
                     this.showToast('Error', 'Terjadi kendala. Coba lagi.', 'error', 'error');
                 } finally {
@@ -270,4 +266,56 @@
 </script>
 @endpush
 
+@push('scripts')
+<script>
+    // Global fallback so click still works if Alpine fails
+    window.addMenuItem = function(menu, tableNumber) {
+        try {
+            if (tableNumber) {
+                const prev = localStorage.getItem('table_number');
+                if (prev && prev !== String(tableNumber)) {
+                    localStorage.removeItem('cart');
+                }
+                localStorage.setItem('table_number', tableNumber);
+            }
+            const type = (menu.category || '').toLowerCase().includes('coffee') ? 'beverage'
+                       : (menu.category || '').toLowerCase().includes('snack') ? 'snack'
+                       : (menu.category || '').toLowerCase().includes('dessert') ? 'dessert'
+                       : 'food';
+
+            const add = window.Cart && typeof window.Cart.add === 'function'
+                ? window.Cart.add.bind(window.Cart)
+                : null;
+
+            if (add) {
+                window.Cart.setTable?.(tableNumber);
+                add(menu.id, menu.name, menu.price, menu.image, 1, { type });
+            } else {
+                const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+                cart.push({
+                    id: menu.id,
+                    name: menu.name,
+                    price: menu.price,
+                    base_price: menu.price,
+                    final_price: menu.price,
+                    final_price_per_item: menu.price,
+                    final_price_total: menu.price,
+                    quantity: 1,
+                    image: menu.image,
+                    type
+                });
+                localStorage.setItem('cart', JSON.stringify(cart));
+                window.dispatchEvent(new CustomEvent('cart-updated', { detail: cart }));
+            }
+            // navigate to cart page
+            window.location.href = "{{ route('cart') }}";
+            return false;
+        } catch (e) {
+            console.error(e);
+            alert('Tidak bisa menambah item, coba lagi.');
+            return false;
+        }
+    }
+</script>
+@endpush
 
