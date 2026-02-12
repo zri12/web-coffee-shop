@@ -66,13 +66,15 @@
                     <div class="flex gap-3">
                         <button @click="temperature = 'ice'" 
                                 :class="temperature === 'ice' ? 'bg-[#C67C4E] text-white' : 'bg-[#F9F9F9] text-[#2F2D2C]'"
-                                class="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all">
-                            â„ï¸ Ice
+                                class="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]">ac_unit</span>
+                            <span>Ice</span>
                         </button>
                         <button @click="temperature = 'hot'" 
                                 :class="temperature === 'hot' ? 'bg-[#C67C4E] text-white' : 'bg-[#F9F9F9] text-[#2F2D2C]'"
-                                class="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all">
-                            ðŸ”¥ Hot
+                                class="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]">local_fire_department</span>
+                            <span>Hot</span>
                         </button>
                     </div>
                 </div>
