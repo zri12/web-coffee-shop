@@ -358,6 +358,16 @@ function cartPage() {
         taxRate: 0,
         serviceFee: 0,
         tableNumber: '',
+
+        loadLocalCart() {
+            try {
+                const raw = localStorage.getItem('cart');
+                const parsed = raw ? JSON.parse(raw) : [];
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                return [];
+            }
+        },
         
         get totalItems() {
             return this.items.reduce((sum, item) => sum + (Math.max(1, parseInt(item.quantity || 1, 10) || 1)), 0);
@@ -459,14 +469,24 @@ function cartPage() {
         },
         
         init() {
-            // Sync with global cart
-            this.items = window.Cart.items;
-            
-            // Listen for global updates
+            // Sync with localStorage first for customer QR flow
+            this.items = this.loadLocalCart();
+
+            // Listen for global updates and storage changes
             window.addEventListener('cart-updated', (e) => {
-                this.items = e.detail || window.Cart.items || [];
+                this.items = e.detail || this.loadLocalCart();
             });
-            
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'cart') {
+                    this.items = this.loadLocalCart();
+                }
+            });
+
+            // Fallback to Cart.items if still empty
+            if (this.items.length === 0 && window.Cart && Array.isArray(window.Cart.items)) {
+                this.items = window.Cart.items;
+            }
+
             // Force valid table number if present in global scope (for QR flow compatibility in cart page)
             const storedTable = window.appTableNumber || localStorage.getItem('table_number') || '';
             if (storedTable) {
