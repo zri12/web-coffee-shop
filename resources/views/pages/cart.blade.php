@@ -284,10 +284,10 @@
                                 <label class="block text-sm font-bold text-text-main dark:text-white mb-2">Nomor Meja</label>
                                 <div class="relative">
                                     <input type="number" name="table_number" min="0"
-                                           class="w-full pl-10 pr-4 py-3 bg-background-light dark:bg-background-dark border border-[#e6e0db] dark:border-[#3E2723] rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all {{ isset($table) ? 'bg-gray-100 cursor-not-allowed' : '' }}" 
+                                           x-model="tableNumber"
+                                           class="w-full pl-10 pr-4 py-3 bg-background-light dark:bg-background-dark border border-[#e6e0db] dark:border-[#3E2723] rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-gray-100 cursor-not-allowed" 
                                            placeholder="Contoh: 5"
-                                           value="{{ isset($table) ? $table->table_number : '' }}"
-                                           {{ isset($table) ? 'readonly' : '' }}>
+                                           readonly>
                                     <span class="material-symbols-outlined text-text-subtle dark:text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 text-[20px]">table_restaurant</span>
                                 </div>
                             </div>
@@ -356,6 +356,7 @@ function cartPage() {
         paymentMethod: 'cash',
         taxRate: 0,
         serviceFee: 0,
+        tableNumber: '',
         
         get totalItems() {
             return this.items.reduce((sum, item) => sum + (Math.max(1, parseInt(item.quantity || 1, 10) || 1)), 0);
@@ -466,8 +467,11 @@ function cartPage() {
             });
             
             // Force valid table number if present in global scope (for QR flow compatibility in cart page)
-            if (window.appTableNumber) {
-                 window.Cart.tableNumber = window.appTableNumber;
+            const storedTable = window.appTableNumber || localStorage.getItem('table_number') || '';
+            if (storedTable) {
+                this.tableNumber = storedTable;
+                window.Cart.tableNumber = storedTable;
+                localStorage.setItem('table_number', storedTable);
             }
         }
     }

@@ -126,12 +126,13 @@
                 >
                     <span class="material-symbols-outlined">refresh</span>
                 </button>
-                <a
-                    href="{{ route('cart') }}"
+                <button
+                    type="button"
+                    @click="goToCart()"
                     class="bg-white text-[#2f2d2c] px-4 py-2 rounded-full text-sm font-semibold hover:bg-[#f6f2ed] transition"
                 >
-                    Checkout
-                </a>
+                    View Cart
+                </button>
             </div>
         </div>
     </div>
@@ -163,6 +164,7 @@
 <script>
     function menuPage() {
         return {
+            tableNumber: @json($table->table_number),
             cartCount: 0,
             cartTotal: 0,
             busy: false,
@@ -174,8 +176,12 @@
                 icon: 'check_circle'
             },
             init() {
-                const cart = this.loadCart();
-                this.syncCartTotals(cart);
+                // persist table number for cart page
+                localStorage.setItem('table_number', this.tableNumber);
+                if (window.Cart?.setTable) {
+                    window.Cart.setTable(this.tableNumber);
+                }
+                this.refreshCart();
             },
             scrollToSection(id) {
                 const el = document.getElementById(id);
@@ -195,6 +201,7 @@
                 return 'food';
             },
             loadCart() {
+                if (window.Cart?.getItems) return window.Cart.getItems();
                 try {
                     return JSON.parse(localStorage.getItem('cart') || '[]');
                 } catch (e) {
@@ -202,8 +209,13 @@
                 }
             },
             saveCart(cart) {
-                localStorage.setItem('cart', JSON.stringify(cart));
-                window.dispatchEvent(new CustomEvent('cart-updated', { detail: cart }));
+                if (window.Cart?.save) {
+                    window.Cart.items = cart;
+                    window.Cart.save();
+                } else {
+                    localStorage.setItem('cart', JSON.stringify(cart));
+                    window.dispatchEvent(new CustomEvent('cart-updated', { detail: cart }));
+                }
             },
             syncCartTotals(cart) {
                 const safeCart = cart || [];
@@ -216,41 +228,58 @@
                     return sum + price * qty;
                 }, 0);
             },
+            refreshCart() {
+                const cart = this.loadCart();
+                this.syncCartTotals(cart);
+            },
             addToCart(menu) {
                 if (this.busy) return;
                 this.busy = true;
                 try {
-                    const cart = this.loadCart();
-                    const idx = cart.findIndex(item => (item.id ?? item.menu_id) === menu.id);
-                    if (idx >= 0) {
-                        const currentQty = parseInt(cart[idx].quantity ?? 1, 10) || 1;
-                        cart[idx].quantity = currentQty + 1;
-                        cart[idx].final_price = cart[idx].finalPrice = cart[idx].price ?? menu.price;
+                    const payload = {
+                        id: menu.id,
+                        name: menu.name,
+                        price: menu.price,
+                        base_price: menu.price,
+                        final_price: menu.price,
+                        finalPrice: menu.price,
+                        quantity: 1,
+                        image: menu.image,
+                        type: this.resolveType(menu.category)
+                    };
+
+                    if (window.Cart?.add) {
+                        window.Cart.setTable?.(this.tableNumber);
+                        window.Cart.add(payload);
+                        this.syncCartTotals(window.Cart.getItems());
                     } else {
-                        cart.push({
-                            id: menu.id,
-                            name: menu.name,
-                            price: menu.price,
-                            base_price: menu.price,
-                            final_price: menu.price,
-                            finalPrice: menu.price,
-                            quantity: 1,
-                            image: menu.image,
-                            type: this.resolveType(menu.category)
-                        });
+                        const cart = this.loadCart();
+                        const idx = cart.findIndex(item => (item.id ?? item.menu_id) === menu.id);
+                        if (idx >= 0) {
+                            const currentQty = parseInt(cart[idx].quantity ?? 1, 10) || 1;
+                            cart[idx].quantity = currentQty + 1;
+                            cart[idx].final_price = cart[idx].finalPrice = cart[idx].price ?? menu.price;
+                        } else {
+                            cart.push(payload);
+                        }
+                        this.saveCart(cart);
+                        this.syncCartTotals(cart);
                     }
-                    this.saveCart(cart);
-                    this.syncCartTotals(cart);
+
                     this.showToast('Ditambahkan', `${menu.name} masuk keranjang.`, 'check_circle', 'success');
+                    setTimeout(() => this.goToCart(), 200);
                 } catch (error) {
                     this.showToast('Error', 'Terjadi kendala. Coba lagi.', 'error', 'error');
                 } finally {
                     this.busy = false;
                 }
             },
+            goToCart() {
+                window.location.href = "{{ route('cart') }}";
+            },
             showToast(title, message, icon = 'check_circle', type = 'success') {
                 this.toast = { show: true, title, message, icon, type };
-                setTimeout(() => this.toast.show = false, 2500);
+                setTimeout(() => this.toast.show = false, 2000);
             }
         };
     }

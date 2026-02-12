@@ -43,6 +43,97 @@
         }
     </script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        // Lightweight cart helper for QR customer flow (localStorage only)
+        (function () {
+            const key = 'cart';
+            const tableKey = 'table_number';
+            const uid = () => 'cart_' + Math.random().toString(36).slice(2);
+
+            const state = {
+                items: [],
+                tableNumber: null,
+            };
+
+            function load() {
+                try {
+                    state.items = JSON.parse(localStorage.getItem(key) || '[]');
+                } catch (e) {
+                    state.items = [];
+                }
+                state.items = state.items.map(normalize);
+                state.tableNumber = localStorage.getItem(tableKey) || null;
+            }
+
+            function persist() {
+                localStorage.setItem(key, JSON.stringify(state.items));
+                if (state.tableNumber) {
+                    localStorage.setItem(tableKey, state.tableNumber);
+                }
+                window.dispatchEvent(new CustomEvent('cart-updated', { detail: state.items }));
+            }
+
+            function normalize(item) {
+                if (!item.cartItemId) item.cartItemId = uid();
+                if (!item.quantity || item.quantity < 1) item.quantity = 1;
+                if (item.price === undefined) item.price = item.final_price ?? item.finalPrice ?? 0;
+                if (item.final_price === undefined) item.final_price = item.price;
+                if (item.finalPrice === undefined) item.finalPrice = item.final_price;
+                return item;
+            }
+
+            load();
+
+            window.Cart = {
+                setTable(number) {
+                    state.tableNumber = number;
+                    persist();
+                },
+                save: persist,
+                add(item) {
+                    const normalized = normalize({ ...item });
+                    const idx = state.items.findIndex(i => (i.id ?? i.menu_id) === normalized.id);
+                    if (idx >= 0) {
+                        state.items[idx].quantity = (parseInt(state.items[idx].quantity || 1, 10) || 1) + 1;
+                    } else {
+                        state.items.push(normalized);
+                    }
+                    persist();
+                },
+                remove(cartItemId) {
+                    state.items = state.items.filter(i => (i.cartItemId ?? '') !== cartItemId);
+                    persist();
+                },
+                clear() {
+                    state.items = [];
+                    persist();
+                },
+                items: state.items,
+                getItems() {
+                    return state.items;
+                },
+                getCount() {
+                    return state.items.reduce((s, i) => s + (parseInt(i.quantity || 1, 10) || 1), 0);
+                },
+                getTotal() {
+                    return state.items.reduce((s, i) => {
+                        const qty = parseInt(i.quantity || 1, 10) || 1;
+                        const price = Number(i.final_price ?? i.finalPrice ?? i.price ?? 0) || 0;
+                        return s + price * qty;
+                    }, 0);
+                },
+                formatPrice(v) {
+                    const n = Number(v) || 0;
+                    return 'Rp ' + n.toLocaleString('id-ID');
+                },
+                recalculateItem(item) {
+                    return item;
+                },
+                updateBadge() {}, // no-op in mobile layout
+                tableNumber: () => state.tableNumber,
+            };
+        })();
+    </script>
     
     <style>
         body { font-family: 'Inter', sans-serif; }
