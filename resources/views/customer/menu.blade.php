@@ -260,6 +260,10 @@
                 }
                 return [];
             },
+            // Backward-compat alias used by addToCartWithOptions
+            loadCart() {
+                return this.loadCartPreferred();
+            },
             saveCart(cart) {
                 if (window.Cart?.save) {
                     window.Cart.items = cart;
