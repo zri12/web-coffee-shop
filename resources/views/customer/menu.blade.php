@@ -237,7 +237,8 @@
                 if (s.includes('dessert')) return 'dessert';
                 return 'food';
             },
-            loadCart() {
+            loadCartPreferred() {
+                // 1) try localStorage (most reliable across contexts)
                 try {
                     const raw = localStorage.getItem('cart');
                     if (raw) {
@@ -246,11 +247,16 @@
                     }
                 } catch (e) { /* ignore */ }
 
+                // 2) fallback to Cart.getItems
                 if (window.Cart?.getItems) {
                     try {
                         const items = window.Cart.getItems();
                         if (Array.isArray(items)) return items;
                     } catch (e) { /* ignore */ }
+                }
+                // 3) fallback to Cart.items
+                if (window.Cart?.items && Array.isArray(window.Cart.items)) {
+                    return window.Cart.items;
                 }
                 return [];
             },
@@ -265,17 +271,27 @@
             },
             syncCartTotals(cart) {
                 const safeCart = cart || [];
-                this.cartCount = safeCart.reduce((sum, item) => sum + (parseInt(item.quantity ?? 1, 10) || 1), 0);
-                this.cartTotal = safeCart.reduce((sum, item) => {
-                    const qty = parseInt(item.quantity ?? 1, 10) || 1;
-                    const price = Number(
-                        item.total_price ?? item.totalPrice ?? item.final_price ?? item.finalPrice ?? item.price ?? item.base_price ?? 0
-                    ) || 0;
-                    return sum + price * qty;
-                }, 0);
+                // Prefer Cart's computed count/total if available
+                if (window.Cart?.getCount) {
+                    this.cartCount = window.Cart.getCount();
+                } else {
+                    this.cartCount = safeCart.reduce((sum, item) => sum + (parseInt(item.quantity ?? 1, 10) || 1), 0);
+                }
+
+                if (window.Cart?.getTotal) {
+                    this.cartTotal = window.Cart.getTotal();
+                } else {
+                    this.cartTotal = safeCart.reduce((sum, item) => {
+                        const qty = parseInt(item.quantity ?? 1, 10) || 1;
+                        const price = Number(
+                            item.total_price ?? item.totalPrice ?? item.final_price ?? item.finalPrice ?? item.price ?? item.base_price ?? 0
+                        ) || 0;
+                        return sum + price * qty;
+                    }, 0);
+                }
             },
             refreshCart() {
-                const cart = this.loadCart();
+                const cart = this.loadCartPreferred();
                 this.syncCartTotals(cart);
             },
             clearCart() {
