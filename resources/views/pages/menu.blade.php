@@ -45,6 +45,12 @@
             </div>
         </div>
 
+        @if(session('error'))
+        <div class="mx-4 md:mx-0 mt-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-medium">
+            {{ session('error') }}
+        </div>
+        @endif
+
         <!-- MAIN CONTENT (Scrollable) -->
         <div class="flex-1 overflow-y-auto px-4 md:px-0 pb-24 md:pb-8 hide-scrollbar" id="menu-content" @scroll.passive="onScroll">
             

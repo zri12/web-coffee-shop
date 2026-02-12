@@ -13,6 +13,9 @@ $app = Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Respect X-Forwarded-* headers from Vercel/edge proxies.
+        $middleware->trustProxies(at: '*');
+
         // API middleware
         $middleware->api(prepend: [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,

@@ -8,6 +8,7 @@ use App\Models\OrderItem;
 use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
 use Midtrans\Config;
@@ -357,9 +358,14 @@ class OrderController extends Controller
             'order_number' => 'required|string',
         ]);
 
-        $order = Order::where('order_number', $request->order_number)
-            ->with(['items.menu', 'payment'])
-            ->first();
+        try {
+            $order = Order::where('order_number', $request->order_number)
+                ->with(['items.menu', 'payment'])
+                ->first();
+        } catch (\Throwable $e) {
+            Log::warning('Track order unavailable', ['error' => $e->getMessage()]);
+            return back()->with('error', 'Layanan lacak pesanan sementara tidak tersedia.');
+        }
 
         if (!$order) {
             return back()->with('error', 'Pesanan tidak ditemukan');

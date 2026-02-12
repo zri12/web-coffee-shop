@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -140,19 +141,27 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        if (Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
-            $request->session()->regenerate();
-            
-            // Redirect based on role
-            $user = Auth::user();
-            $redirectRoute = match($user->role) {
-                'admin' => 'admin.dashboard',
-                'cashier' => 'cashier.incoming-orders',
-                'manager' => 'manager.dashboard',
-                default => 'home'
-            };
-            
-            return redirect()->route($redirectRoute)->with('success', 'Login berhasil!');
+        try {
+            if (Auth::attempt($request->only('email', 'password'), $request->boolean('remember'))) {
+                $request->session()->regenerate();
+                
+                // Redirect based on role
+                $user = Auth::user();
+                $redirectRoute = match($user->role) {
+                    'admin' => 'admin.dashboard',
+                    'cashier' => 'cashier.incoming-orders',
+                    'manager' => 'manager.dashboard',
+                    default => 'home'
+                };
+                
+                return redirect()->route($redirectRoute)->with('success', 'Login berhasil!');
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Web login unavailable', ['error' => $e->getMessage()]);
+
+            return back()->withErrors([
+                'email' => 'Login sementara tidak tersedia. Periksa koneksi database/server.',
+            ])->onlyInput('email');
         }
 
         return back()->withErrors([
