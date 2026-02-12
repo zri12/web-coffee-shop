@@ -46,7 +46,6 @@
             <div id="cat-{{ $category->slug }}" class="space-y-3">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs uppercase tracking-[0.08em] text-[#b6a99d]">Category</p>
                         <h2 class="text-lg font-semibold text-[#2f2d2c]">{{ $category->name }}</h2>
                     </div>
                     <span class="text-xs px-3 py-1 rounded-full bg-[#f3e8df] text-[#7c5b3a]">
@@ -80,7 +79,13 @@
                                     @if($menu->is_available)
                                         <button
                                             type="button"
-                                            @click="addToCart({{ $menu->id }}, @json($menu->name))"
+                                            @click="addToCart({
+                                                id: {{ $menu->id }},
+                                                name: @json($menu->name),
+                                                price: {{ (float) $menu->price }},
+                                                image: @json($menu->display_image_url),
+                                                category: @json($menu->category->slug ?? $category->slug ?? '')
+                                            })"
                                             class="px-4 py-2 rounded-full bg-[#c67c4e] text-white text-sm font-semibold hover:bg-[#b06b3e] active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed"
                                             :disabled="busy"
                                         >
@@ -122,7 +127,7 @@
                     <span class="material-symbols-outlined">refresh</span>
                 </button>
                 <a
-                    href="tel:{{ $systemSettings['whatsapp'] ?? '' }}"
+                    href="{{ route('cart') }}"
                     class="bg-white text-[#2f2d2c] px-4 py-2 rounded-full text-sm font-semibold hover:bg-[#f6f2ed] transition"
                 >
                     Checkout
@@ -158,8 +163,6 @@
 <script>
     function menuPage() {
         return {
-            tableNumber: @json($table->table_number),
-            csrf: document.querySelector('meta[name=\"csrf-token\"]').getAttribute('content'),
             cartCount: 0,
             cartTotal: 0,
             busy: false,
@@ -171,7 +174,8 @@
                 icon: 'check_circle'
             },
             init() {
-                this.refreshCart();
+                const cart = this.loadCart();
+                this.syncCartTotals(cart);
             },
             scrollToSection(id) {
                 const el = document.getElementById(id);
@@ -183,43 +187,61 @@
                 const number = Number(value || 0);
                 return 'Rp ' + number.toLocaleString('id-ID');
             },
-            async refreshCart() {
+            resolveType(slug = '') {
+                const s = (slug || '').toLowerCase();
+                if (s.includes('coffee') || s.includes('kopi') || s.includes('drink')) return 'beverage';
+                if (s.includes('snack')) return 'snack';
+                if (s.includes('dessert')) return 'dessert';
+                return 'food';
+            },
+            loadCart() {
                 try {
-                    const res = await fetch(`/order/${this.tableNumber}/cart`);
-                    const data = await res.json();
-                    if (data.success) {
-                        this.cartCount = data.cart_count || 0;
-                        this.cartTotal = data.cart_total || 0;
-                    }
+                    return JSON.parse(localStorage.getItem('cart') || '[]');
                 } catch (e) {
-                    // silent fail; not critical
+                    return [];
                 }
             },
-            async addToCart(menuId, name) {
+            saveCart(cart) {
+                localStorage.setItem('cart', JSON.stringify(cart));
+                window.dispatchEvent(new CustomEvent('cart-updated', { detail: cart }));
+            },
+            syncCartTotals(cart) {
+                const safeCart = cart || [];
+                this.cartCount = safeCart.reduce((sum, item) => sum + (parseInt(item.quantity ?? 1, 10) || 1), 0);
+                this.cartTotal = safeCart.reduce((sum, item) => {
+                    const qty = parseInt(item.quantity ?? 1, 10) || 1;
+                    const price = Number(
+                        item.total_price ?? item.totalPrice ?? item.final_price ?? item.finalPrice ?? item.price ?? item.base_price ?? 0
+                    ) || 0;
+                    return sum + price * qty;
+                }, 0);
+            },
+            addToCart(menu) {
                 if (this.busy) return;
                 this.busy = true;
                 try {
-                    const res = await fetch(`/order/${this.tableNumber}/cart`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': this.csrf,
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            menu_id: menuId,
-                            quantity: 1
-                        })
-                    });
-
-                    const data = await res.json();
-                    if (data.success) {
-                        this.cartCount = data.cart_count ?? this.cartCount + 1;
-                        this.cartTotal = data.cart_total ?? this.cartTotal;
-                        this.showToast('Ditambahkan', `${name} masuk keranjang.`, 'check_circle', 'success');
+                    const cart = this.loadCart();
+                    const idx = cart.findIndex(item => (item.id ?? item.menu_id) === menu.id);
+                    if (idx >= 0) {
+                        const currentQty = parseInt(cart[idx].quantity ?? 1, 10) || 1;
+                        cart[idx].quantity = currentQty + 1;
+                        cart[idx].final_price = cart[idx].finalPrice = cart[idx].price ?? menu.price;
                     } else {
-                        this.showToast('Gagal', data.message || 'Tidak bisa menambah item.', 'error', 'error');
+                        cart.push({
+                            id: menu.id,
+                            name: menu.name,
+                            price: menu.price,
+                            base_price: menu.price,
+                            final_price: menu.price,
+                            finalPrice: menu.price,
+                            quantity: 1,
+                            image: menu.image,
+                            type: this.resolveType(menu.category)
+                        });
                     }
+                    this.saveCart(cart);
+                    this.syncCartTotals(cart);
+                    this.showToast('Ditambahkan', `${menu.name} masuk keranjang.`, 'check_circle', 'success');
                 } catch (error) {
                     this.showToast('Error', 'Terjadi kendala. Coba lagi.', 'error', 'error');
                 } finally {
