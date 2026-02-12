@@ -89,6 +89,7 @@
                                         <button
                                             type="button"
                                             data-add-menu="1"
+                                            data-payload='@js($menuPayload)'
                                             @click.prevent.stop='addToCart(@js($menuPayload))'
                                             onclick='return window.addMenuItem && addMenuItem(@js($menuPayload), {{ (int) $table->table_number }});'
                                             class="px-4 py-2 rounded-full bg-[#c67c4e] text-white text-sm font-semibold hover:bg-[#b06b3e] active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed"
@@ -263,6 +264,7 @@
                 if (this.busy) return;
                 this.busy = true;
                 try {
+                    window.Cart?.setTable?.(this.tableNumber);
                     addMenuItem(menu, this.tableNumber);
                     this.refreshCart();
                     this.showToast('Ditambahkan', `${menu.name} masuk keranjang.`, 'check_circle', 'success');
@@ -290,6 +292,12 @@
     // Global fallback so click still works if Alpine fails
     window.addMenuItem = function(menu, tableNumber) {
         try {
+            // Normalize payload
+            if (typeof menu === 'string') {
+                menu = JSON.parse(menu);
+            }
+            if (!menu || typeof menu !== 'object') throw new Error('Invalid payload');
+
             if (tableNumber) {
                 const prev = localStorage.getItem('table_number');
                 if (prev && prev !== String(tableNumber)) {
@@ -297,9 +305,10 @@
                 }
                 localStorage.setItem('table_number', tableNumber);
             }
-            const type = (menu.category || '').toLowerCase().includes('coffee') ? 'beverage'
-                       : (menu.category || '').toLowerCase().includes('snack') ? 'snack'
-                       : (menu.category || '').toLowerCase().includes('dessert') ? 'dessert'
+            const cat = (menu.category || '').toLowerCase();
+            const type = cat.includes('coffee') || cat.includes('kopi') ? 'beverage'
+                       : cat.includes('snack') ? 'snack'
+                       : cat.includes('dessert') ? 'dessert'
                        : 'food';
 
             const add = window.Cart && typeof window.Cart.add === 'function'
