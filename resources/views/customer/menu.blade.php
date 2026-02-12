@@ -173,6 +173,28 @@
             cartCount: 0,
             cartTotal: 0,
             busy: false,
+            showDetail: false,
+            selectedProduct: {
+                id: null,
+                name: '',
+                priceRaw: 0,
+                price: '',
+                description: '',
+                image: '',
+                isFeatured: false,
+                type: 'food'
+            },
+            // Option states
+            temperature: 'ice',
+            iceLevel: 'normal',
+            sugarLevel: 'normal',
+            size: null,
+            spiceLevel: 'mild',
+            portion: null,
+            toppings: [],
+            addOns: [],
+            sauces: [],
+            specialRequest: '',
             toast: {
                 show: false,
                 type: 'success',
