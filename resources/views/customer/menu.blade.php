@@ -421,7 +421,8 @@
                         options
                     });
                     this.saveCart(cart);
-                    this.refreshCart();
+                    // Immediately sync bar without waiting for events
+                    this.syncCartTotals(cart);
                     this.showDetail = false;
                     document.body.style.overflow = '';
                     this.showToast('Ditambahkan', `${this.selectedProduct.name} masuk keranjang.`, 'check_circle', 'success');
