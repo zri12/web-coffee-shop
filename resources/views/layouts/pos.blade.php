@@ -72,7 +72,6 @@
                 <button @click="sidebarOpen = true" class="text-text-main-light dark:text-white">
                     <span class="material-symbols-outlined">menu</span>
                 </button>
-                <h1 class="font-bold text-lg dark:text-white">@yield('title', 'POS')</h1>
             </div>
             
             @yield('content')

@@ -93,16 +93,9 @@
                 <button @click="sidebarOpen = true" class="lg:hidden text-text-main-light dark:text-white hover:bg-gray-100 dark:hover:bg-primary/10 p-2 rounded-lg transition-colors">
                     <span class="material-symbols-outlined">menu</span>
                 </button>
-                <h2 class="text-[#181411] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em]">@yield('title', 'Dashboard Overview')</h2>
             </div>
 
-            <div class="flex items-center gap-6">
-                <!-- Search -->
-                <div class="hidden md:flex items-center bg-[#f4f2f0] dark:bg-[#2c241b] rounded-lg px-3 py-2 w-64 h-10 transition-all focus-within:ring-2 focus-within:ring-primary/20 border border-transparent focus-within:border-primary/20">
-                    <span class="material-symbols-outlined text-[#897561] text-[20px]">search</span>
-                    <input class="bg-transparent border-none outline-none text-sm ml-2 w-full text-[#181411] dark:text-white placeholder-[#897561] focus:ring-0 p-0" placeholder="Search orders, items..." type="text"/>
-                </div>
-
+            <div class="flex items-center gap-4">
                 <!-- Actions -->
                 <div class="flex items-center gap-4">
                     <div class="flex items-center gap-3 cursor-pointer">
