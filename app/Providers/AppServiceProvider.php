@@ -22,12 +22,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(SystemSettingsService $settingsService): void
     {
-        if (env('VERCEL') || env('VERCEL_ENV') || $this->app->environment('production')) {
+        $host = request()?->getHost() ?? '';
+        $isVercelHost = str_contains($host, '.vercel.app') || str_contains($host, '.vercel-dns.com');
+
+        if ($isVercelHost || env('VERCEL') || env('VERCEL_ENV') || $this->app->environment('production')) {
             URL::forceScheme('https');
 
             if ($vercelUrl = env('VERCEL_URL')) {
                 URL::forceRootUrl('https://' . $vercelUrl);
                 config(['app.url' => 'https://' . $vercelUrl]);
+            } elseif ($isVercelHost) {
+                URL::forceRootUrl('https://' . $host);
+                config(['app.url' => 'https://' . $host]);
             }
 
             // Avoid mixed-content form submission and keep CSRF/session stable on HTTPS.
