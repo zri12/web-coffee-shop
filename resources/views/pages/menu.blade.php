@@ -221,9 +221,9 @@ document.addEventListener('alpine:init', () => {
         temperature: 'ice',
         iceLevel: 'normal',
         sugarLevel: 'normal',
-        size: 'regular',
+        size: null,
         spiceLevel: 'mild',
-        portion: 'regular',
+        portion: null,
         toppings: [],
         addOns: [],
         sauces: [],
@@ -267,9 +267,9 @@ document.addEventListener('alpine:init', () => {
             this.temperature = 'ice';
             this.iceLevel = 'normal';
             this.sugarLevel = 'normal';
-            this.size = 'regular';
+            this.size = null;
             this.spiceLevel = 'mild';
-            this.portion = 'regular';
+            this.portion = null;
             this.toppings = [];
             this.addOns = [];
             this.sauces = [];
@@ -290,6 +290,10 @@ document.addEventListener('alpine:init', () => {
         },
 
         async addToCartWithOptions() {
+            if (!this.canAddToCart()) {
+                return;
+            }
+
             const options = this.buildOptions();
             options.type = this.selectedProduct.type;
             
@@ -315,17 +319,17 @@ document.addEventListener('alpine:init', () => {
                 options.temperature = this.temperature;
                 if (this.temperature === 'ice') options.iceLevel = this.iceLevel;
                 options.sugarLevel = this.sugarLevel;
-                options.size = this.size;
+                if (this.size) options.size = this.size;
                 if (this.addOns.length > 0) options.addOns = this.addOns;
             } else if (this.selectedProduct.type === 'food') {
                 options.spiceLevel = this.spiceLevel;
-                options.portion = this.portion;
+                if (this.portion) options.portion = this.portion;
                 if (this.addOns.length > 0) options.addOns = this.addOns;
             } else if (this.selectedProduct.type === 'snack') {
-                options.portion = this.portion;
+                if (this.portion) options.portion = this.portion;
                 if (this.sauces.length > 0) options.sauces = this.sauces;
             } else if (this.selectedProduct.type === 'dessert') {
-                options.portion = this.portion;
+                if (this.portion) options.portion = this.portion;
                 if (this.toppings.length > 0) options.toppings = this.toppings;
             }
             
@@ -336,32 +340,53 @@ document.addEventListener('alpine:init', () => {
             return options;
         },
 
+        isVariantRequired() {
+            return ['beverage', 'food', 'snack', 'dessert'].includes(this.selectedProduct.type);
+        },
+
+        isVariantSelected() {
+            if (this.selectedProduct.type === 'beverage') {
+                return !!this.size;
+            }
+
+            if (['food', 'snack', 'dessert'].includes(this.selectedProduct.type)) {
+                return !!this.portion;
+            }
+
+            return true;
+        },
+
+        canAddToCart() {
+            return !this.isVariantRequired() || this.isVariantSelected();
+        },
+
+        getCurrentPricing() {
+            const options = this.buildOptions();
+            options.type = this.selectedProduct.type;
+
+            if (window.Cart && typeof window.Cart.calculatePriceBreakdown === 'function') {
+                return window.Cart.calculatePriceBreakdown(
+                    this.selectedProduct.priceRaw,
+                    this.selectedProduct.type,
+                    options
+                );
+            }
+
+            return {
+                final_price_per_item: Number(this.selectedProduct.priceRaw) || 0
+            };
+        },
+
+        formatPrice(price) {
+            if (window.Cart && typeof window.Cart.formatPrice === 'function') {
+                return window.Cart.formatPrice(price);
+            }
+            const safe = Number(price) || 0;
+            return 'Rp ' + new Intl.NumberFormat('id-ID').format(safe);
+        },
+
         calculateItemPrice() {
-            let total = Number(this.selectedProduct.priceRaw) || 0;
-            
-            // Add-ons pricing logic
-            // ... (Keep existing logic or ensure it matches backend)
-            // Ideally backend handles this, but frontend needs it for display
-             if (this.addOns.length > 0) {
-                const addonPrices = { 'extra-shot': 5000, 'whipped-cream': 3000, 'caramel-syrup': 3000, 'extra-cheese': 5000, 'extra-egg': 3000, 'extra-rice': 5000 };
-                this.addOns.forEach(addon => total += addonPrices[addon] || 0);
-            }
-            if (this.toppings.length > 0) {
-               const toppingPrices = { 'chocolate': 3000, 'caramel': 3000, 'whipped': 5000, 'ice-cream': 8000 };
-               this.toppings.forEach(topping => total += toppingPrices[topping] || 0);
-            }
-            if (this.sauces.length > 0 && this.sauces.includes('bbq')) total += 2000;
-            
-            if (this.selectedProduct.type === 'beverage' && this.size === 'large') total += 8000;
-            
-             if (this.portion === 'large') {
-                if(this.selectedProduct.type === 'dessert') total += 8000;
-                else if (['food', 'snack'].includes(this.selectedProduct.type)) total += 5000;
-            } else if (this.portion === 'small' && this.selectedProduct.type === 'snack') {
-                total -= 5000;
-            }
-            
-            return total;
+            return this.getCurrentPricing().final_price_per_item || 0;
         },
 
         scrollToCategory(id) {

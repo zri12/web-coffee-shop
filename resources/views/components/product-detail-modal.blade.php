@@ -1,4 +1,4 @@
-<!-- Product Detail Modal -->
+﻿<!-- Product Detail Modal -->
 <div x-show="showDetail" 
      x-cloak
      @click.self="showDetail = false; document.body.style.overflow = ''"
@@ -67,12 +67,12 @@
                         <button @click="temperature = 'ice'" 
                                 :class="temperature === 'ice' ? 'bg-[#C67C4E] text-white' : 'bg-[#F9F9F9] text-[#2F2D2C]'"
                                 class="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all">
-                            ❄️ Ice
+                            â„ï¸ Ice
                         </button>
                         <button @click="temperature = 'hot'" 
                                 :class="temperature === 'hot' ? 'bg-[#C67C4E] text-white' : 'bg-[#F9F9F9] text-[#2F2D2C]'"
                                 class="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all">
-                            🔥 Hot
+                            ðŸ”¥ Hot
                         </button>
                     </div>
                 </div>
@@ -368,10 +368,12 @@
         <!-- Fixed Bottom Action -->
         <div class="bg-white border-t border-[#F1F1F1] px-5 py-4 pb-safe">
             <!-- Add to Cart Button (Qty always 1) -->
-            <button @click="addToCartWithOptions()" 
-                    class="w-full bg-[#C67C4E] text-white py-4 rounded-2xl font-bold text-[16px] shadow-lg hover:bg-[#A05E35] active:scale-[0.99] transition-all flex items-center justify-center gap-2">
+            <button @click="addToCartWithOptions()"
+                    :disabled="!canAddToCart()"
+                    class="w-full py-4 rounded-2xl font-bold text-[16px] shadow-lg transition-all flex items-center justify-center gap-2"
+                    :class="canAddToCart() ? 'bg-[#C67C4E] text-white hover:bg-[#A05E35] active:scale-[0.99]' : 'bg-gray-300 text-gray-500 cursor-not-allowed'">
                 <span class="material-symbols-outlined">add_shopping_cart</span>
-                <span>Add to Cart · <span x-text="formatPrice(calculateItemPrice())"></span></span>
+                <span x-text="canAddToCart() ? `Add to Cart · ${formatPrice(calculateItemPrice())}` : 'Pilih varian dulu'"></span>
             </button>
             <p class="text-[12px] text-center text-[#9B9B9B] mt-2">Each item added individually with chosen options</p>
         </div>
@@ -385,3 +387,4 @@
         padding-bottom: calc(1rem + env(safe-area-inset-bottom));
     }
 </style>
+

@@ -85,8 +85,9 @@
 
             <!-- Actions -->
             <div class="flex gap-3">
-                <a href="{{ route('cart') }}" class="relative flex size-10 items-center justify-center rounded-lg bg-background-light dark:bg-background-dark/50 hover:bg-primary/10 transition-colors text-text-main dark:text-white group">
+                <a href="{{ route('cart') }}" class="relative flex items-center gap-2 h-10 px-3 rounded-lg bg-background-light dark:bg-background-dark/50 hover:bg-primary/10 transition-colors text-text-main dark:text-white group">
                     <span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">shopping_cart</span>
+                    <span id="cart-total-inline" class="hidden md:inline text-xs font-semibold text-primary">Rp 0</span>
                     <span id="cart-badge" class="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-bold h-4 min-w-[16px] px-1 rounded-full flex items-center justify-center hidden border-2 border-white dark:border-[#221910]">0</span>
                 </a>
                 
@@ -176,6 +177,34 @@
                 }
             },
 
+            variantPriceMaps: {
+                beverage: {
+                    size: {
+                        regular: { name: 'Regular', additional_price: 0 },
+                        large: { name: 'Large', additional_price: 8000 }
+                    }
+                },
+                food: {
+                    portion: {
+                        regular: { name: 'Regular', additional_price: 0 },
+                        large: { name: 'Large', additional_price: 5000 }
+                    }
+                },
+                snack: {
+                    portion: {
+                        small: { name: 'Small', additional_price: -5000 },
+                        regular: { name: 'Regular', additional_price: 0 },
+                        large: { name: 'Large', additional_price: 5000 }
+                    }
+                },
+                dessert: {
+                    portion: {
+                        regular: { name: 'Regular', additional_price: 0 },
+                        large: { name: 'Large', additional_price: 8000 }
+                    }
+                }
+            },
+
             toNumber(value) {
                 const parsed = Number(value);
                 return Number.isFinite(parsed) ? parsed : 0;
@@ -214,10 +243,53 @@
                 return entries;
             },
 
+            getVariantDefinition(productType = 'beverage', options = {}) {
+                const typeConfig = this.variantPriceMaps[productType] || {};
+                if (typeConfig.size) {
+                    const key = options.size;
+                    return key && typeConfig.size[key]
+                        ? { key, name: typeConfig.size[key].name, additional_price: this.toNumber(typeConfig.size[key].additional_price), field: 'size' }
+                        : null;
+                }
+
+                if (typeConfig.portion) {
+                    const key = options.portion;
+                    return key && typeConfig.portion[key]
+                        ? { key, name: typeConfig.portion[key].name, additional_price: this.toNumber(typeConfig.portion[key].additional_price), field: 'portion' }
+                        : null;
+                }
+
+                return null;
+            },
+
+            calculatePriceBreakdown(basePrice, productType = 'beverage', options = {}) {
+                const base = this.toNumber(basePrice);
+                const selectedVariant = this.getVariantDefinition(productType, options);
+                const variantAdditionalPrice = this.toNumber(selectedVariant?.additional_price || 0);
+                const addonEntries = this.calculateAddonEntries(options);
+                const addonsTotal = addonEntries.reduce((sum, addon) => sum + this.toNumber(addon.price), 0);
+                const finalPrice = base + variantAdditionalPrice + addonsTotal;
+
+                return {
+                    base_price: base,
+                    selected_variant: selectedVariant
+                        ? { name: selectedVariant.name, additional_price: variantAdditionalPrice }
+                        : null,
+                    selected_addons: addonEntries.map(addon => ({
+                        name: addon.name,
+                        price: this.toNumber(addon.price)
+                    })),
+                    variant_additional_price: variantAdditionalPrice,
+                    addons_total: addonsTotal,
+                    final_price_per_item: finalPrice
+                };
+            },
+
             recalculateItem(item) {
                 const normalized = { ...(item || {}) };
                 const options = normalized.options && typeof normalized.options === 'object' ? normalized.options : {};
                 const quantity = Math.max(1, parseInt(normalized.quantity ?? 1, 10) || 1);
+                const productType = normalized.type || options.type || 'beverage';
                 const basePrice = this.toNumber(
                     normalized.base_price ??
                     normalized.basePrice ??
@@ -226,7 +298,9 @@
                     normalized.final_price ??
                     normalized.finalPrice
                 );
-
+                const pricing = this.calculatePriceBreakdown(basePrice, productType, options);
+                const selectedVariant = normalized.selected_variant ?? normalized.selectedVariant ?? pricing.selected_variant;
+                const selectedAddons = Array.isArray(normalized.selected_addons) ? normalized.selected_addons : pricing.selected_addons;
                 const addonEntries = Array.isArray(normalized.addons) && normalized.addons.length > 0
                     ? normalized.addons.map(addon => ({
                         name: addon.name || this.formatLabel(addon.key),
@@ -234,27 +308,45 @@
                         type: addon.type || 'add_on',
                         price: this.toNumber(addon.price)
                     }))
-                    : this.calculateAddonEntries(options);
+                    : selectedAddons.map(addon => ({
+                        name: addon.name,
+                        key: String(addon.name).toLowerCase().replace(/\s+/g, '-'),
+                        type: 'add_on',
+                        price: this.toNumber(addon.price)
+                    }));
 
-                const addonTotal = addonEntries.reduce((sum, addon) => sum + this.toNumber(addon.price), 0);
+                const addonTotal = this.toNumber(
+                    normalized.addon_total ??
+                    normalized.addons_total ??
+                    pricing.addons_total
+                );
                 const totalPrice = this.toNumber(
+                    normalized.final_price_per_item ??
                     normalized.total_price ??
                     normalized.totalPrice ??
                     normalized.final_price ??
                     normalized.finalPrice ??
-                    (basePrice + addonTotal)
+                    pricing.final_price_per_item
                 );
-                const subtotal = this.toNumber(normalized.subtotal ?? (totalPrice * quantity));
+                const subtotal = this.toNumber(
+                    normalized.final_price_total ??
+                    normalized.subtotal ??
+                    (totalPrice * quantity)
+                );
 
                 return {
                     ...normalized,
-                    id: normalized.id,
+                    id: normalized.id ?? normalized.product_id,
+                    product_id: normalized.product_id ?? normalized.id,
                     name: normalized.name || 'Item',
+                    product_name: normalized.product_name || normalized.name || 'Item',
                     image: normalized.image || null,
-                    type: normalized.type || 'beverage',
+                    type: productType,
                     options,
                     quantity,
                     addons: addonEntries,
+                    selected_variant: selectedVariant,
+                    selected_addons: selectedAddons,
                     base_price: basePrice,
                     basePrice,
                     price: basePrice,
@@ -263,6 +355,8 @@
                     totalPrice,
                     final_price: totalPrice,
                     finalPrice: totalPrice,
+                    final_price_per_item: totalPrice,
+                    final_price_total: subtotal,
                     subtotal,
                     cartItemId: normalized.cartItemId || normalized.cart_item_id || (Date.now() + Math.random())
                 };
@@ -281,22 +375,34 @@
             add(id, name, basePrice, image = null, quantity = 1, options = {}) {
                 const cart = this.items;
                 const normalizedOptions = options && typeof options === 'object' ? options : {};
-                const addonEntries = this.calculateAddonEntries(normalizedOptions);
-                const addonTotal = addonEntries.reduce((sum, addon) => sum + this.toNumber(addon.price), 0);
+                const productType = normalizedOptions.type || 'beverage';
+                const pricing = this.calculatePriceBreakdown(basePrice, productType, normalizedOptions);
+                const addonEntries = pricing.selected_addons.map(addon => ({
+                    name: addon.name,
+                    key: String(addon.name).toLowerCase().replace(/\s+/g, '-'),
+                    type: 'add_on',
+                    price: addon.price
+                }));
                 const base = this.toNumber(basePrice);
                 const qty = Math.max(1, parseInt(quantity, 10) || 1);
-                const totalPrice = base + addonTotal;
+                const totalPrice = pricing.final_price_per_item;
 
                 const cartItem = this.recalculateItem({
-                    id,
-                    name,
+                    id: id,
+                    product_id: id,
+                    name: name,
+                    product_name: name,
                     image,
                     quantity: qty,
-                    type: normalizedOptions.type || 'beverage',
+                    type: productType,
                     options: normalizedOptions,
+                    selected_variant: pricing.selected_variant,
+                    selected_addons: pricing.selected_addons,
                     addons: addonEntries,
                     base_price: base,
                     total_price: totalPrice,
+                    final_price_per_item: totalPrice,
+                    final_price_total: totalPrice * qty,
                     subtotal: totalPrice * qty,
                     cartItemId: Date.now() + Math.random()
                 });
@@ -365,15 +471,25 @@
             updateBadge() {
                 const cart = this.items;
                 const badge = document.getElementById('cart-badge');
+                const totalLabel = document.getElementById('cart-total-inline');
                 if (!badge) return;
                 
                 const totalItems = cart.reduce((sum, item) => sum + Math.max(1, parseInt(item.quantity || 1, 10) || 1), 0);
+                const totalPrice = cart.reduce((sum, item) => sum + this.toNumber(item.final_price_total ?? item.subtotal), 0);
                 
                 if (totalItems > 0) {
                     badge.classList.remove('hidden');
                     badge.innerText = totalItems > 99 ? '99+' : totalItems;
+                    if (totalLabel) {
+                        totalLabel.classList.remove('hidden');
+                        totalLabel.innerText = this.formatPrice(totalPrice);
+                    }
                 } else {
                     badge.classList.add('hidden');
+                    if (totalLabel) {
+                        totalLabel.classList.add('hidden');
+                        totalLabel.innerText = this.formatPrice(0);
+                    }
                 }
             },
             

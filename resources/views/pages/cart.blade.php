@@ -194,6 +194,14 @@
                                             </p>
                                         </template>
 
+                                        <!-- Selected Variant -->
+                                        <template x-if="item.selected_variant">
+                                            <p class="flex items-center justify-between gap-2">
+                                                <span>Variant: <span x-text="item.selected_variant.name"></span></span>
+                                                <span class="font-medium text-primary" x-text="formatSignedPrice(item.selected_variant.additional_price || 0)"></span>
+                                            </p>
+                                        </template>
+
                                         <!-- Add-On Price Breakdown -->
                                         <template x-if="getAddons(item).length > 0">
                                             <div class="pt-1">
@@ -371,6 +379,15 @@ function cartPage() {
             }
             const safe = Number(price) || 0;
             return 'Rp ' + new Intl.NumberFormat('id-ID').format(safe);
+        },
+
+        formatSignedPrice(price) {
+            const value = Number(price) || 0;
+            if (value === 0) {
+                return 'Gratis';
+            }
+            const sign = value > 0 ? '+' : '-';
+            return `${sign}${this.formatPrice(Math.abs(value))}`;
         },
 
         resolveImageUrl(image) {
