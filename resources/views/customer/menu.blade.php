@@ -41,7 +41,7 @@
     </section>
 
     <!-- Menu sections -->
-    <section class="flex-1 space-y-6 px-5 pb-8">
+    <section class="flex-1 space-y-6 px-5 pb-8" x-init="initClickFallbacks()">
         @foreach($categories as $category)
             <div id="cat-{{ $category->slug }}" class="space-y-3">
                 <div class="flex items-center justify-between">
@@ -88,9 +88,9 @@
                                     @if($menu->is_available)
                                         <button
                                             type="button"
-                                            data-payload='{{ htmlspecialchars(json_encode($menuPayload), ENT_QUOTES, "UTF-8") }}'
-                                            @click.prevent.stop="addToCart(JSON.parse($el.dataset.payload))"
-                                            onclick="return window.addMenuItem && addMenuItem(JSON.parse(this.dataset.payload), {{ (int) $table->table_number }});"
+                                            data-add-menu="1"
+                                            @click.prevent.stop='addToCart(@js($menuPayload))'
+                                            onclick='return window.addMenuItem && addMenuItem(@js($menuPayload), {{ (int) $table->table_number }});'
                                             class="px-4 py-2 rounded-full bg-[#c67c4e] text-white text-sm font-semibold hover:bg-[#b06b3e] active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed"
                                             :disabled="busy"
                                         >
@@ -237,6 +237,27 @@
             refreshCart() {
                 const cart = this.loadCart();
                 this.syncCartTotals(cart);
+            },
+            initClickFallbacks() {
+                const tableNum = this.tableNumber;
+                document.querySelectorAll('[data-add-menu]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        try {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            let payload = btn.__payload;
+                            if (!payload) {
+                                const raw = btn.getAttribute('data-payload');
+                                payload = raw ? JSON.parse(raw) : null;
+                                btn.__payload = payload;
+                            }
+                            addMenuItem(payload, tableNum);
+                            this.refreshCart();
+                        } catch (err) {
+                            console.error('addMenuItem fallback error', err);
+                        }
+                    }, { passive: false });
+                });
             },
             addToCart(menu) {
                 if (this.busy) return;
