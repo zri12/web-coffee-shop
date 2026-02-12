@@ -55,6 +55,15 @@
 
                 <div class="space-y-3">
                     @forelse($category->menus as $menu)
+                        @php
+                            $menuPayload = [
+                                'id' => $menu->id,
+                                'name' => $menu->name,
+                                'price' => (float) $menu->price,
+                                'image' => $menu->display_image_url,
+                                'category' => $menu->category->slug ?? $category->slug ?? ''
+                            ];
+                        @endphp
                         <article class="bg-white rounded-2xl shadow-sm border border-[#f0e7df] overflow-hidden flex">
                             <div class="w-28 h-28 shrink-0 bg-[#f7f2ec]">
                                 <img
@@ -79,20 +88,9 @@
                                     @if($menu->is_available)
                                         <button
                                             type="button"
-                                            @click.prevent.stop="addToCart({
-                                                id: {{ $menu->id }},
-                                                name: @json($menu->name),
-                                                price: {{ (float) $menu->price }},
-                                                image: @json($menu->display_image_url),
-                                                category: @json($menu->category->slug ?? $category->slug ?? '')
-                                            })"
-                                            onclick="return window.addMenuItem && addMenuItem({
-                                                id: {{ $menu->id }},
-                                                name: @json($menu->name),
-                                                price: {{ (float) $menu->price }},
-                                                image: @json($menu->display_image_url),
-                                                category: @json($menu->category->slug ?? $category->slug ?? '')
-                                            }, {{ (int) $table->table_number }});"
+                                            data-payload='{{ htmlspecialchars(json_encode($menuPayload), ENT_QUOTES, "UTF-8") }}'
+                                            @click.prevent.stop="addToCart(JSON.parse($el.dataset.payload))"
+                                            onclick="return window.addMenuItem && addMenuItem(JSON.parse(this.dataset.payload), {{ (int) $table->table_number }});"
                                             class="px-4 py-2 rounded-full bg-[#c67c4e] text-white text-sm font-semibold hover:bg-[#b06b3e] active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed"
                                             :disabled="busy"
                                         >
