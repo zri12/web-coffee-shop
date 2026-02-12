@@ -188,6 +188,12 @@
                 localStorage.setItem('table_number', this.tableNumber);
                 window.Cart?.setTable?.(this.tableNumber);
                 this.refreshCart();
+
+                window.addEventListener('cart-updated', () => this.refreshCart());
+                window.addEventListener('cart-cleared', () => this.refreshCart());
+                window.addEventListener('storage', (e) => {
+                    if (e.key === 'cart') this.refreshCart();
+                });
             },
             scrollToSection(id) {
                 const el = document.getElementById(id);
