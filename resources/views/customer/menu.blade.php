@@ -89,12 +89,16 @@
                                         <button
                                             type="button"
                                             class="px-4 py-2 rounded-full bg-[#c67c4e] text-white text-sm font-semibold hover:bg-[#b06b3e] active:scale-95 transition disabled:opacity-60 disabled:cursor-not-allowed js-add-menu"
-                                            data-id="{{ $menu->id }}"
-                                            data-name="{{ e($menu->name) }}"
-                                            data-price="{{ (float) $menu->price }}"
-                                            data-image="{{ e($menu->display_image_url) }}"
-                                            data-category="{{ e($menu->category->slug ?? $category->slug ?? '') }}"
-                                            @click.prevent.stop="addFromDataset($event)"
+                                            @click.prevent.stop="showProductDetail({
+                                                id: {{ $menu->id }},
+                                                name: @js($menu->name),
+                                                priceRaw: {{ (float) $menu->price }},
+                                                price: @js($menu->formatted_price),
+                                                description: @js($menu->description),
+                                                image: @js($menu->display_image_url),
+                                                isFeatured: {{ $menu->is_featured ? 'true' : 'false' }},
+                                                category: @js($menu->category->slug ?? $category->slug ?? '')
+                                            })"
                                             :disabled="busy"
                                         >
                                             <span class="material-symbols-outlined align-middle text-base">add</span>
@@ -241,59 +245,6 @@
                 const cart = this.loadCart();
                 this.syncCartTotals(cart);
             },
-            addFromDataset(event) {
-                const t = event.currentTarget;
-                const menu = {
-                    id: Number(t.dataset.id),
-                    name: t.dataset.name,
-                    price: Number(t.dataset.price),
-                    image: t.dataset.image,
-                    category: t.dataset.category
-                };
-                this.addToCart(menu);
-            },
-            addToCart(menu) {
-                if (this.busy) return;
-                this.busy = true;
-                try {
-                    // ensure table stored
-                    window.Cart?.setTable?.(this.tableNumber);
-                    localStorage.setItem('table_number', this.tableNumber);
-
-                    const cat = (menu.category || '').toLowerCase();
-                    const type = cat.includes('coffee') || cat.includes('kopi') ? 'beverage'
-                               : cat.includes('snack') ? 'snack'
-                               : cat.includes('dessert') ? 'dessert'
-                               : 'food';
-
-                    if (window.Cart?.add) {
-                        window.Cart.add(menu.id, menu.name, menu.price, menu.image, 1, { type });
-                    } else {
-                        const cart = JSON.parse(localStorage.getItem('cart') || '[]');
-                        cart.push({
-                            id: menu.id,
-                            name: menu.name,
-                            price: menu.price,
-                            base_price: menu.price,
-                            final_price: menu.price,
-                            final_price_per_item: menu.price,
-                            final_price_total: menu.price,
-                            quantity: 1,
-                            image: menu.image,
-                            type,
-                        });
-                        localStorage.setItem('cart', JSON.stringify(cart));
-                        window.dispatchEvent(new CustomEvent('cart-updated', { detail: cart }));
-                    }
-
-                    this.refreshCart();
-                    this.showToast('Ditambahkan', `${menu.name} masuk keranjang.`, 'check_circle', 'success');
-                } catch (error) {
-                    this.showToast('Error', 'Terjadi kendala. Coba lagi.', 'error', 'error');
-                } finally {
-                    this.busy = false;
-                }
-            },
             clearCart() {
                 if (window.Cart?.clear) {
                     window.Cart.clear();
@@ -302,6 +253,127 @@
                     window.dispatchEvent(new CustomEvent('cart-cleared'));
                 }
                 this.refreshCart();
+            },
+            showProductDetail(payload) {
+                this.selectedProduct = {
+                    id: payload.id,
+                    name: payload.name,
+                    priceRaw: payload.priceRaw,
+                    price: payload.price,
+                    description: payload.description || '',
+                    image: payload.image || '',
+                    isFeatured: payload.isFeatured || false,
+                    type: this.getProductType(payload.category || '')
+                };
+                this.resetOptions();
+                this.showDetail = true;
+                document.body.style.overflow = 'hidden';
+            },
+            resetOptions() {
+                this.temperature = 'ice';
+                this.iceLevel = 'normal';
+                this.sugarLevel = 'normal';
+                this.size = null;
+                this.spiceLevel = 'mild';
+                this.portion = null;
+                this.toppings = [];
+                this.addOns = [];
+                this.sauces = [];
+                this.specialRequest = '';
+            },
+            buildOptions() {
+                const opts = {};
+                if (this.selectedProduct.type === 'beverage') {
+                    opts.temperature = this.temperature;
+                    if (this.temperature === 'ice') opts.iceLevel = this.iceLevel;
+                    opts.sugarLevel = this.sugarLevel;
+                    if (this.size) opts.size = this.size;
+                    if (this.addOns.length) opts.addOns = this.addOns;
+                } else if (this.selectedProduct.type === 'food') {
+                    opts.spiceLevel = this.spiceLevel;
+                    if (this.portion) opts.portion = this.portion;
+                    if (this.addOns.length) opts.addOns = this.addOns;
+                } else if (this.selectedProduct.type === 'snack') {
+                    if (this.portion) opts.portion = this.portion;
+                    if (this.sauces.length) opts.sauces = this.sauces;
+                } else if (this.selectedProduct.type === 'dessert') {
+                    if (this.portion) opts.portion = this.portion;
+                    if (this.toppings.length) opts.toppings = this.toppings;
+                }
+                if (this.specialRequest.trim()) opts.specialRequest = this.specialRequest.trim();
+                return opts;
+            },
+            calculatePriceWithOptions(base, type, options) {
+                let total = Number(base) || 0;
+                if (type === 'beverage') {
+                    if (options.size === 'large') total += 8000;
+                    (options.addOns || []).forEach(a => {
+                        if (a === 'extra-shot') total += 5000;
+                        if (a === 'whipped-cream' || a === 'caramel-syrup') total += 3000;
+                    });
+                } else if (type === 'food' || type === 'snack' || type === 'dessert') {
+                    if (options.portion === 'large') total += 5000;
+                    if (options.portion === 'small') total -= 5000;
+                    (options.addOns || []).forEach(a => {
+                        if (a === 'extra-cheese' || a === 'extra-rice') total += 5000;
+                        if (a === 'extra-egg') total += 3000;
+                    });
+                    (options.toppings || []).forEach(t => {
+                        if (t === 'chocolate' || t === 'caramel') total += 3000;
+                        if (t === 'whipped') total += 5000;
+                        if (t === 'ice-cream') total += 8000;
+                    });
+                    (options.sauces || []).forEach(s => { if (s === 'bbq') total += 2000; });
+                }
+                return total;
+            },
+            canAddToCart() {
+                if (!this.showDetail) return true;
+                const type = this.selectedProduct.type;
+                if (type === 'beverage') return !!this.size;
+                if (['food','snack','dessert'].includes(type)) return !!this.portion;
+                return true;
+            },
+            calculateItemPrice() {
+                const opts = this.buildOptions();
+                return this.calculatePriceWithOptions(this.selectedProduct.priceRaw, this.selectedProduct.type, opts);
+            },
+            async addToCartWithOptions() {
+                if (!this.canAddToCart()) return;
+                this.busy = true;
+                try {
+                    window.Cart?.setTable?.(this.tableNumber);
+                    localStorage.setItem('table_number', this.tableNumber);
+
+                    const options = this.buildOptions();
+                    options.type = this.selectedProduct.type;
+                    const finalPrice = this.calculatePriceWithOptions(this.selectedProduct.priceRaw, this.selectedProduct.type, options);
+
+                    const cart = this.loadCart();
+                    cart.push({
+                        id: this.selectedProduct.id,
+                        name: this.selectedProduct.name,
+                        price: this.selectedProduct.priceRaw,
+                        base_price: this.selectedProduct.priceRaw,
+                        final_price: finalPrice,
+                        final_price_per_item: finalPrice,
+                        final_price_total: finalPrice,
+                        quantity: 1,
+                        image: this.selectedProduct.image,
+                        type: this.selectedProduct.type,
+                        options
+                    });
+                    this.saveCart(cart);
+                    this.refreshCart();
+                    this.showDetail = false;
+                    document.body.style.overflow = '';
+                    this.showToast('Ditambahkan', `${this.selectedProduct.name} masuk keranjang.`, 'check_circle', 'success');
+                } catch (e) {
+                    console.error(e);
+                    this.showToast('Error', 'Tidak bisa menambah item.', 'error', 'error');
+                } finally {
+                    this.busy = false;
+                }
             },
             goToCart() {
                 window.location.href = "{{ route('cart') }}";
