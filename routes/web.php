@@ -1,8 +1,10 @@
 <?php
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\OrderController;
@@ -21,6 +23,46 @@ use App\Http\Controllers\Dashboard\UserController as DashboardUserController;
 
 // Public Routes
 Route::get('/ping', fn () => 'Laravel OK');
+Route::get('/menu-ai-image/{menu}', function ($menu, Request $request) {
+    $name = trim((string) $request->query('name', 'Cafe Menu'));
+    $safeName = htmlspecialchars(Str::limit($name, 28), ENT_QUOTES, 'UTF-8');
+
+    $hash = abs(crc32((string) $menu));
+    $palettes = [
+        ['#4A2E1F', '#C98A4A', '#F8F2E8'],
+        ['#2F3E46', '#84A98C', '#F4F1DE'],
+        ['#3D2C2E', '#B56B45', '#F5E6CC'],
+        ['#1F2A44', '#CFA75E', '#EFE6D5'],
+    ];
+    $palette = $palettes[$hash % count($palettes)];
+
+    $svg = <<<SVG
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="{$palette[0]}"/>
+      <stop offset="100%" stop-color="{$palette[1]}"/>
+    </linearGradient>
+    <radialGradient id="shine" cx="30%" cy="20%" r="60%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.35)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <rect width="1024" height="1024" fill="url(#shine)"/>
+  <circle cx="220" cy="210" r="140" fill="rgba(255,255,255,0.13)"/>
+  <circle cx="840" cy="820" r="190" fill="rgba(255,255,255,0.10)"/>
+  <rect x="232" y="278" width="560" height="430" rx="48" fill="rgba(255,255,255,0.14)" stroke="rgba(255,255,255,0.3)" stroke-width="6"/>
+  <text x="512" y="520" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="96" font-weight="700" fill="{$palette[2]}">{$safeName}</text>
+  <text x="512" y="600" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="36" fill="rgba(255,255,255,0.9)">Bean &amp; Brew</text>
+</svg>
+SVG;
+
+    return response($svg, 200)
+        ->header('Content-Type', 'image/svg+xml')
+        ->header('Cache-Control', 'public, max-age=31536000, immutable');
+})->name('menu.ai-image');
+
 Route::get('/db-check', function () {
     try {
         $dbName = DB::selectOne('select database() as db')->db ?? null;

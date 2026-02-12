@@ -57,11 +57,10 @@ class Menu extends Model
             return asset('images/menus/' . basename($normalized));
         }
 
-        $prompt = rawurlencode(
-            'professional cafe menu photography of ' . $this->name . ', soft lighting, high detail'
-        );
-
-        return 'https://image.pollinations.ai/prompt/' . $prompt . '?width=1024&height=1024&seed=' . $this->id;
+        return route('menu.ai-image', [
+            'menu' => $this->id,
+            'name' => $this->name,
+        ]);
     }
 
     /**
@@ -69,7 +68,10 @@ class Menu extends Model
      */
     public function getPlaceholderImageUrlAttribute(): string
     {
-        return 'https://placehold.co/800x800/F4EDE6/6A4B2A?text=' . rawurlencode($this->name);
+        return route('menu.ai-image', [
+            'menu' => 'placeholder-' . $this->id,
+            'name' => $this->name,
+        ]);
     }
 
     /**
