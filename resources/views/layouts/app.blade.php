@@ -153,32 +153,165 @@
     <script>
         // Global Cart Functionality
         window.Cart = {
+            optionPriceMaps: {
+                addOns: {
+                    'extra-shot': 5000,
+                    'whipped-cream': 3000,
+                    'caramel-syrup': 3000,
+                    'extra-cheese': 5000,
+                    'extra-egg': 3000,
+                    'extra-rice': 5000
+                },
+                toppings: {
+                    'chocolate': 3000,
+                    'caramel': 3000,
+                    'whipped': 5000,
+                    'ice-cream': 8000
+                },
+                sauces: {
+                    'bbq': 2000,
+                    'ketchup': 0,
+                    'mayonnaise': 0,
+                    'chili': 0
+                }
+            },
+
+            toNumber(value) {
+                const parsed = Number(value);
+                return Number.isFinite(parsed) ? parsed : 0;
+            },
+
+            formatLabel(value) {
+                return String(value || '')
+                    .split('-')
+                    .map(word => word ? word.charAt(0).toUpperCase() + word.slice(1) : '')
+                    .join(' ');
+            },
+
+            formatPrice(price) {
+                return 'Rp ' + new Intl.NumberFormat('id-ID').format(this.toNumber(price));
+            },
+
+            calculateAddonEntries(options = {}) {
+                const entries = [];
+                const addOptionEntries = (field, type) => {
+                    const selected = Array.isArray(options[field]) ? options[field] : [];
+                    const priceMap = this.optionPriceMaps[field] || {};
+                    selected.forEach(key => {
+                        entries.push({
+                            type,
+                            key,
+                            name: this.formatLabel(key),
+                            price: this.toNumber(priceMap[key])
+                        });
+                    });
+                };
+
+                addOptionEntries('addOns', 'add_on');
+                addOptionEntries('toppings', 'topping');
+                addOptionEntries('sauces', 'sauce');
+
+                return entries;
+            },
+
+            recalculateItem(item) {
+                const normalized = { ...(item || {}) };
+                const options = normalized.options && typeof normalized.options === 'object' ? normalized.options : {};
+                const quantity = Math.max(1, parseInt(normalized.quantity ?? 1, 10) || 1);
+                const basePrice = this.toNumber(
+                    normalized.base_price ??
+                    normalized.basePrice ??
+                    normalized.price ??
+                    normalized.total_price ??
+                    normalized.final_price ??
+                    normalized.finalPrice
+                );
+
+                const addonEntries = Array.isArray(normalized.addons) && normalized.addons.length > 0
+                    ? normalized.addons.map(addon => ({
+                        name: addon.name || this.formatLabel(addon.key),
+                        key: addon.key || (addon.name ? String(addon.name).toLowerCase().replace(/\s+/g, '-') : ''),
+                        type: addon.type || 'add_on',
+                        price: this.toNumber(addon.price)
+                    }))
+                    : this.calculateAddonEntries(options);
+
+                const addonTotal = addonEntries.reduce((sum, addon) => sum + this.toNumber(addon.price), 0);
+                const totalPrice = this.toNumber(
+                    normalized.total_price ??
+                    normalized.totalPrice ??
+                    normalized.final_price ??
+                    normalized.finalPrice ??
+                    (basePrice + addonTotal)
+                );
+                const subtotal = this.toNumber(normalized.subtotal ?? (totalPrice * quantity));
+
+                return {
+                    ...normalized,
+                    id: normalized.id,
+                    name: normalized.name || 'Item',
+                    image: normalized.image || null,
+                    type: normalized.type || 'beverage',
+                    options,
+                    quantity,
+                    addons: addonEntries,
+                    base_price: basePrice,
+                    basePrice,
+                    price: basePrice,
+                    addon_total: addonTotal,
+                    total_price: totalPrice,
+                    totalPrice,
+                    final_price: totalPrice,
+                    finalPrice: totalPrice,
+                    subtotal,
+                    cartItemId: normalized.cartItemId || normalized.cart_item_id || (Date.now() + Math.random())
+                };
+            },
+
             get items() {
-                return JSON.parse(localStorage.getItem('cart') || '[]');
+                try {
+                    const raw = JSON.parse(localStorage.getItem('cart') || '[]');
+                    if (!Array.isArray(raw)) return [];
+                    return raw.map(item => this.recalculateItem(item));
+                } catch (error) {
+                    return [];
+                }
             },
             
-            add(id, name, price, image = null) {
-                let cart = this.items;
-                
-                // Always add as new item (qty=1, no merging)
-                cart.push({ 
-                    id, 
-                    name, 
-                    price, 
-                    image, 
-                    quantity: 1,
-                    finalPrice: price,
-                    type: 'beverage',
-                    options: {},
+            add(id, name, basePrice, image = null, quantity = 1, options = {}) {
+                const cart = this.items;
+                const normalizedOptions = options && typeof options === 'object' ? options : {};
+                const addonEntries = this.calculateAddonEntries(normalizedOptions);
+                const addonTotal = addonEntries.reduce((sum, addon) => sum + this.toNumber(addon.price), 0);
+                const base = this.toNumber(basePrice);
+                const qty = Math.max(1, parseInt(quantity, 10) || 1);
+                const totalPrice = base + addonTotal;
+
+                const cartItem = this.recalculateItem({
+                    id,
+                    name,
+                    image,
+                    quantity: qty,
+                    type: normalizedOptions.type || 'beverage',
+                    options: normalizedOptions,
+                    addons: addonEntries,
+                    base_price: base,
+                    total_price: totalPrice,
+                    subtotal: totalPrice * qty,
                     cartItemId: Date.now() + Math.random()
                 });
-                
+
+                console.log("Item added to cart:", cartItem);
+                cart.push(cartItem);
                 this.save(cart);
                 this.showToast('Item ditambahkan ke keranjang');
+                return cartItem;
             },
             
-            remove(id) {
-                let cart = this.items.filter(item => item.id !== id);
+            remove(identifier) {
+                const cart = this.items.filter(item => {
+                    return item.cartItemId !== identifier && item.id !== identifier;
+                });
                 this.save(cart);
             },
             
@@ -186,23 +319,22 @@
                 this.save([]);
             },
             
-            updateQuantity(id, quantity) {
-                let cart = this.items;
-                const item = cart.find(item => item.id === id);
-                
-                if (item) {
-                    item.quantity = parseInt(quantity);
-                    if (item.quantity <= 0) {
-                        this.remove(id);
-                        return;
-                    }
-                }
-                
+            updateQuantity(identifier, quantity) {
+                const cart = this.items;
+                const index = cart.findIndex(item => item.cartItemId === identifier || item.id === identifier);
+                if (index === -1) return;
+
+                const qty = Math.max(1, parseInt(quantity, 10) || 1);
+                cart[index] = this.recalculateItem({
+                    ...cart[index],
+                    quantity: qty
+                });
+
                 this.save(cart);
             },
             
             removeByIndex(index) {
-                let cart = this.items;
+                const cart = this.items;
                 if (index >= 0 && index < cart.length) {
                     cart.splice(index, 1);
                     this.save(cart);
@@ -210,17 +342,24 @@
             },
             
             updateQuantityByIndex(index, quantity) {
-                let cart = this.items;
+                const cart = this.items;
                 if (index >= 0 && index < cart.length) {
-                    cart[index].quantity = Math.max(1, parseInt(quantity));
+                    const qty = Math.max(1, parseInt(quantity, 10) || 1);
+                    cart[index] = this.recalculateItem({
+                        ...cart[index],
+                        quantity: qty
+                    });
                     this.save(cart);
                 }
             },
             
             save(cart) {
-                localStorage.setItem('cart', JSON.stringify(cart));
+                const normalizedCart = Array.isArray(cart) ? cart.map(item => this.recalculateItem(item)) : [];
+                localStorage.setItem('cart', JSON.stringify(normalizedCart));
                 this.updateBadge();
-                window.dispatchEvent(new CustomEvent('cart-updated'));
+                window.dispatchEvent(new CustomEvent('cart-updated', {
+                    detail: normalizedCart
+                }));
             },
             
             updateBadge() {
@@ -228,8 +367,7 @@
                 const badge = document.getElementById('cart-badge');
                 if (!badge) return;
                 
-                // Each cart item is qty=1, so totalItems = cart.length
-                const totalItems = cart.length;
+                const totalItems = cart.reduce((sum, item) => sum + Math.max(1, parseInt(item.quantity || 1, 10) || 1), 0);
                 
                 if (totalItems > 0) {
                     badge.classList.remove('hidden');

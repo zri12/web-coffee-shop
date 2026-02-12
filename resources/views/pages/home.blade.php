@@ -213,20 +213,14 @@
 <script>
 // Simple cart functionality (qty=1 per add, no merging)
 function addToCart(id, name, price) {
+    if (window.Cart && typeof window.Cart.add === 'function') {
+        window.Cart.add(id, name, price, null, 1, { type: 'beverage' });
+        return;
+    }
+
+    // Fallback only if global cart is unavailable
     let cart = JSON.parse(localStorage.getItem('cart') || '[]');
-    
-    // Always add as new item with unique ID (no merging)
-    cart.push({ 
-        id, 
-        name, 
-        price, 
-        quantity: 1,
-        finalPrice: price,
-        type: 'beverage',
-        options: {}, // No options for quick add
-        cartItemId: Date.now() + Math.random()
-    });
-    
+    cart.push({ id, name, price, quantity: 1, finalPrice: price, cartItemId: Date.now() + Math.random() });
     localStorage.setItem('cart', JSON.stringify(cart));
     updateCartBadge();
     showToast('Added to cart!');

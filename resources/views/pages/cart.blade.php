@@ -55,7 +55,7 @@
                                 <!-- Image -->
                                 <div class="w-20 h-20 bg-background-light dark:bg-background-dark rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
                                     <template x-if="item.image">
-                                        <img :src="'/images/menus/' + item.image" :alt="item.name" class="w-full h-full object-cover">
+                                        <img :src="resolveImageUrl(item.image)" :alt="item.name" class="w-full h-full object-cover">
                                     </template>
                                     <template x-if="!item.image">
                                         <span class="material-symbols-outlined text-3xl text-text-subtle/30">coffee</span>
@@ -65,7 +65,8 @@
                                 <!-- Details -->
                                 <div class="flex-1 min-w-0">
                                     <h3 class="font-bold text-text-main dark:text-white truncate text-lg" x-text="item.name"></h3>
-                                    <p class="text-primary font-bold mb-1" x-text="formatPrice(item.finalPrice || item.price)"></p>
+                                    <p class="text-primary font-bold mb-1" x-text="formatPrice(getUnitPrice(item))"></p>
+                                    <p class="text-xs text-text-subtle dark:text-gray-400" x-text="'Qty: ' + (item.quantity || 1)"></p>
                                     
                                     <!-- Product Options -->
                                     <div x-show="item.options" class="text-xs text-text-subtle dark:text-gray-400 space-y-0.5 mt-2">
@@ -192,12 +193,24 @@
                                                 <span class="flex-1 line-clamp-2">Note: <span x-text="item.options.specialRequest"></span></span>
                                             </p>
                                         </template>
+
+                                        <!-- Add-On Price Breakdown -->
+                                        <template x-if="getAddons(item).length > 0">
+                                            <div class="pt-1">
+                                                <template x-for="(addon, addonIndex) in getAddons(item)" :key="`${index}-${addonIndex}`">
+                                                    <p class="flex items-center justify-between gap-2">
+                                                        <span>+ <span x-text="addon.name"></span></span>
+                                                        <span class="font-medium text-primary" x-text="formatPrice(addon.price)"></span>
+                                                    </p>
+                                                </template>
+                                            </div>
+                                        </template>
                                     </div>
                                 </div>
                                 
                                 <!-- Subtotal (Price for this single item) -->
                                 <div class="hidden sm:block text-right min-w-[100px] flex-shrink-0">
-                                    <p class="font-bold text-text-main dark:text-white" x-text="formatPrice(item.finalPrice || item.price)"></p>
+                                    <p class="font-bold text-text-main dark:text-white" x-text="formatPrice(getItemSubtotal(item))"></p>
                                 </div>
                                 
                                 <!-- Remove Button (No quantity controls - each item is qty=1) -->
@@ -223,7 +236,7 @@
                     <div class="space-y-4 mb-6">
                         <div class="flex justify-between text-text-subtle dark:text-gray-400">
                             <span>Subtotal (<span x-text="totalItems"></span> item)</span>
-                            <span class="font-medium text-text-main dark:text-white" x-text="formatPrice(totalPrice)"></span>
+                            <span class="font-medium text-text-main dark:text-white" x-text="formatPrice(subtotalPrice)"></span>
                         </div>
                         <div class="flex justify-between text-text-subtle dark:text-gray-400">
                             <span>Biaya Layanan</span>
@@ -333,20 +346,70 @@ function cartPage() {
     return {
         items: [],
         paymentMethod: 'cash',
+        taxRate: 0,
+        serviceFee: 0,
         
         get totalItems() {
-            // Each cart entry is qty=1, so just count array length
-            return this.items.length;
+            return this.items.reduce((sum, item) => sum + (Math.max(1, parseInt(item.quantity || 1, 10) || 1)), 0);
+        },
+
+        get subtotalPrice() {
+            return this.items.reduce((sum, item) => sum + this.getItemSubtotal(item), 0);
+        },
+
+        get taxAmount() {
+            return Math.round(this.subtotalPrice * this.taxRate);
         },
         
         get totalPrice() {
-            // Each item has qty=1, so just sum finalPrice
-            // Handles both backend (snake_case) and frontend (camelCase) keys just in case
-            return this.items.reduce((sum, item) => sum + (item.subtotal || item.finalPrice || item.price), 0);
+            return this.subtotalPrice + this.taxAmount + this.serviceFee;
         },
         
         formatPrice(price) {
-            return window.Cart.formatPrice(price);
+            if (window.Cart && typeof window.Cart.formatPrice === 'function') {
+                return window.Cart.formatPrice(price);
+            }
+            const safe = Number(price) || 0;
+            return 'Rp ' + new Intl.NumberFormat('id-ID').format(safe);
+        },
+
+        resolveImageUrl(image) {
+            if (!image) return '';
+            if (/^(https?:)?\/\//.test(image) || image.startsWith('/')) {
+                return image;
+            }
+            return `/images/menus/${image}`;
+        },
+
+        getUnitPrice(item) {
+            const safeItem = window.Cart && typeof window.Cart.recalculateItem === 'function'
+                ? window.Cart.recalculateItem(item)
+                : item;
+            return Number(
+                safeItem.total_price ??
+                safeItem.totalPrice ??
+                safeItem.final_price ??
+                safeItem.finalPrice ??
+                safeItem.price ??
+                safeItem.base_price ??
+                safeItem.basePrice ??
+                0
+            ) || 0;
+        },
+
+        getItemSubtotal(item) {
+            const safeItem = window.Cart && typeof window.Cart.recalculateItem === 'function'
+                ? window.Cart.recalculateItem(item)
+                : item;
+            const quantity = Math.max(1, parseInt(safeItem.quantity || 1, 10) || 1);
+            return Number(safeItem.subtotal ?? (this.getUnitPrice(safeItem) * quantity)) || 0;
+        },
+
+        getAddons(item) {
+            const safeItem = window.Cart && typeof window.Cart.recalculateItem === 'function'
+                ? window.Cart.recalculateItem(item)
+                : item;
+            return Array.isArray(safeItem.addons) ? safeItem.addons : [];
         },
         
         async removeItem(index) {

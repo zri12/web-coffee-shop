@@ -291,12 +291,13 @@ document.addEventListener('alpine:init', () => {
 
         async addToCartWithOptions() {
             const options = this.buildOptions();
+            options.type = this.selectedProduct.type;
             
             // Use unified Cart API
             await window.Cart.add(
                 this.selectedProduct.id, 
                 this.selectedProduct.name, 
-                this.calculateItemPrice(), 
+                this.selectedProduct.priceRaw, 
                 this.selectedProduct.image, 
                 1, 
                 options
@@ -336,7 +337,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         calculateItemPrice() {
-            let total = this.selectedProduct.priceRaw;
+            let total = Number(this.selectedProduct.priceRaw) || 0;
             
             // Add-ons pricing logic
             // ... (Keep existing logic or ensure it matches backend)
@@ -399,8 +400,12 @@ document.addEventListener('alpine:init', () => {
 
         updateCartInfo(cartData = null) {
             const cart = cartData || window.Cart.items || [];
-            this.cartCount = cart.length;
-            const total = cart.reduce((sum, item) => sum + (item.subtotal || item.finalPrice || item.price), 0);
+            this.cartCount = cart.reduce((sum, item) => sum + (Math.max(1, parseInt(item.quantity || 1, 10) || 1)), 0);
+            const total = cart.reduce((sum, item) => {
+                const quantity = Math.max(1, parseInt(item.quantity || 1, 10) || 1);
+                const itemTotal = Number(item.subtotal ?? ((item.total_price ?? item.finalPrice ?? item.final_price ?? item.price ?? 0) * quantity)) || 0;
+                return sum + itemTotal;
+            }, 0);
             this.cartTotal = window.Cart.formatPrice(total);
         }
     }));
