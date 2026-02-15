@@ -24,9 +24,6 @@ $app = Application::configure(basePath: dirname(__DIR__))
         // Alias for role middleware
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
-            'admin' => \App\Http\Middleware\CheckRole::class . ':admin',
-            'manager' => \App\Http\Middleware\CheckRole::class . ':admin,manager',
-            'cashier' => \App\Http\Middleware\CheckRole::class . ':cashier',
         ]);
 
         // CORS handling
