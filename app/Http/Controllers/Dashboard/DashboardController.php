@@ -153,6 +153,7 @@ class DashboardController extends Controller
     public function editMenu(Menu $menu)
     {
         $categories = Category::where('is_active', true)->get();
+        $menu->load('recipes.ingredient'); // Eager load recipes with ingredients
         return view('admin.menus-edit', compact('menu', 'categories'));
     }
 
@@ -510,5 +511,18 @@ class DashboardController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Password berhasil diubah');
+    }
+
+    /**
+     * Get recipes for a menu (API)
+     */
+    public function getRecipes(Menu $menu)
+    {
+        $recipes = $menu->recipes()->with('ingredient')->get();
+        
+        return response()->json([
+            'success' => true,
+            'recipes' => $recipes
+        ]);
     }
 }
