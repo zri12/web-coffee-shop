@@ -220,6 +220,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         Route::put('/recipes/{recipe}', [App\Http\Controllers\Admin\RecipeController::class, 'update'])->name('recipes.update');
         Route::delete('/recipes/{recipe}', [App\Http\Controllers\Admin\RecipeController::class, 'destroy'])->name('recipes.destroy');
         Route::get('/api/ingredients', [App\Http\Controllers\Admin\RecipeController::class, 'getIngredients'])->name('api.ingredients');
+        Route::get('/menus/{menu}/recipes', [App\Http\Controllers\Dashboard\MenuController::class, 'getRecipes'])->name('api.menu.recipes');
         
         // Analytics
         Route::get('/analytics/inventory', [App\Http\Controllers\Admin\InventoryAnalyticsController::class, 'index'])->name('analytics.inventory');
