@@ -35,6 +35,12 @@
         <p class="text-sm font-medium leading-normal {{ request()->routeIs('admin.ingredients*') ? '' : 'group-hover:text-[#181411] dark:group-hover:text-white' }}">Storage & Inventory</p>
     </a>
 
+    <!-- Inventory Analytics -->
+    <a class="flex items-center gap-3 px-3 py-3 rounded-lg transition-colors group {{ request()->routeIs('admin.analytics*') ? 'bg-primary/10 text-primary dark:text-primary' : 'text-[#5c4d40] dark:text-[#a89c92] hover:bg-[#f4f2f0] dark:hover:bg-[#2c241b]' }}" href="{{ route('admin.analytics.inventory') }}">
+        <span class="material-symbols-outlined {{ request()->routeIs('admin.analytics*') ? '' : 'group-hover:text-[#181411] dark:group-hover:text-white' }}">analytics</span>
+        <p class="text-sm font-medium leading-normal {{ request()->routeIs('admin.analytics*') ? '' : 'group-hover:text-[#181411] dark:group-hover:text-white' }}">Inventory Analytics</p>
+    </a>
+
     <!-- Staff Monitoring -->
     <a class="flex items-center gap-3 px-3 py-3 rounded-lg transition-colors group {{ request()->routeIs('manager.staff*') ? 'bg-primary/10 text-primary dark:text-primary' : 'text-[#5c4d40] dark:text-[#a89c92] hover:bg-[#f4f2f0] dark:hover:bg-[#2c241b]' }}" href="{{ route('manager.staff') }}">
         <span class="material-symbols-outlined {{ request()->routeIs('manager.staff*') ? '' : 'group-hover:text-[#181411] dark:group-hover:text-white' }}">group</span>
