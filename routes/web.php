@@ -205,6 +205,23 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/logs/transactions', [DashboardController::class, 'transactionLogs'])->name('logs.transactions');
     Route::get('/logs/changes', [DashboardController::class, 'changeLogs'])->name('logs.changes');
     
+    // Inventory Management
+    Route::get('/ingredients', [App\Http\Controllers\Admin\IngredientController::class, 'index'])->name('ingredients.index');
+    Route::post('/ingredients', [App\Http\Controllers\Admin\IngredientController::class, 'store'])->name('ingredients.store');
+    Route::put('/ingredients/{ingredient}', [App\Http\Controllers\Admin\IngredientController::class, 'update'])->name('ingredients.update');
+    Route::delete('/ingredients/{ingredient}', [App\Http\Controllers\Admin\IngredientController::class, 'destroy'])->name('ingredients.destroy');
+    Route::get('/ingredients/{ingredient}/history', [App\Http\Controllers\Admin\IngredientController::class, 'history'])->name('ingredients.history');
+    Route::post('/ingredients/{ingredient}/restock', [App\Http\Controllers\Admin\IngredientController::class, 'restock'])->name('ingredients.restock');
+    
+    // Recipes
+    Route::post('/recipes', [App\Http\Controllers\Admin\RecipeController::class, 'store'])->name('recipes.store');
+    Route::put('/recipes/{recipe}', [App\Http\Controllers\Admin\RecipeController::class, 'update'])->name('recipes.update');
+    Route::delete('/recipes/{recipe}', [App\Http\Controllers\Admin\RecipeController::class, 'destroy'])->name('recipes.destroy');
+    Route::get('/api/ingredients', [App\Http\Controllers\Admin\RecipeController::class, 'getIngredients'])->name('api.ingredients');
+    
+    // Analytics
+    Route::get('/analytics/inventory', [App\Http\Controllers\Admin\InventoryAnalyticsController::class, 'index'])->name('analytics.inventory');
+    
     // Profile
     Route::get('/profile', [DashboardController::class, 'profile'])->name('profile');
     Route::post('/profile/update', [DashboardController::class, 'updateProfile'])->name('profile.update');

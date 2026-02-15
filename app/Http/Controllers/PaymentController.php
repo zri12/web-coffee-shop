@@ -159,6 +159,15 @@ class PaymentController extends Controller
                         'payment_status' => 'paid',
                         'status' => 'paid',
                     ]);
+                    
+                    // NEW: Deduct stock after payment confirmed
+                    try {
+                        app(\App\Services\StockService::class)->deductStockForOrder($order);
+                        \Log::info('✅ Stock deducted for order ' . $order->order_number);
+                    } catch (\Exception $e) {
+                        \Log::error('❌ Stock deduction failed for order ' . $order->order_number . ': ' . $e->getMessage());
+                        // Don't fail payment, but log for manual review
+                    }
                 }
             } elseif (in_array($transactionStatus, ['pending'])) {
                 $payment->update(['status' => 'pending']);

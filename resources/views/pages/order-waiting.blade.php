@@ -179,10 +179,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
     async function checkOrderStatus() {
         try {
-            const response = await fetch(`/api/order/${orderNumber}/status`);
-            const data = await response.json();
+            const response = await fetch(`/api/order/${orderNumber}/status`, {
+                headers: { 'Accept': 'application/json' }
+            });
+
+            if (!response.ok) {
+                console.warn('Order status polling failed', response.status);
+                return;
+            }
+
+            const data = await response.json().catch(() => null);
             
-            if (data.success && data.order) {
+            if (data && data.success && data.order) {
                 // If payment status changed to paid, redirect to success page
                 if (data.order.payment_status === 'paid') {
                     clearInterval(pollInterval);

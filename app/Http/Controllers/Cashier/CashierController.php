@@ -495,7 +495,7 @@ class CashierController extends Controller
     public function confirmPayment($id)
     {
         try {
-            $order = \App\Models\Order::with('payment')->findOrFail($id);
+            $order = \App\Models\Order::with(['payment', 'items.menu.recipes.ingredient'])->findOrFail($id);
             
             // Validate it's a cash order
             if ($order->payment_method !== 'cash') {
@@ -513,35 +513,58 @@ class CashierController extends Controller
                 ], 400);
             }
             
-            // CRITICAL: Update both payment_status AND status
-            // After cash payment confirmed: waiting_payment/pending -> paid
-            $order->update([
-                'payment_status' => 'paid',
-                'status' => 'paid' // Status berubah ke 'paid' setelah konfirmasi (NEW flow)
-            ]);
+            // NEW: Validate stock before confirming payment
+            $stockService = app(\App\Services\StockService::class);
+            $stockValidation = $stockService->validateStockForOrder($order);
             
-            // Update payment record if exists
-            if ($order->payment) {
-                $order->payment->update([
-                    'status' => 'paid',
-                    'paid_at' => now()
-                ]);
+            if (!$stockValidation['valid']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Stok tidak mencukupi: ' . implode(', ', $stockValidation['errors'])
+                ], 400);
             }
             
-            \Log::info("Cash payment confirmed for order {$order->order_number} by " . auth()->user()->name);
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Cash payment confirmed successfully'
-            ]);
+            \DB::beginTransaction();
+            try {
+                // CRITICAL: Update both payment_status AND status
+                // After cash payment confirmed: waiting_payment/pending -> paid
+                $order->update([
+                    'payment_status' => 'paid',
+                    'status' => 'paid' // Status berubah ke 'paid' setelah konfirmasi (NEW flow)
+                ]);
+                
+                // Update payment record if exists
+                if ($order->payment) {
+                    $order->payment->update([
+                        'status' => 'paid',
+                        'paid_at' => now()
+                    ]);
+                }
+                
+                // NEW: Deduct stock after payment confirmed
+                $stockService->deductStockForOrder($order);
+                
+                \DB::commit();
+                
+                \Log::info("✅ Cash payment confirmed and stock deducted for order {$order->order_number} by " . auth()->user()->name);
+                
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Cash payment confirmed successfully'
+                ]);
+            } catch (\Exception $e) {
+                \DB::rollBack();
+                throw $e;
+            }
         } catch (\Exception $e) {
-            \Log::error("Failed to confirm cash payment: " . $e->getMessage());
+            \Log::error("❌ Failed to confirm cash payment: " . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to confirm payment: ' . $e->getMessage()
             ], 500);
         }
     }
+
     
     // Print Kitchen Order
     public function printKitchen($id)

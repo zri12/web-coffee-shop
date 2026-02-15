@@ -44,6 +44,23 @@
     <!-- Divider -->
     <div class="my-2 border-t border-[#f4f2f0] dark:border-[#3e2d23]"></div>
 
+    <!-- Storage & Inventory -->
+    <a href="{{ route('admin.ingredients.index') }}" 
+       class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{ request()->routeIs('admin.ingredients*') ? 'bg-primary text-white' : 'text-[#897561] dark:text-[#a89c92] hover:bg-[#f4f2f0] dark:hover:bg-[#3e2d23]' }}">
+        <span class="material-symbols-outlined text-[24px]">inventory_2</span>
+        <span class="font-medium">Storage & Inventory</span>
+    </a>
+
+    <!-- Analytics -->
+    <a href="{{ route('admin.analytics.inventory') }}" 
+       class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{ request()->routeIs('admin.analytics*') ? 'bg-primary text-white' : 'text-[#897561] dark:text-[#a89c92] hover:bg-[#f4f2f0] dark:hover:bg-[#3e2d23]' }}">
+        <span class="material-symbols-outlined text-[24px]">analytics</span>
+        <span class="font-medium">Inventory Analytics</span>
+    </a>
+
+    <!-- Divider -->
+    <div class="my-2 border-t border-[#f4f2f0] dark:border-[#3e2d23]"></div>
+
     <!-- Payment Settings -->
     <a href="{{ route('admin.payment-settings') }}" 
        class="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors {{ request()->routeIs('admin.payment-settings') ? 'bg-primary text-white' : 'text-[#897561] dark:text-[#a89c92] hover:bg-[#f4f2f0] dark:hover:bg-[#3e2d23]' }}">

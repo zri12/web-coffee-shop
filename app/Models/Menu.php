@@ -109,6 +109,14 @@ class Menu extends Model
     }
 
     /**
+     * Get product recipes (ingredients used in this menu item)
+     */
+    public function recipes()
+    {
+        return $this->hasMany(ProductRecipe::class, 'product_id');
+    }
+
+    /**
      * Scope for available menus
      */
     public function scopeAvailable($query)
