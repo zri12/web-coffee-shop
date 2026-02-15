@@ -207,6 +207,11 @@ class StockService
         $statistics = [];
 
         foreach ($logs as $log) {
+            // Skip orphaned logs (ingredient deleted)
+            if (!$log->ingredient) {
+                continue;
+            }
+
             $ingredientId = $log->ingredient_id;
             $ingredientName = $log->ingredient->name;
 
