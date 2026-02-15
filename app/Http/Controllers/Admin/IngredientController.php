@@ -62,6 +62,14 @@ class IngredientController extends Controller
     }
 
     /**
+     * Get single ingredient data (API)
+     */
+    public function show(Ingredient $ingredient)
+    {
+        return response()->json($ingredient);
+    }
+
+    /**
      * Store new ingredient
      */
     public function store(Request $request)
