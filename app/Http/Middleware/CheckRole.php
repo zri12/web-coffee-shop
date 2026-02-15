@@ -25,8 +25,19 @@ class CheckRole
             ], 401);
         }
 
+        // Defensive: If roles are passed as a single comma-separated string (e.g. from some cache configs), explode them
+        $parsedRoles = [];
+        foreach ($roles as $role) {
+            if (str_contains($role, ',')) {
+                $parsedRoles = array_merge($parsedRoles, explode(',', $role));
+            } else {
+                $parsedRoles[] = $role;
+            }
+        }
+        $parsedRoles = array_map('trim', $parsedRoles);
+
         // Check if user has any of the required roles
-        if (! empty($roles) && ! $user->hasAnyRole($roles)) {
+        if (! empty($parsedRoles) && ! $user->hasAnyRole($parsedRoles)) {
             return response()->json([
                 'success' => false,
                 'message' => 'Forbidden - You do not have permission to access this resource',

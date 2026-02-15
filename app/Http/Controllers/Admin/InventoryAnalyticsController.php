@@ -91,11 +91,14 @@ class InventoryAnalyticsController extends Controller
             if (isset($dailyData[$date])) {
                 $dailyData[$date]['total'] += abs($log->change_amount);
                 
-                $ingredientName = $log->ingredient->name;
-                if (!isset($dailyData[$date]['ingredients'][$ingredientName])) {
-                    $dailyData[$date]['ingredients'][$ingredientName] = 0;
+                // Handle orphaned logs where ingredient might have been deleted
+                if ($log->ingredient) {
+                    $ingredientName = $log->ingredient->name;
+                    if (!isset($dailyData[$date]['ingredients'][$ingredientName])) {
+                        $dailyData[$date]['ingredients'][$ingredientName] = 0;
+                    }
+                    $dailyData[$date]['ingredients'][$ingredientName] += abs($log->change_amount);
                 }
-                $dailyData[$date]['ingredients'][$ingredientName] += abs($log->change_amount);
             }
         }
 
@@ -118,11 +121,14 @@ class InventoryAnalyticsController extends Controller
         $categoryData = [];
 
         foreach ($logs as $log) {
-            $category = $log->ingredient->category;
-            if (!isset($categoryData[$category])) {
-                $categoryData[$category] = 0;
+            // Handle orphaned logs where ingredient might have been deleted
+            if ($log->ingredient) {
+                $category = $log->ingredient->category;
+                if (!isset($categoryData[$category])) {
+                    $categoryData[$category] = 0;
+                }
+                $categoryData[$category] += abs($log->change_amount);
             }
-            $categoryData[$category] += abs($log->change_amount);
         }
 
         return $categoryData;
