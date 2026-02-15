@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Order;
+use App\Models\Menu;
 use App\Models\Ingredient;
 use App\Models\IngredientLog;
 use Illuminate\Support\Facades\DB;
@@ -117,6 +118,9 @@ class StockService
             DB::commit();
 
             Log::info("✅ Stock deduction completed for order #{$order->order_number}");
+            
+            // Update menu availability after stock deduction
+            $this->updateMenuAvailability();
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -247,5 +251,29 @@ class StockService
     {
         $statistics = $this->getUsageStatistics($days);
         return !empty($statistics) ? $statistics[0] : null;
+    }
+
+    /**
+     * Update all menu availability based on current stock levels
+     * 
+     * @return void
+     */
+    public function updateMenuAvailability(): void
+    {
+        Log::info("🔄 Updating menu availability based on stock levels");
+        
+        $menus = Menu::with('recipes.ingredient')->get();
+        $updated = 0;
+        
+        foreach ($menus as $menu) {
+            $wasBefore = $menu->is_available;
+            $menu->updateAvailabilityByStock();
+            
+            if ($wasBefore !== $menu->is_available) {
+                $updated++;
+            }
+        }
+        
+        Log::info("✅ Menu availability update completed. {$updated} menus updated.");
     }
 }

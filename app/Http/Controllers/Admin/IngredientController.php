@@ -142,6 +142,9 @@ class IngredientController extends Controller
             );
 
             DB::commit();
+            
+            // Update menu availability after restock
+            app(\App\Services\StockService::class)->updateMenuAvailability();
 
             return redirect()->route('admin.ingredients.index')
                 ->with('success', "Berhasil restock {$ingredient->name}");

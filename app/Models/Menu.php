@@ -149,4 +149,83 @@ class Menu extends Model
     {
         return 'Rp ' . number_format($this->price, 0, ',', '.');
     }
+
+    /**
+     * Check if menu has insufficient stock for all ingredients
+     * 
+     * @return bool True if any ingredient is insufficient
+     */
+    public function hasInsufficientStock(): bool
+    {
+        $recipes = $this->recipes()->with('ingredient')->get();
+        
+        // No recipe = always available
+        if ($recipes->isEmpty()) {
+            return false;
+        }
+        
+        foreach ($recipes as $recipe) {
+            if (!$recipe->ingredient) {
+                continue;
+            }
+            
+            // Check if stock is less than required quantity
+            if ($recipe->ingredient->stock < $recipe->quantity_used) {
+                \Log::info("Menu '{$this->name}' has insufficient stock for ingredient '{$recipe->ingredient->name}' (Stock: {$recipe->ingredient->stock}, Required: {$recipe->quantity_used})");
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Update menu availability based on current stock levels
+     * 
+     * @return void
+     */
+    public function updateAvailabilityByStock(): void
+    {
+        $hasInsufficientStock = $this->hasInsufficientStock();
+        
+        if ($hasInsufficientStock && $this->is_available) {
+            // Auto-disable menu due to insufficient stock
+            $this->update(['is_available' => false]);
+            \Log::info("Menu '{$this->name}' auto-disabled due to insufficient stock");
+        } elseif (!$hasInsufficientStock && !$this->is_available) {
+            // Auto-enable menu when stock is sufficient
+            $this->update(['is_available' => true]);
+            \Log::info("Menu '{$this->name}' auto-enabled due to sufficient stock");
+        }
+    }
+
+    /**
+     * Get stock status message for this menu
+     * 
+     * @return string|null
+     */
+    public function getStockStatusMessage(): ?string
+    {
+        $recipes = $this->recipes()->with('ingredient')->get();
+        
+        if ($recipes->isEmpty()) {
+            return null;
+        }
+        
+        $insufficientIngredients = [];
+        
+        foreach ($recipes as $recipe) {
+            if (!$recipe->ingredient) continue;
+            
+            if ($recipe->ingredient->stock < $recipe->quantity_used) {
+                $insufficientIngredients[] = $recipe->ingredient->name;
+            }
+        }
+        
+        if (empty($insufficientIngredients)) {
+            return null;
+        }
+        
+        return 'Stok habis: ' . implode(', ', $insufficientIngredients);
+    }
 }
