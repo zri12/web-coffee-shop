@@ -233,33 +233,75 @@
 const menuId = {{ $menu->id }};
 let ingredients = [];
 let recipes = [];
+let isLoading = false;
 
 // Load initial data
 document.addEventListener('DOMContentLoaded', function() {
+    showLoadingState();
     loadIngredients();
     loadRecipes();
 });
 
+// Show loading state
+function showLoadingState() {
+    const tbody = document.getElementById('recipeTableBody');
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="4" class="px-6 py-12 text-center">
+                <div class="flex flex-col items-center justify-center">
+                    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-3"></div>
+                    <p class="text-gray-500 dark:text-gray-400">Loading ingredients...</p>
+                </div>
+            </td>
+        </tr>
+    `;
+}
+
 // Load available ingredients
 function loadIngredients() {
     fetch('/admin/api/ingredients')
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) {
+                throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+            }
+            return r.json();
+        })
         .then(data => {
-            ingredients = data.ingredients;
-            populateIngredientSelect();
+            if (data.success && data.ingredients) {
+                ingredients = data.ingredients;
+                populateIngredientSelect();
+                console.log(`✅ Loaded ${ingredients.length} ingredients`);
+            } else {
+                throw new Error('Invalid response format');
+            }
+        })
+        .catch(err => {
+            console.error('❌ Failed to load ingredients:', err);
+            showNotification('Failed to load ingredient data. Please refresh the page.', 'error');
+            // Still allow viewing existing recipes even if ingredients fail to load
         });
 }
 
 // Load existing recipes
 function loadRecipes() {
     fetch(`/admin/menus/${menuId}/recipes`)
-        .then(r => r.json())
+        .then(r => {
+            if (!r.ok) {
+                throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+            }
+            return r.json();
+        })
         .then(data => {
-            recipes = data.recipes || [];
-            renderRecipeTable();
+            if (data.success) {
+                recipes = data.recipes || [];
+                renderRecipeTable();
+                console.log(`✅ Loaded ${recipes.length} recipes`);
+            } else {
+                throw new Error('Invalid response format');
+            }
         })
         .catch(err => {
-            console.error('Failed to load recipes:', err);
+            console.error('❌ Failed to load recipes:', err);
             renderRecipeTable(); // Show empty state
         });
 }
@@ -267,12 +309,19 @@ function loadRecipes() {
 // Populate ingredient dropdown
 function populateIngredientSelect() {
     const select = document.getElementById('ingredientSelect');
+    if (!select) return;
+    
     select.innerHTML = '<option value="">Choose ingredient...</option>';
+    
+    if (ingredients.length === 0) {
+        select.innerHTML += '<option value="" disabled>No ingredients available</option>';
+        return;
+    }
     
     ingredients.forEach(ing => {
         const option = document.createElement('option');
         option.value = ing.id;
-        option.textContent = `${ing.name} (Stock: ${ing.stock} ${ing.unit})`;
+        option.textContent = `${ing.name} (Stock: ${parseFloat(ing.stock).toFixed(2)} ${ing.unit})`;
         option.dataset.unit = ing.unit;
         option.dataset.stock = ing.stock;
         select.appendChild(option);
@@ -283,6 +332,8 @@ function populateIngredientSelect() {
 function renderRecipeTable() {
     const tbody = document.getElementById('recipeTableBody');
     const emptyState = document.getElementById('emptyRecipeState');
+    
+    if (!tbody || !emptyState) return;
     
     if (recipes.length === 0) {
         tbody.innerHTML = '';
@@ -295,28 +346,31 @@ function renderRecipeTable() {
         <tr class="hover:bg-gray-50 dark:hover:bg-[#0f0d0b] transition-colors group">
             <td class="px-6 py-4">
                 <div class="flex items-center">
-                    <div class="bg-primary/5 p-2 rounded-lg mr-3">
-                        <span class="material-symbols-outlined text-primary text-[18px]">inventory_2</span>
+                    <div class="bg-gradient-to-br from-primary/10 to-primary/5 p-2.5 rounded-xl mr-3">
+                        <span class="material-symbols-outlined text-primary text-[20px]">inventory_2</span>
                     </div>
-                    <span class="font-semibold text-gray-900 dark:text-white">${recipe.ingredient.name}</span>
+                    <div>
+                        <span class="font-semibold text-gray-900 dark:text-white">${recipe.ingredient.name}</span>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">${recipe.ingredient.category || 'Uncategorized'}</p>
+                    </div>
                 </div>
             </td>
             <td class="px-6 py-4 text-right">
                 <span class="text-lg font-bold text-gray-900 dark:text-white">${parseFloat(recipe.quantity_used).toFixed(2)}</span>
             </td>
             <td class="px-6 py-4">
-                <span class="inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-medium bg-gray-100 dark:bg-[#3d362e] text-gray-600 dark:text-gray-300">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                     ${recipe.ingredient.unit}
                 </span>
             </td>
             <td class="px-6 py-4">
                 <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onclick="editRecipe(${recipe.id})" 
-                            class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors" title="Edit">
+                            class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all hover:scale-110" title="Edit Quantity">
                         <span class="material-symbols-outlined text-[18px]">edit</span>
                     </button>
                     <button onclick="deleteRecipe(${recipe.id})" 
-                            class="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Delete">
+                            class="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all hover:scale-110" title="Remove">
                         <span class="material-symbols-outlined text-[18px]">delete</span>
                     </button>
                 </div>
@@ -327,11 +381,18 @@ function renderRecipeTable() {
 
 // Modal functions
 function openAddIngredientModal() {
+    if (ingredients.length === 0) {
+        showNotification('No ingredients available. Please add ingredients first in Storage & Inventory.', 'error');
+        return;
+    }
+    
     document.getElementById('ingredientModalTitle').textContent = 'Add Ingredient to Recipe';
     document.getElementById('submitBtnText').textContent = 'Add to Recipe';
     document.getElementById('ingredientForm').reset();
     document.getElementById('recipeId').value = '';
     document.getElementById('ingredientSelect').disabled = false;
+    document.getElementById('unitDisplay').value = '';
+    document.getElementById('ingredientStockInfo').textContent = '';
     toggleModal('ingredientModal', true);
 }
 
@@ -346,6 +407,7 @@ function editRecipe(recipeId) {
     document.getElementById('ingredientSelect').disabled = true;
     document.getElementById('quantityUsed').value = recipe.quantity_used;
     document.getElementById('unitDisplay').value = recipe.ingredient.unit;
+    document.getElementById('ingredientStockInfo').textContent = `Current stock: ${recipe.ingredient.stock} ${recipe.ingredient.unit}`;
     
     toggleModal('ingredientModal', true);
 }
@@ -356,77 +418,102 @@ function closeIngredientModal() {
 
 function toggleModal(modalId, show) {
     const modal = document.getElementById(modalId);
+    if (!modal) return;
+    
     const backdrop = modal.querySelector('div[id$="Backdrop"]');
     const panel = modal.querySelector('div[id$="Panel"]');
     
     if (show) {
         modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
         setTimeout(() => {
             backdrop.classList.remove('opacity-0');
+            backdrop.classList.add('opacity-100');
             panel.classList.remove('opacity-0', 'translate-y-4', 'sm:translate-y-0', 'sm:scale-95');
             panel.classList.add('opacity-100', 'translate-y-0', 'sm:scale-100');
         }, 10);
     } else {
+        backdrop.classList.remove('opacity-100');
         backdrop.classList.add('opacity-0');
         panel.classList.remove('opacity-100', 'translate-y-0', 'sm:scale-100');
         panel.classList.add('opacity-0', 'translate-y-4', 'sm:translate-y-0', 'sm:scale-95');
         setTimeout(() => {
             modal.classList.add('hidden');
+            document.body.style.overflow = '';
         }, 300);
     }
 }
 
 // Update unit display when ingredient selected
-document.getElementById('ingredientSelect').addEventListener('change', function() {
-    const selected = this.options[this.selectedIndex];
-    const unit = selected.dataset.unit || '';
-    const stock = selected.dataset.stock || '';
-    
-    document.getElementById('unitDisplay').value = unit;
-    document.getElementById('ingredientStockInfo').textContent = stock ? `Current stock: ${stock} ${unit}` : '';
-});
+const ingredientSelect = document.getElementById('ingredientSelect');
+if (ingredientSelect) {
+    ingredientSelect.addEventListener('change', function() {
+        const selected = this.options[this.selectedIndex];
+        const unit = selected.dataset.unit || '';
+        const stock = selected.dataset.stock || '';
+        
+        document.getElementById('unitDisplay').value = unit;
+        document.getElementById('ingredientStockInfo').textContent = stock ? `Current stock: ${parseFloat(stock).toFixed(2)} ${unit}` : '';
+    });
+}
 
 // Form submission
-document.getElementById('ingredientForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const formData = new FormData(this);
-    const recipeId = document.getElementById('recipeId').value;
-    
-    const url = recipeId ? `/admin/recipes/${recipeId}` : '/admin/recipes';
-    const method = recipeId ? 'PUT' : 'POST';
-    
-    // Convert FormData to JSON
-    const data = {};
-    formData.forEach((value, key) => data[key] = value);
-    
-    if (recipeId) {
-        data._method = 'PUT';
-    }
-    
-    fetch(url, {
-        method: 'POST',
-        headers: {
-            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify(data)
-    })
-    .then(async response => {
-        const result = await response.json();
-        if (response.ok) {
-            closeIngredientModal();
-            loadRecipes(); // Reload table
-            showNotification(result.message, 'success');
-        } else {
-            showNotification(result.message || 'Error occurred', 'error');
+const ingredientForm = document.getElementById('ingredientForm');
+if (ingredientForm) {
+    ingredientForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (isLoading) return;
+        isLoading = true;
+        
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<span class="animate-spin inline-block mr-2">⏳</span> Saving...';
+        submitBtn.disabled = true;
+        
+        const formData = new FormData(this);
+        const recipeId = document.getElementById('recipeId').value;
+        
+        const url = recipeId ? `/admin/recipes/${recipeId}` : '/admin/recipes';
+        
+        // Convert FormData to JSON
+        const data = {};
+        formData.forEach((value, key) => data[key] = value);
+        
+        if (recipeId) {
+            data._method = 'PUT';
         }
-    })
-    .catch(err => {
-        console.error(err);
-        showNotification('Network error occurred', 'error');
+        
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(async response => {
+            const result = await response.json();
+            if (response.ok) {
+                closeIngredientModal();
+                loadRecipes(); // Reload table
+                showNotification(result.message, 'success');
+            } else {
+                showNotification(result.message || 'Error occurred', 'error');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showNotification('Network error occurred. Please try again.', 'error');
+        })
+        .finally(() => {
+            isLoading = false;
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        });
     });
-});
+}
 
 // Delete recipe
 function deleteRecipe(recipeId) {
@@ -449,21 +536,51 @@ function deleteRecipe(recipeId) {
         } else {
             showNotification(result.message || 'Error occurred', 'error');
         }
+    })
+    .catch(err => {
+        console.error(err);
+        showNotification('Network error occurred', 'error');
     });
 }
 
 // Notification helper
 function showNotification(message, type = 'success') {
     const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
+    const icon = type === 'success' ? '✓' : '✕';
+    
     const notification = document.createElement('div');
-    notification.className = `fixed bottom-4 right-4 ${bgColor} text-white px-6 py-3 rounded-lg shadow-lg z-50 text-sm`;
-    notification.textContent = message;
+    notification.className = `fixed bottom-4 right-4 ${bgColor} text-white px-6 py-3 rounded-xl shadow-2xl z-[9999] text-sm flex items-center gap-2 animate-slide-up`;
+    notification.innerHTML = `
+        <span class="text-lg font-bold">${icon}</span>
+        <span>${message}</span>
+    `;
     document.body.appendChild(notification);
     
     setTimeout(() => {
-        notification.remove();
-    }, 3000);
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateY(1rem)';
+        setTimeout(() => notification.remove(), 300);
+    }, 4000);
 }
+
+// Add CSS animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slide-up {
+        from {
+            opacity: 0;
+            transform: translateY(1rem);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    .animate-slide-up {
+        animation: slide-up 0.3s ease-out;
+    }
+`;
+document.head.appendChild(style);
 </script>
 
 @if(session('error'))
