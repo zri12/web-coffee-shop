@@ -215,6 +215,10 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         Route::get('/ingredients/{ingredient}/history', [App\Http\Controllers\Admin\IngredientController::class, 'history'])->name('ingredients.history');
         Route::post('/ingredients/{ingredient}/restock', [App\Http\Controllers\Admin\IngredientController::class, 'restock'])->name('ingredients.restock');
         
+        // Analytics
+        Route::get('/analytics/ingredients', [App\Http\Controllers\Admin\AnalyticsController::class, 'ingredients'])->name('analytics.ingredients');
+        Route::get('/analytics/menu-availability', [App\Http\Controllers\Admin\AnalyticsController::class, 'menuAvailability'])->name('analytics.menu-availability');
+        
         // Recipes
         Route::post('/recipes', [App\Http\Controllers\Admin\RecipeController::class, 'store'])->name('recipes.store');
         Route::put('/recipes/{recipe}', [App\Http\Controllers\Admin\RecipeController::class, 'update'])->name('recipes.update');

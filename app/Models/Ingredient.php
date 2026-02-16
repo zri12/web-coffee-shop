@@ -134,6 +134,32 @@ class Ingredient extends Model
     }
 
     /**
+     * Get status icon for UI
+     */
+    public function getStatusIconAttribute(): string
+    {
+        return match($this->status) {
+            'Aman' => 'check_circle',
+            'Hampir Habis' => 'warning',
+            'Habis' => 'cancel',
+            default => 'help'
+        };
+    }
+
+    /**
+     * Get status color name
+     */
+    public function getStatusColorAttribute(): string
+    {
+        return match($this->status) {
+            'Aman' => 'green',
+            'Hampir Habis' => 'yellow',
+            'Habis' => 'red',
+            default => 'gray'
+        };
+    }
+
+    /**
      * Check if ingredient can be deleted
      */
     public function canBeDeleted(): bool
