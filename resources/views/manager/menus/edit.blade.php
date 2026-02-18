@@ -82,6 +82,48 @@
                         <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                     @enderror
                 </div>
+
+                <div x-data="menuAddonsForm(@json(old('addons', $menu->addons ?? [])))" class="space-y-3 mt-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs uppercase tracking-wide text-[#a89c92]">Add-ons</p>
+                            <h3 class="text-lg font-semibold text-[#181411] dark:text-white">Product add-ons</h3>
+                        </div>
+                        <button type="button" @click="addRow()" class="text-primary text-xs font-semibold flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[18px]">add</span>
+                            Add add-on
+                        </button>
+                    </div>
+                    <template x-for="(addon, index) in addons" :key="index">
+                        <div class="grid grid-cols-2 gap-3 items-end">
+                            <div>
+                                <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Name</label>
+                                <input type="text" :name="'addons['+index+'][name]'" x-model="addon.name"
+                                       class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="Extra shot">
+                            </div>
+                            <div>
+                                <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Price (Rp)</label>
+                                <input type="number" min="0" step="500" :name="'addons['+index+'][price]'" x-model="addon.price"
+                                       class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="0">
+                            </div>
+                            <button type="button" @click="removeRow(index)"
+                                    class="text-red-600 text-xs font-semibold justify-self-start flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[18px]">delete</span>
+                                Remove
+                            </button>
+                        </div>
+                    </template>
+                    <template x-if="addons.length === 0">
+                        <p class="text-xs text-[#897561]">Add-ons appear as optional extras on the detail modal.</p>
+                    </template>
+                    @error('addons.*.name')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                    @error('addons.*.price')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
             </div>
 
             <div class="flex gap-3 mt-6">

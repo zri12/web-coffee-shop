@@ -13,10 +13,13 @@
             <select class="px-4 py-2.5 bg-white dark:bg-[#1a1612] border border-[#e6e0db] dark:border-[#3d362e] rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-sm" onchange="window.location.href='?status='+this.value">
                 <option value="" {{ request('status') === null ? 'selected' : '' }}>All Status</option>
                 <option value="waiting_payment" {{ request('status') === 'waiting_payment' ? 'selected' : '' }}>Menunggu Pembayaran</option>
+                <option value="waiting_cashier_confirmation" {{ request('status') === 'waiting_cashier_confirmation' ? 'selected' : '' }}>Menunggu Konfirmasi Kasir</option>
                 <option value="paid" {{ request('status') === 'paid' ? 'selected' : '' }}>Sudah Dibayar</option>
                 <option value="preparing" {{ request('status') === 'preparing' ? 'selected' : '' }}>Sedang Dipersiapkan</option>
                 <option value="completed" {{ request('status') === 'completed' ? 'selected' : '' }}>Selesai</option>
                 <option value="cancelled" {{ request('status') === 'cancelled' ? 'selected' : '' }}>Dibatalkan</option>
+                <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>Legacy Pending</option>
+                <option value="processing" {{ request('status') === 'processing' ? 'selected' : '' }}>Legacy Processing</option>
             </select>
         </div>
     </div>
@@ -70,42 +73,36 @@
                                 $statusText = '';
                                 $statusIcon = '';
                                 
-                                if ($order->status === 'waiting_payment') {
+                                $status = $order->status;
+                                if (in_array($status, ['waiting_payment','waiting_cashier_confirmation','pending'])) {
                                     if ($order->payment_method === 'cash') {
-                                        // 🟠 Menunggu Pembayaran Tunai
                                         $statusBadge = 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300';
-                                        $statusText = 'Menunggu Pembayaran Tunai';
+                                        $statusText = 'Menunggu Konfirmasi Kasir';
                                         $statusIcon = 'payments';
                                     } else {
-                                        // 🔵 Menunggu Pembayaran QRIS
                                         $statusBadge = 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300';
                                         $statusText = 'Menunggu Pembayaran QRIS';
                                         $statusIcon = 'qr_code_2';
                                     }
-                                } elseif ($order->status === 'paid') {
-                                    // 🟢 Sudah Dibayar (siap diproses)
+                                } elseif ($status === 'paid') {
                                     $statusBadge = 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
                                     $statusText = 'Sudah Dibayar';
                                     $statusIcon = 'check_circle';
-                                } elseif ($order->status === 'preparing') {
-                                    // 🟣 Sedang Dipersiapkan
+                                } elseif (in_array($status, ['preparing','processing'])) {
                                     $statusBadge = 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300';
                                     $statusText = 'Sedang Dipersiapkan';
                                     $statusIcon = 'restaurant';
-                                } elseif ($order->status === 'completed') {
-                                    // 🟢 Selesai
+                                } elseif ($status === 'completed') {
                                     $statusBadge = 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
                                     $statusText = 'Selesai';
                                     $statusIcon = 'verified';
-                                } elseif ($order->status === 'cancelled') {
-                                    // 🔴 Dibatalkan
+                                } elseif ($status === 'cancelled') {
                                     $statusBadge = 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
                                     $statusText = 'Dibatalkan';
                                     $statusIcon = 'cancel';
                                 } else {
-                                    // Default fallback
                                     $statusBadge = 'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300';
-                                    $statusText = ucfirst($order->status);
+                                    $statusText = ucfirst($status);
                                     $statusIcon = 'info';
                                 }
                             @endphp

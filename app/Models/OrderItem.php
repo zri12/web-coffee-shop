@@ -83,7 +83,8 @@ class OrderItem extends Model
     public function getOptionsTextAttribute(): string
     {
         if (!$this->options || empty($this->options)) {
-            return '';
+            // Fallback: show notes if options not stored
+            return $this->notes ?? '';
         }
 
         $texts = [];

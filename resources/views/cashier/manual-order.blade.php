@@ -152,7 +152,7 @@
                                 
                                 <!-- Price & Remove -->
                                 <div class="flex items-center gap-2">
-                                    <span class="text-sm font-bold text-[#181411] dark:text-white">Rp <span x-text="formatPrice(item.price * item.quantity)"></span></span>
+                                    <span class="text-sm font-bold text-[#181411] dark:text-white">Rp <span x-text="formatPrice((item.total_price || item.price) * item.quantity)"></span></span>
                                     <button type="button" @click="removeItem(index)" class="size-6 rounded bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
                                         <span class="material-symbols-outlined text-[14px]">close</span>
                                     </button>
@@ -470,8 +470,43 @@
                     <p class="text-sm text-[#897561] dark:text-[#a89c92] leading-relaxed" x-text="selectedMenu.description || 'Delicious menu item made with care and quality ingredients.'"></p>
                 </div>
 
+                <!-- Dynamic Options from Admin -->
+                <div class="space-y-4 mb-6" x-show="optionGroups.length > 0">
+                    <template x-if="loadingOptions">
+                        <div class="text-sm text-[#897561] dark:text-[#a89c92]">Loading options...</div>
+                    </template>
+                    <template x-for="group in optionGroups" :key="group.id">
+                        <div class="p-4 rounded-xl border border-[#e8e4df] dark:border-[#3e2d23] bg-[#fdfbf7] dark:bg-[#221910] space-y-3">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-bold text-[#181411] dark:text-white" x-text="group.name"></h3>
+                                <span class="text-[11px] px-2 py-0.5 rounded-full"
+                                      :class="group.is_required ? 'bg-red-100 text-red-700' : 'bg-[#f4f2f0] dark:bg-[#2c241b] text-[#897561] dark:text-[#a89c92]'">
+                                    <span x-text="group.is_required ? 'Required' : 'Optional'"></span>
+                                </span>
+                            </div>
+                            <div class="space-y-2">
+                                <template x-for="value in group.values" :key="value.id">
+                                    <label class="flex items-center gap-3 p-3 rounded-lg border-2 transition-all cursor-pointer"
+                                           :class="isSelected(group, value.id) ? 'border-primary bg-primary/5' : 'border-[#e8e4df] dark:border-[#3e2d23] hover:border-primary'">
+                                        <input :type="group.type === 'single' ? 'radio' : 'checkbox'"
+                                               class="size-5 text-primary focus:ring-primary"
+                                               :name="'option-' + group.id"
+                                               :value="value.id"
+                                               @change="toggleOption(group, value)"
+                                               :checked="isSelected(group, value.id)">
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-[#181411] dark:text-white" x-text="value.name"></p>
+                                            <p class="text-xs text-[#897561] dark:text-[#a89c92]" x-text="value.price_adjustment === 0 ? 'Free' : (value.price_adjustment > 0 ? '+ Rp ' + formatPrice(value.price_adjustment) : '- Rp ' + formatPrice(Math.abs(value.price_adjustment)))"></p>
+                                        </div>
+                                    </label>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
                 <!-- BEVERAGE OPTIONS -->
-                <div x-show="selectedMenu.type === 'beverage'" class="space-y-5 mb-6">
+                <div x-show="selectedMenu.type === 'beverage' && optionGroups.length === 0" class="space-y-5 mb-6">
                     <!-- Temperature Selection -->
                     <div>
                         <h3 class="text-sm font-bold text-[#181411] dark:text-white mb-3">Temperature</h3>
@@ -550,7 +585,7 @@
                 </div>
 
                 <!-- FOOD OPTIONS -->
-                <div x-show="selectedMenu.type === 'food'" class="space-y-5 mb-6">
+                <div x-show="selectedMenu.type === 'food' && optionGroups.length === 0" class="space-y-5 mb-6">
                     <!-- Spice Level -->
                     <div>
                         <h3 class="text-sm font-bold text-[#181411] dark:text-white mb-3">Spice Level</h3>
@@ -604,7 +639,7 @@
                 </div>
 
                 <!-- SNACK OPTIONS -->
-                <div x-show="selectedMenu.type === 'snack'" class="space-y-5 mb-6">
+                <div x-show="selectedMenu.type === 'snack' && optionGroups.length === 0" class="space-y-5 mb-6">
                     <!-- Size Selection -->
                     <div>
                         <h3 class="text-sm font-bold text-[#181411] dark:text-white mb-3">Size</h3>
@@ -659,7 +694,7 @@
                 </div>
 
                 <!-- DESSERT OPTIONS -->
-                <div x-show="selectedMenu.type === 'dessert'" class="space-y-5 mb-6">
+                <div x-show="selectedMenu.type === 'dessert' && optionGroups.length === 0" class="space-y-5 mb-6">
                     <!-- Portion Size -->
                     <div>
                         <h3 class="text-sm font-bold text-[#181411] dark:text-white mb-3">Portion</h3>
@@ -719,7 +754,7 @@
                 <!-- Notes -->
                 <div class="mb-6">
                     <h3 class="text-sm font-bold text-[#181411] dark:text-white mb-3">Special Instructions (Optional)</h3>
-                    <textarea x-model="modalNotes" rows="3" placeholder="e.g., Extra hot, no sugar, etc." class="w-full px-4 py-3 bg-[#f4f2f0] dark:bg-[#221910] border border-transparent focus:border-primary rounded-lg text-sm text-[#181411] dark:text-white placeholder-[#897561] dark:placeholder-[#a89c92] resize-none"></textarea>
+                    <textarea x-model="specialRequest" rows="3" placeholder="e.g., Extra hot, no sugar, etc." class="w-full px-4 py-3 bg-[#f4f2f0] dark:bg-[#221910] border border-transparent focus:border-primary rounded-lg text-sm text-[#181411] dark:text-white placeholder-[#897561] dark:placeholder-[#a89c92] resize-none"></textarea>
                 </div>
 
                 <!-- Action Buttons -->
@@ -762,17 +797,11 @@ function manualOrder() {
         selectedMenu: {},
         modalQuantity: 1,
         modalNotes: '',
-        
-        // Product customization options
-        temperature: 'ice',
-        iceLevel: 'normal',
-        sugarLevel: 'normal',
-        size: 'regular',
-        spiceLevel: 'mild',
-        portion: 'regular',
-        addOns: [],
-        sauces: [],
-        toppings: [],
+        // Dynamic option groups (admin-driven)
+        optionGroups: [],
+        selections: {},
+        loadingOptions: false,
+        specialRequest: '',
 
         getProductType(categorySlug) {
             const slugLower = categorySlug.toLowerCase();
@@ -789,15 +818,9 @@ function manualOrder() {
         },
 
         resetOptions() {
-            this.temperature = 'ice';
-            this.iceLevel = 'normal';
-            this.sugarLevel = 'normal';
-            this.size = 'regular';
-            this.spiceLevel = 'mild';
-            this.portion = 'regular';
-            this.addOns = [];
-            this.sauces = [];
-            this.toppings = [];
+            this.optionGroups = [];
+            this.selections = {};
+            this.specialRequest = '';
             this.modalQuantity = 1;
             this.modalNotes = '';
         },
@@ -816,6 +839,7 @@ function manualOrder() {
             this.resetOptions();
             this.showMenuDetail = true;
             document.body.style.overflow = 'hidden';
+            this.loadOptionsForMenu(menuId);
         },
 
         resolveMenuImage(image) {
@@ -832,164 +856,148 @@ function manualOrder() {
             document.body.style.overflow = 'auto';
         },
 
-        calculateItemPrice() {
-            let basePrice = this.selectedMenu.price;
-            let addOnPrice = 0;
-
-            // Calculate add-on prices based on product type
-            if (this.selectedMenu.type === 'beverage') {
-                // Size upgrade
-                if (this.size === 'large') addOnPrice += 8000;
-                
-                // Beverage add-ons
-                if (this.addOns.includes('extra-shot')) addOnPrice += 5000;
-                if (this.addOns.includes('whipped-cream')) addOnPrice += 3000;
-                if (this.addOns.includes('caramel-syrup')) addOnPrice += 3000;
-            } else if (this.selectedMenu.type === 'food') {
-                // Portion upgrade
-                if (this.portion === 'large') addOnPrice += 5000;
-                
-                // Food add-ons
-                if (this.addOns.includes('extra-cheese')) addOnPrice += 5000;
-                if (this.addOns.includes('extra-egg')) addOnPrice += 3000;
-                if (this.addOns.includes('extra-rice')) addOnPrice += 5000;
-            } else if (this.selectedMenu.type === 'snack') {
-                // Size adjustment
-                if (this.size === 'small') addOnPrice -= 5000;
-                if (this.size === 'large') addOnPrice += 5000;
-                
-                // BBQ sauce
-                if (this.sauces.includes('bbq')) addOnPrice += 2000;
-            } else if (this.selectedMenu.type === 'dessert') {
-                // Portion upgrade
-                if (this.portion === 'large') addOnPrice += 5000;
-                
-                // Toppings
-                if (this.toppings.includes('whipped-cream')) addOnPrice += 3000;
-                if (this.toppings.includes('chocolate-chips')) addOnPrice += 4000;
-                if (this.toppings.includes('caramel-drizzle')) addOnPrice += 3000;
+        async loadOptionsForMenu(menuId) {
+            this.loadingOptions = true;
+            try {
+                const res = await fetch(`/menu/${menuId}/options`);
+                const json = await res.json();
+                this.optionGroups = json?.data?.option_groups ?? [];
+                this.selections = {};
+            } catch (e) {
+                console.error(e);
+                this.optionGroups = [];
+            } finally {
+                this.loadingOptions = false;
             }
-
-            return basePrice + addOnPrice;
         },
 
-        formatItemNotes() {
-            let notesParts = [];
-            
-            if (this.selectedMenu.type === 'beverage') {
-                // Temperature
-                if (this.temperature === 'ice') {
-                    notesParts.push(`❄️ Ice - ${this.iceLevel}`);
+        toggleOption(group, value) {
+            if (group.type === 'single') {
+                this.selections[group.id] = value.id;
+            } else {
+                const current = this.selections[group.id] || [];
+                if (current.includes(value.id)) {
+                    this.selections[group.id] = current.filter(v => v !== value.id);
                 } else {
-                    notesParts.push('🔥 Hot');
-                }
-                
-                // Sugar level
-                if (this.sugarLevel !== 'normal') {
-                    const sugarLabels = {'less': 'Less Sugar', 'no-sugar': 'No Sugar'};
-                    notesParts.push(`Sugar: ${sugarLabels[this.sugarLevel] || this.sugarLevel}`);
-                }
-                
-                // Size
-                if (this.size === 'large') {
-                    notesParts.push('Size: Large (+8k)');
-                }
-                
-                // Add-ons
-                if (this.addOns.length > 0) {
-                    const addonLabels = {
-                        'extra-shot': 'Extra Shot +5k',
-                        'whipped-cream': 'Whipped Cream +3k',
-                        'caramel-syrup': 'Caramel Syrup +3k'
-                    };
-                    const addonsText = this.addOns.map(a => addonLabels[a] || a).join(', ');
-                    notesParts.push(`Add-ons: ${addonsText}`);
-                }
-            } else if (this.selectedMenu.type === 'food') {
-                // Spice level
-                const spiceEmojis = {'mild': '🫑 Mild', 'medium': '🌶️ Medium', 'spicy': '🔥 Spicy'};
-                notesParts.push(`Spice: ${spiceEmojis[this.spiceLevel] || this.spiceLevel}`);
-                
-                // Portion
-                if (this.portion === 'large') {
-                    notesParts.push('Portion: Large (+5k)');
-                }
-                
-                // Add-ons
-                if (this.addOns.length > 0) {
-                    const addonLabels = {
-                        'extra-cheese': 'Extra Cheese +5k',
-                        'extra-egg': 'Extra Egg +3k',
-                        'extra-rice': 'Extra Rice +5k'
-                    };
-                    const addonsText = this.addOns.map(a => addonLabels[a] || a).join(', ');
-                    notesParts.push(`Add-ons: ${addonsText}`);
-                }
-            } else if (this.selectedMenu.type === 'snack') {
-                // Size
-                if (this.size !== 'regular') {
-                    const sizeLabels = {'small': 'Small (-5k)', 'large': 'Large (+5k)'};
-                    notesParts.push(`Size: ${sizeLabels[this.size] || this.size}`);
-                }
-                
-                // Sauces
-                if (this.sauces.length > 0) {
-                    const sauceLabels = {
-                        'ketchup': 'Ketchup',
-                        'mayo': 'Mayonnaise',
-                        'chili': 'Chili Sauce',
-                        'bbq': 'BBQ Sauce +2k'
-                    };
-                    const saucesText = this.sauces.map(s => sauceLabels[s] || s).join(', ');
-                    notesParts.push(`Sauces: ${saucesText}`);
-                }
-            } else if (this.selectedMenu.type === 'dessert') {
-                // Portion
-                if (this.portion === 'large') {
-                    notesParts.push('Portion: Large (+5k)');
-                }
-                
-                // Toppings
-                if (this.toppings.length > 0) {
-                    const toppingLabels = {
-                        'whipped-cream': 'Whipped Cream +3k',
-                        'chocolate-chips': 'Chocolate Chips +4k',
-                        'caramel-drizzle': 'Caramel Drizzle +3k'
-                    };
-                    const toppingsText = this.toppings.map(t => toppingLabels[t] || t).join(', ');
-                    notesParts.push(`Toppings: ${toppingsText}`);
+                    this.selections[group.id] = [...current, value.id];
                 }
             }
-            
-            // Add special instructions if any
-            if (this.modalNotes.trim()) {
-                notesParts.push(`📝 ${this.modalNotes.trim()}`);
+        },
+
+        isSelected(group, valueId) {
+            const sel = this.selections[group.id];
+            return group.type === 'single' ? sel === valueId : Array.isArray(sel) && sel.includes(valueId);
+        },
+
+        hasSelection(group) {
+            const sel = this.selections[group.id];
+            if (group.type === 'single') return !!sel;
+            return Array.isArray(sel) && sel.length > 0;
+        },
+
+        buildOptions() {
+            const groups = this.optionGroups.map(group => {
+                const selected = this.selections[group.id];
+                const values = (group.values || []).filter(v => group.type === 'single'
+                    ? v.id === selected
+                    : Array.isArray(selected) && selected.includes(v.id)
+                ).map(v => ({ id: v.id, name: v.name, price_adjustment: v.price_adjustment }));
+                return {
+                    id: group.id,
+                    name: group.name,
+                    type: group.type,
+                    is_required: group.is_required,
+                    selected_values: values,
+                };
+            });
+            const payload = { option_groups: groups };
+            if (this.specialRequest.trim()) payload.special_request = this.specialRequest.trim();
+            return payload;
+        },
+
+        calculatePriceWithOptions(base) {
+            let total = Number(base) || 0;
+            this.optionGroups.forEach(group => {
+                const selected = this.selections[group.id];
+                const values = group.values || [];
+                if (group.type === 'single' && selected) {
+                    const val = values.find(v => v.id === selected);
+                    if (val) total += Number(val.price_adjustment || 0);
+                }
+                if (group.type === 'multiple' && Array.isArray(selected)) {
+                    selected.forEach(id => {
+                        const val = values.find(v => v.id === id);
+                        if (val) total += Number(val.price_adjustment || 0);
+                    });
+                }
+            });
+            return total;
+        },
+
+        calculateItemPrice() {
+            if (this.optionGroups.length > 0) {
+                return this.calculatePriceWithOptions(this.selectedMenu.price);
             }
-            
+            return this.selectedMenu.price;
+        },
+
+        
+        formatItemNotes() {
+            const notesParts = [];
+            this.optionGroups.forEach(group => {
+                const selected = this.selections[group.id];
+                const values = (group.values || []).filter(v => group.type === 'single'
+                    ? v.id === selected
+                    : Array.isArray(selected) && selected.includes(v.id)
+                );
+                if (values.length) {
+                    const names = values.map(v => v.name).join(', ');
+                    notesParts.push(`${group.name}: ${names}`);
+                }
+            });
+
+            if (this.specialRequest.trim()) {
+                notesParts.push(this.specialRequest.trim());
+            }
+
             return notesParts.join(' | ');
         },
 
         addItemFromModal() {
+            const missingRequired = this.optionGroups.some(g => g.is_required && !this.hasSelection(g));
+            if (missingRequired) {
+                alert('Pilih opsi wajib terlebih dahulu');
+                return;
+            }
             const itemPrice = this.calculateItemPrice();
             const itemNotes = this.formatItemNotes();
+            const options = this.buildOptions();
+            const optionSignature = JSON.stringify(options);
             
-            // Check if same item with same options exists
             const existingIndex = this.items.findIndex(item => 
                 item.menu_id === this.selectedMenu.id && 
-                item.notes === itemNotes
+                item.notes === itemNotes &&
+                item.options_signature === optionSignature
             );
             
             if (existingIndex !== -1) {
                 this.items[existingIndex].quantity += this.modalQuantity;
+                this.items[existingIndex].total_price = itemPrice;
+                this.items[existingIndex].subtotal = itemPrice * this.items[existingIndex].quantity;
             } else {
                 this.items.push({
                     menu_id: this.selectedMenu.id,
                     name: this.selectedMenu.name,
+                    total_price: itemPrice,
+                    unit_price: itemPrice,
                     price: itemPrice,
                     category: this.selectedMenu.category,
                     image: this.selectedMenu.image || '',
                     quantity: this.modalQuantity,
-                    notes: itemNotes
+                    notes: itemNotes,
+                    options,
+                    raw_options: options,
+                    options_signature: optionSignature
                 });
             }
             
@@ -1006,6 +1014,7 @@ function manualOrder() {
                     menu_id: menuId,
                     name: name,
                     price: price,
+                    total_price: price,
                     category: category,
                     image: '',
                     quantity: 1,
@@ -1029,7 +1038,7 @@ function manualOrder() {
         },
 
         calculateSubtotal() {
-            return this.items.reduce((total, item) => total + (item.price * item.quantity), 0);
+            return this.items.reduce((total, item) => total + ((item.total_price || item.price) * item.quantity), 0);
         },
 
         calculateTax() {
@@ -1101,8 +1110,9 @@ function manualOrder() {
                         items: this.items.map(item => ({
                             menu_id: item.menu_id,
                             quantity: item.quantity,
-                            price: item.price,
-                            notes: item.notes || ''
+                            price: item.total_price || item.price,
+                            notes: item.notes || '',
+                            options: item.raw_options || item.options || {}
                         }))
                     })
                 });

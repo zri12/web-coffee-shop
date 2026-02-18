@@ -139,11 +139,16 @@ class DashboardController extends Controller
             'description' => 'nullable|string',
             'image' => 'nullable|image|max:2048',
             'is_available' => 'boolean',
+            'addons' => 'array',
+            'addons.*.name' => 'nullable|string|max:120',
+            'addons.*.price' => 'nullable|numeric|min:0',
         ]);
 
         if ($request->hasFile('image')) {
             $validated['image'] = $request->file('image')->store('menus', 'public');
         }
+
+        $validated['addons'] = Menu::normalizeAddons($request->input('addons', []));
 
         Menu::create($validated);
 
@@ -153,7 +158,6 @@ class DashboardController extends Controller
     public function editMenu(Menu $menu)
     {
         $categories = Category::where('is_active', true)->get();
-        $menu->load('recipes.ingredient'); // Eager load recipes with ingredients
         return view('admin.menus-edit', compact('menu', 'categories'));
     }
 
@@ -166,11 +170,16 @@ class DashboardController extends Controller
             'description' => 'nullable|string',
             'image' => 'nullable|image|max:2048',
             'is_available' => 'boolean',
+            'addons' => 'array',
+            'addons.*.name' => 'nullable|string|max:120',
+            'addons.*.price' => 'nullable|numeric|min:0',
         ]);
 
         if ($request->hasFile('image')) {
             $validated['image'] = $request->file('image')->store('menus', 'public');
         }
+
+        $validated['addons'] = Menu::normalizeAddons($request->input('addons', []));
 
         $menu->update($validated);
 
@@ -187,7 +196,16 @@ class DashboardController extends Controller
     public function categories()
     {
         $categories = Category::withCount('menus')->orderBy('sort_order')->get();
-        return view('admin.categories', compact('categories'));
+        $optionDefinitions = collect(config('menu-options.groups', []))->map(function ($group, $key) {
+            return [
+                'key' => $key,
+                'name' => $group['name'] ?? ucfirst(str_replace('_', ' ', $key)),
+                'description' => $group['description'] ?? '',
+            ];
+        })->values()->all();
+        $optionFlagsDefaults = config('menu-options.defaults', []);
+
+        return view('admin.categories', compact('categories', 'optionDefinitions', 'optionFlagsDefaults'));
     }
 
     public function storeCategory(Request $request)
@@ -196,7 +214,11 @@ class DashboardController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'is_active' => 'boolean',
+            'option_flags' => 'array',
+            'option_flags.*' => 'boolean',
         ]);
+
+        $validated['option_flags'] = array_map('boolval', $validated['option_flags'] ?? []);
 
         Category::create($validated);
 
@@ -210,7 +232,11 @@ class DashboardController extends Controller
             'description' => 'nullable|string',
             'is_active' => 'boolean',
             'sort_order' => 'nullable|integer',
+            'option_flags' => 'array',
+            'option_flags.*' => 'boolean',
         ]);
+
+        $validated['option_flags'] = array_map('boolval', $validated['option_flags'] ?? []);
 
         $category->update($validated);
 
@@ -511,18 +537,5 @@ class DashboardController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Password berhasil diubah');
-    }
-
-    /**
-     * Get recipes for a menu (API)
-     */
-    public function getRecipes(Menu $menu)
-    {
-        $recipes = $menu->recipes()->with('ingredient')->get();
-        
-        return response()->json([
-            'success' => true,
-            'recipes' => $recipes
-        ]);
     }
 }

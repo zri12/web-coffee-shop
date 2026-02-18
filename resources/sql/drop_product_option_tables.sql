@@ -1,0 +1,5 @@
+SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS product_option_groups;
+DROP TABLE IF EXISTS option_values;
+DROP TABLE IF EXISTS option_groups;
+SET FOREIGN_KEY_CHECKS = 1;

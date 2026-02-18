@@ -4,9 +4,17 @@ namespace App\Http\Controllers\Cashier;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+use App\Services\PricingService;
 
 class CashierController extends Controller
 {
+    private PricingService $pricing;
+
+    public function __construct(PricingService $pricing)
+    {
+        $this->pricing = $pricing;
+    }
+
     // Dashboard - Ringkasan hari ini, Order masuk, Status pesanan
     public function dashboard()
     {
@@ -37,7 +45,9 @@ class CashierController extends Controller
         // Get ALL orders that are not completed or cancelled
         $allActiveOrders = \App\Models\Order::with(['items.menu', 'payment'])
             ->whereNotIn('status', ['completed', 'cancelled'])
-            ->orderBy('created_at', 'asc')
+            // Latest activity at the top: updated_at fallback to created_at
+            ->orderBy('updated_at', 'desc')
+            ->orderBy('created_at', 'desc')
             ->get();
         
         // Categorize orders
@@ -48,41 +58,36 @@ class CashierController extends Controller
 
             $isQrisWaiting = $paymentMethod === 'qris'
                 && in_array($paymentStatus, ['pending', 'waiting_payment'])
-                && $status === 'waiting_payment';
+                && in_array($status, ['waiting_payment', 'pending']);
 
             $isCashWaiting = $paymentMethod === 'cash'
                 && $paymentStatus === 'unpaid'
-                && in_array($status, ['waiting_cashier_confirmation', 'waiting_payment']);
+                && in_array($status, ['waiting_cashier_confirmation', 'waiting_payment', 'pending']);
 
             return $isQrisWaiting || $isCashWaiting;
-        });
+        })->values(); // preserve sorted order
         
         $paidOrders = $allActiveOrders->filter(function($order) {
             $paymentStatus = strtolower((string)$order->payment_status);
             $status = strtolower((string)$order->status);
-            return $paymentStatus === 'paid' && in_array($status, ['pending', 'paid']);
-        });
+            // Hanya tampil di kolom "Sudah Dibayar" kalau belum masuk dapur
+            return ($paymentStatus === 'paid' || $status === 'paid')
+                && !in_array($status, ['preparing', 'processing']);
+        })->values(); // already pre-sorted by updated_at DESC
         
         $preparingOrders = $allActiveOrders->filter(function($order) {
-            return in_array($order->status, ['preparing', 'processing']);
-        });
-        
-        // Get completed orders for today
-        $readyOrders = \App\Models\Order::with(['items.menu', 'payment'])
-            ->where('status', 'completed')
-            ->whereDate('created_at', today())
-            ->orderBy('updated_at', 'desc')
-            ->take(10)
-            ->get();
+            $status = strtolower((string)$order->status);
+            return in_array($status, ['preparing', 'processing']);
+        })->values(); // already pre-sorted by updated_at DESC
         
         // Stats for header
         $stats = [
             'waiting_payment' => $waitingPaymentOrders->count(),
             'preparing' => $preparingOrders->count(),
-            'completed_today' => $readyOrders->count(),
+            'completed_today' => 0,
         ];
         
-        return view('cashier.incoming-orders', compact('stats', 'waitingPaymentOrders', 'paidOrders', 'preparingOrders', 'readyOrders'));
+        return view('cashier.incoming-orders', compact('stats', 'waitingPaymentOrders', 'paidOrders', 'preparingOrders'))->with('readyOrders', collect());
     }
 
     // New Orders - Order dari QR meja & online dengan status
@@ -91,25 +96,24 @@ class CashierController extends Controller
         $query = \App\Models\Order::with(['items.menu', 'payment'])
             ->withCount('items');
         
-        // Filter by status if provided
+        // Filter by status if provided (supports new + legacy values)
         if ($request->has('status') && $request->status !== '') {
             $filterStatus = $request->status;
             
-            // Handle special filter for unpaid orders
+            $statusMap = [
+                'waiting_payment' => ['waiting_payment', 'waiting_cashier_confirmation', 'pending'],
+                'paid' => ['paid'],
+                'preparing' => ['preparing', 'processing'],
+                'completed' => ['completed'],
+                'cancelled' => ['cancelled'],
+                'pending' => ['pending'],
+                'processing' => ['processing'],
+            ];
+
             if ($filterStatus === 'unpaid') {
                 $query->where('payment_status', 'unpaid');
-            } elseif ($filterStatus === 'waiting_payment') {
-                $query->where('status', 'waiting_payment');
-            } elseif ($filterStatus === 'paid') {
-                $query->where('status', 'paid');
-            } elseif ($filterStatus === 'preparing') {
-                $query->where('status', 'preparing');
-            } elseif ($filterStatus === 'completed') {
-                $query->where('status', 'completed');
-            } elseif ($filterStatus === 'cancelled') {
-                $query->where('status', 'cancelled');
-            } else {
-                $query->where('status', $filterStatus);
+            } elseif (isset($statusMap[$filterStatus])) {
+                $query->whereIn('status', $statusMap[$filterStatus]);
             }
         }
         
@@ -152,6 +156,7 @@ class CashierController extends Controller
                 'items.*.quantity' => 'required|integer|min:1',
                 'items.*.price' => 'nullable|numeric|min:0',
                 'items.*.notes' => 'nullable|string',
+                'items.*.options' => 'nullable|array',
                 'payment_method' => 'required|in:cash,card,qris',
             ]);
 
@@ -197,20 +202,67 @@ class CashierController extends Controller
         $total = 0;
         foreach ($validated['items'] as $item) {
             $menu = \App\Models\Menu::find($item['menu_id']);
-            
-            // Use custom price if provided (includes add-ons), otherwise use menu base price
-            $itemPrice = isset($item['price']) ? $item['price'] : $menu->price;
-            $subtotal = $itemPrice * $item['quantity'];
+            $options = $item['options'] ?? [];
+            $quantity = max(1, (int) $item['quantity']);
+            $pricing = $this->pricing->calculate($menu, $options, $quantity);
+            $itemPrice = $pricing['unit_price'];
+            $subtotal = $pricing['subtotal'];
+
+            // Build readable notes from options so kitchen printer always gets detail
+            $optionsNotes = [];
+            $opts = $options;
+            if (!empty($opts['size'])) {
+                $optionsNotes[] = ucfirst($opts['size']);
+            }
+            if (!empty($opts['temperature'])) {
+                $optionsNotes[] = ucfirst($opts['temperature']);
+            }
+            if (!empty($opts['iceLevel'])) {
+                $optionsNotes[] = 'Ice: ' . ucfirst($opts['iceLevel']);
+            }
+            if (!empty($opts['sugarLevel'])) {
+                $optionsNotes[] = 'Sugar: ' . ucfirst(str_replace('-', ' ', $opts['sugarLevel']));
+            }
+            if (!empty($opts['spiceLevel'])) {
+                $optionsNotes[] = 'Spice: ' . ucfirst($opts['spiceLevel']);
+            }
+            if (!empty($opts['portion'])) {
+                $optionsNotes[] = 'Portion: ' . ucfirst($opts['portion']);
+            }
+            if (!empty($opts['addOns']) && is_array($opts['addOns'])) {
+                foreach ($opts['addOns'] as $addon) {
+                    $optionsNotes[] = '+ ' . ucwords(str_replace('-', ' ', $addon));
+                }
+            }
+            if (!empty($opts['toppings']) && is_array($opts['toppings'])) {
+                foreach ($opts['toppings'] as $topping) {
+                    $optionsNotes[] = '+ ' . ucwords(str_replace('-', ' ', $topping));
+                }
+            }
+            if (!empty($opts['sauces']) && is_array($opts['sauces'])) {
+                foreach ($opts['sauces'] as $sauce) {
+                    $optionsNotes[] = ucwords(str_replace('-', ' ', $sauce)) . ' sauce';
+                }
+            }
+            if (!empty($opts['specialRequest'])) {
+                $optionsNotes[] = 'Note: ' . $opts['specialRequest'];
+            }
+
+            $finalNotes = trim($item['notes'] ?? '');
+            if (empty($finalNotes) && !empty($optionsNotes)) {
+                $finalNotes = implode(', ', $optionsNotes);
+            }
             
             \App\Models\OrderItem::create([
                 'order_id' => $order->id,
                 'menu_id' => $item['menu_id'],
                 'menu_name' => $menu->name,
-                'quantity' => $item['quantity'],
+                'quantity' => $quantity,
                 'price' => $itemPrice,
                 'unit_price' => $itemPrice,
                 'subtotal' => $subtotal,
-                'notes' => $item['notes'] ?? null,
+                'notes' => $finalNotes ?: null,
+                'options' => $pricing['raw_options'] ?? $options ?? [],
             ]);
             
             $total += $subtotal;
@@ -280,14 +332,37 @@ class CashierController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
         
-        // Filter by status
+        // Filter by status (new + legacy)
         if ($request->has('status') && $request->status) {
-            $query->where('status', $request->status);
+            $statusMap = [
+                'waiting_payment' => ['waiting_payment', 'waiting_cashier_confirmation', 'pending'],
+                'paid' => ['paid'],
+                'preparing' => ['preparing', 'processing'],
+                'completed' => ['completed'],
+                'cancelled' => ['cancelled'],
+                'pending' => ['pending'],
+                'processing' => ['processing'],
+            ];
+
+            $filterStatus = $request->status;
+            if (isset($statusMap[$filterStatus])) {
+                $query->whereIn('status', $statusMap[$filterStatus]);
+            }
         }
         
         $orders = $query->latest()->paginate(20);
+
+        // Summary counts for badges
+        $allForSummary = $orders->getCollection();
+        $summary = [
+            'completed' => $allForSummary->whereIn('status', ['completed'])->count(),
+            'pending' => $allForSummary->whereIn('status', ['waiting_payment', 'waiting_cashier_confirmation', 'pending'])->count(),
+            'processing' => $allForSummary->whereIn('status', ['preparing', 'processing'])->count(),
+            'revenue' => $allForSummary->sum('total_amount'),
+            'total' => $allForSummary->count(),
+        ];
             
-        return view('cashier.history', compact('orders'));
+        return view('cashier.history', compact('orders', 'summary'));
     }
 
     // Get Order Details for Modal
@@ -495,7 +570,7 @@ class CashierController extends Controller
     public function confirmPayment($id)
     {
         try {
-            $order = \App\Models\Order::with(['payment', 'items.menu.recipes.ingredient'])->findOrFail($id);
+            $order = \App\Models\Order::with('payment')->findOrFail($id);
             
             // Validate it's a cash order
             if ($order->payment_method !== 'cash') {
@@ -513,58 +588,35 @@ class CashierController extends Controller
                 ], 400);
             }
             
-            // NEW: Validate stock before confirming payment
-            $stockService = app(\App\Services\StockService::class);
-            $stockValidation = $stockService->validateStockForOrder($order);
+            // CRITICAL: Update both payment_status AND status
+            // After cash payment confirmed: waiting_payment/pending -> paid
+            $order->update([
+                'payment_status' => 'paid',
+                'status' => 'paid' // Status berubah ke 'paid' setelah konfirmasi (NEW flow)
+            ]);
             
-            if (!$stockValidation['valid']) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Stok tidak mencukupi: ' . implode(', ', $stockValidation['errors'])
-                ], 400);
+            // Update payment record if exists
+            if ($order->payment) {
+                $order->payment->update([
+                    'status' => 'paid',
+                    'paid_at' => now()
+                ]);
             }
             
-            \DB::beginTransaction();
-            try {
-                // CRITICAL: Update both payment_status AND status
-                // After cash payment confirmed: waiting_payment/pending -> paid
-                $order->update([
-                    'payment_status' => 'paid',
-                    'status' => 'paid' // Status berubah ke 'paid' setelah konfirmasi (NEW flow)
-                ]);
-                
-                // Update payment record if exists
-                if ($order->payment) {
-                    $order->payment->update([
-                        'status' => 'paid',
-                        'paid_at' => now()
-                    ]);
-                }
-                
-                // NEW: Deduct stock after payment confirmed
-                $stockService->deductStockForOrder($order);
-                
-                \DB::commit();
-                
-                \Log::info("✅ Cash payment confirmed and stock deducted for order {$order->order_number} by " . auth()->user()->name);
-                
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Cash payment confirmed successfully'
-                ]);
-            } catch (\Exception $e) {
-                \DB::rollBack();
-                throw $e;
-            }
+            \Log::info("Cash payment confirmed for order {$order->order_number} by " . auth()->user()->name);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Cash payment confirmed successfully'
+            ]);
         } catch (\Exception $e) {
-            \Log::error("❌ Failed to confirm cash payment: " . $e->getMessage());
+            \Log::error("Failed to confirm cash payment: " . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to confirm payment: ' . $e->getMessage()
             ], 500);
         }
     }
-
     
     // Print Kitchen Order
     public function printKitchen($id)

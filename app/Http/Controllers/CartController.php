@@ -3,240 +3,206 @@
 namespace App\Http\Controllers;
 
 use App\Models\Menu;
-use App\Models\Table;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Session;
+use App\Services\PricingService;
 
 class CartController extends Controller
 {
-    /**
-     * Get cart contents
-     */
-    public function index(Request $request)
+    private PricingService $pricing;
+
+    public function __construct(PricingService $pricing)
     {
-        $cart = $this->getCart($request);
-        
-        return response()->json([
-            'success' => true,
-            'cart' => $cart,
-            'cart_count' => count($cart),
-            'cart_total' => $this->calculateTotal($cart)
+        $this->pricing = $pricing;
+    }
+
+    /**
+     * Display cart page with session data
+     */
+    public function index()
+    {
+        $cart = session()->get('cart', []);
+        $cartItems = [];
+        $subtotal = 0;
+
+        foreach ($cart as $key => $item) {
+            $item['cart_key'] = $key; // Add key for delete button
+            $cartItems[] = $item;
+            $itemSubtotal = $item['total_price'] * ($item['quantity'] ?? $item['qty'] ?? 1);
+            $subtotal += $itemSubtotal;
+        }
+
+        return view('pages.cart', [
+            'cartItems' => $cartItems,
+            'subtotal' => $subtotal,
+            'total' => $subtotal,
         ]);
     }
 
     /**
-     * Add item to cart
+     * Add item to cart (session-based)
      */
-    public function store(Request $request)
+    public function add(Request $request)
     {
-        $request->validate([
-            'menu_id' => 'required|exists:menus,id',
-            'quantity' => 'nullable|integer|min:1',
-            'options' => 'nullable|array',
-            'table_number' => 'nullable|string' // Optional context
+        $validated = $request->validate([
+            'product_id' => 'nullable|exists:menus,id',
+            'menu_id' => 'nullable|exists:menus,id',
+            'qty' => 'nullable|integer|min:1',
+            'options' => 'nullable',
+            'order_type' => 'nullable|in:menu,qr,manual',
+            'table_number' => 'nullable|string',
         ]);
 
-        $menu = Menu::findOrFail($request->menu_id);
-        
-        // Calculate price
-        $basePrice = $menu->price;
-        $options = $request->options ?? [];
-        $finalPrice = $this->calculatePriceWithOptions($basePrice, $options);
-        
-        $cartItem = [
-            'id' => $menu->id,
-            'name' => $menu->name,
-            'price' => $basePrice,
-            'final_price' => $finalPrice,
-            'image' => $menu->image_url ? asset('storage/' . $menu->image_url) : ($menu->image ? asset('images/menus/' . $menu->image) : null),
-            'quantity' => (int) ($request->quantity ?? 1),
-            'type' => $this->getMenuType($menu), // helper to determine type
-            'options' => $options,
-            'cartItemId' => uniqid('cart_', true),
-            'subtotal' => $finalPrice * (int) ($request->quantity ?? 1)
-        ];
+        $productId = $validated['product_id'] ?? $validated['menu_id'] ?? null;
+        if (!$productId) {
+            return response()->json(['success' => false, 'message' => 'Product id is required.'], 422);
+        }
 
-        $this->addToSessionCart($request, $cartItem);
+        $product = Menu::findOrFail($productId);
+        if (!$product->is_available) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['success' => false, 'message' => 'Produk tidak tersedia'], 400);
+            }
+            return back()->with('error', 'Produk tidak tersedia');
+        }
 
-        $cart = $this->getCart($request);
-        
-        return response()->json([
-            'success' => true,
-            'message' => 'Item added to cart',
-            'cart' => $cart,
-            'cart_count' => count($cart),
-            'cart_total' => $this->calculateTotal($cart)
+        $cart = session()->get('cart', []);
+        $options = $request->input('options', []);
+        if (is_string($options)) {
+            $decoded = json_decode($options, true);
+            $options = is_array($decoded) ? $decoded : [];
+        }
+
+        $quantity = max(1, (int) ($validated['qty'] ?? 1));
+        $pricing = $this->pricing->calculate($product, $options, $quantity);
+
+        // Generate unique cart key based on product ID and options
+        $cartKey = $this->generateCartKey($product->id, $pricing['normalized_options']);
+
+        if (isset($cart[$cartKey])) {
+            // Product with same options exists, increase quantity
+            $cart[$cartKey]['quantity'] += $quantity;
+            $cart[$cartKey]['total_price'] = $pricing['unit_price'];
+            $cart[$cartKey]['subtotal'] = $pricing['unit_price'] * $cart[$cartKey]['quantity'];
+        } else {
+            // Add new item
+            $cart[$cartKey] = [
+                'id' => $product->id,
+                'name' => $product->name,
+                'base_price' => $pricing['base_price'],
+                'total_price' => $pricing['unit_price'],
+                'subtotal' => $pricing['subtotal'],
+                'image' => $product->display_image_url, // Use display_image_url accessor for full path
+                'quantity' => $quantity,
+                'options' => $pricing['options'],
+                'raw_options' => $pricing['raw_options'],
+                'options_signature' => $this->pricing->optionSignature($pricing['normalized_options']),
+                'order_type' => $request->input('order_type', 'menu'),
+                'table_number' => $request->input('table_number'),
+            ];
+        }
+
+        session()->put('cart', $cart);
+        session()->put('order_meta', [
+            'order_type' => $request->input('order_type', 'menu'),
+            'table_number' => $request->input('table_number'),
         ]);
+
+        // Return JSON for AJAX requests
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true, 
+                'message' => 'Produk ditambahkan ke keranjang!',
+                'cart_count' => array_sum(array_column($cart, 'quantity')),
+                'cart_total' => array_sum(array_map(function ($item) {
+                    return $item['total_price'] * ($item['quantity'] ?? 1);
+                }, $cart)),
+                'cart' => array_values($cart),
+            ]);
+        }
+
+        return back()->with('success', 'Produk ditambahkan ke keranjang!');
     }
 
     /**
      * Remove item from cart
      */
-    public function destroy(Request $request)
+    public function remove($cartKey)
     {
-        $request->validate([
-            'cartItemId' => 'required|string',
-            'table_number' => 'nullable|string'
-        ]);
+        $cart = session()->get('cart', []);
 
-        $this->removeFromSessionCart($request, $request->cartItemId);
+        if (isset($cart[$cartKey])) {
+            unset($cart[$cartKey]);
+            session()->put('cart', $cart);
+            
+            return back()->with('success', 'Item dihapus dari keranjang');
+        }
+
+        return back()->with('error', 'Item tidak ditemukan');
+    }
+
+    /**
+     * Clear entire cart
+     */
+    public function clear()
+    {
+        session()->forget('cart');
         
-        $cart = $this->getCart($request);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Item removed',
-            'cart' => $cart,
-            'cart_count' => count($cart),
-            'cart_total' => $this->calculateTotal($cart)
-        ]);
+        return redirect()->route('cart')->with('success', 'Keranjang dikosongkan');
     }
 
     /**
      * Update item quantity
      */
-    public function update(Request $request)
+    public function updateQuantity(Request $request, $cartKey)
     {
-        $request->validate([
-            'cartItemId' => 'required|string',
-            'quantity' => 'required|integer|min:0',
-            'table_number' => 'nullable|string'
+        $validated = $request->validate([
+            'qty' => 'required|integer|min:1|max:99',
         ]);
 
-        if ($request->quantity <= 0) {
-            $this->removeFromSessionCart($request, $request->cartItemId);
-        } else {
-            $this->updateSessionCartQuantity($request, $request->cartItemId, $request->quantity);
+        $cart = session()->get('cart', []);
+
+        if (isset($cart[$cartKey])) {
+            $cart[$cartKey]['quantity'] = $validated['qty'];
+            $cart[$cartKey]['subtotal'] = $cart[$cartKey]['total_price'] * $validated['qty'];
+            session()->put('cart', $cart);
+            
+            return back()->with('success', 'Jumlah diperbarui');
         }
 
-        $cart = $this->getCart($request);
+        return back()->with('error', 'Item tidak ditemukan');
+    }
+
+    /**
+     * Get cart count for navbar badge (AJAX)
+     */
+    public function getCount()
+    {
+        $cart = session()->get('cart', []);
+        $count = 0;
+        $total = 0;
+        
+        foreach ($cart as $item) {
+            $quantity = $item['quantity'] ?? $item['qty'] ?? 1;
+            $count += $quantity;
+            $total += ($item['total_price'] ?? $item['price'] ?? 0) * $quantity;
+        }
 
         return response()->json([
-            'success' => true,
-            'message' => 'Cart updated',
-            'cart' => $cart,
-            'cart_count' => count($cart),
-            'cart_total' => $this->calculateTotal($cart)
+            'count' => $count,
+            'total' => $total
         ]);
     }
-    
-    // --- Helper Methods ---
 
-    private function getCart(Request $request)
+    /**
+     * Generate unique cart key based on product ID and options
+     */
+    private function generateCartKey($productId, $options = null)
     {
-        $key = $this->getSessionKey($request);
-        return Session::get($key, []);
-    }
-
-    private function addToSessionCart(Request $request, $item)
-    {
-        $key = $this->getSessionKey($request);
-        $cart = Session::get($key, []);
-        
-        // Always push as new item (no merging for simplicty & options support)
-        $cart[] = $item;
-        
-        Session::put($key, array_values($cart));
-    }
-
-    private function removeFromSessionCart(Request $request, $cartItemId)
-    {
-        $key = $this->getSessionKey($request);
-        $cart = Session::get($key, []);
-        
-        $cart = array_filter($cart, function($item) use ($cartItemId) {
-            return ($item['cartItemId'] ?? '') !== $cartItemId;
-        });
-        
-        Session::put($key, array_values($cart));
-    }
-    
-    private function updateSessionCartQuantity(Request $request, $cartItemId, $quantity)
-    {
-        $key = $this->getSessionKey($request);
-        $cart = Session::get($key, []);
-        
-        foreach ($cart as &$item) {
-            if (($item['cartItemId'] ?? '') === $cartItemId) {
-                $item['quantity'] = $quantity;
-                $item['subtotal'] = $item['final_price'] * $quantity;
-                break;
-            }
+        if ($options && !empty($options)) {
+            // Create hash of options for uniqueness
+            ksort($options); // Sort to ensure consistent hashing
+            return $productId . '_' . md5(json_encode($options));
         }
-        
-        Session::put($key, $cart);
-    }
-
-    private function getSessionKey(Request $request)
-    {
-        if ($request->filled('table_number')) {
-            return "cart_table_{$request->table_number}";
-        }
-        return 'cart_general';
-    }
-
-    private function calculateTotal($cart)
-    {
-        return array_reduce($cart, function($total, $item) {
-            return $total + ($item['subtotal'] ?? 0);
-        }, 0);
-    }
-    
-    private function calculatePriceWithOptions($basePrice, $options)
-    {
-        $total = $basePrice;
-        
-        // Add logic similar to frontend/CustomerController
-        // Simplified for brevity, ensures critical price factors are handled
-        
-        // Size
-        if (($options['size'] ?? '') === 'large') $total += 8000;
-        
-        // Addons
-        if (!empty($options['addOns'])) {
-            $prices = [
-                'extra-shot' => 5000,
-                'whipped-cream' => 3000,
-                'caramel-syrup' => 3000,
-                'extra-cheese' => 5000,
-                'extra-egg' => 3000,
-                'extra-rice' => 5000,
-            ];
-            foreach ($options['addOns'] as $addon) {
-                $total += $prices[$addon] ?? 0;
-            }
-        }
-        
-        // Toppings
-        if (!empty($options['toppings'])) {
-            $prices = [
-                'chocolate' => 3000, 
-                'caramel' => 3000, 
-                'whipped' => 5000, 
-                'ice-cream' => 8000
-            ];
-            foreach ($options['toppings'] as $t) {
-                $total += $prices[$t] ?? 0;
-            }
-        }
-        
-        // Portion
-        if (isset($options['portion'])) {
-             if ($options['portion'] === 'large') $total += 5000; // Generic logic
-             if ($options['portion'] === 'small') $total -= 5000;
-        }
-
-        return $total;
-    }
-
-    private function getMenuType($menu)
-    {
-        // Simple heuristic based on category
-        // In a real app, this should be on the model
-        $slug = $menu->category->slug ?? '';
-        if (str_contains($slug, 'kopi') || str_contains($slug, 'coffee')) return 'beverage';
-        if (str_contains($slug, 'snack')) return 'snack';
-        if (str_contains($slug, 'dessert')) return 'dessert';
-        return 'food';
+        return (string) $productId;
     }
 }

@@ -6,14 +6,26 @@ use App\Models\Category;
 use App\Models\Menu;
 use App\Models\Table;
 use Illuminate\Http\Request;
+use App\Services\PricingService;
 
 class CustomerController extends Controller
 {
+    private PricingService $pricing;
+
+    public function __construct(PricingService $pricing)
+    {
+        $this->pricing = $pricing;
+    }
+
     public function index($tableNumber)
     {
         // Find table by number or fail
         // Using first() instead of firstOrFail() to handle invalid tables gracefully if needed
         $table = Table::where('table_number', $tableNumber)->firstOrFail();
+        session()->put('order_meta', [
+            'order_type' => 'qr',
+            'table_number' => $tableNumber
+        ]);
 
         return view('customer.landing', compact('table'));
     }
@@ -21,6 +33,10 @@ class CustomerController extends Controller
     public function menu($tableNumber)
     {
         $table = Table::where('table_number', $tableNumber)->firstOrFail();
+        session()->put('order_meta', [
+            'order_type' => 'qr',
+            'table_number' => $tableNumber
+        ]);
         
         // Get active categories with all menus and load category relationship for each menu
         $categories = Category::where('is_active', true)
@@ -50,29 +66,26 @@ class CustomerController extends Controller
                 'message' => 'Menu item is not available'
             ], 400);
         }
+        $quantity = max(1, (int) ($request->quantity ?? 1));
+        $pricing = $this->pricing->calculate($menu, $request->options ?? [], $quantity);
 
-        $quantity = (int) ($request->quantity ?? 1);
-        $normalizedOptions = $this->normalizeOptions($request->options ?? []);
+        $cart = session()->get('cart', []);
+        $optionSignature = $this->pricing->optionSignature($pricing['normalized_options']);
+        $cartKey = $menu->id . '_' . $optionSignature;
 
-        $basePrice = $menu->price;
-        $finalPrice = $this->calculatePriceWithOptions($basePrice, $normalizedOptions);
-
-        $cart = session()->get("cart.table_{$tableNumber}", []);
-        $optionSignature = $this->buildOptionSignature($normalizedOptions);
-        $existingIndex = $this->findCartItemIndex($cart, $menu->id, $optionSignature);
-
-        if ($existingIndex !== null) {
-            $cart[$existingIndex]['quantity'] += $quantity;
-            $cart[$existingIndex]['subtotal'] = $cart[$existingIndex]['final_price'] * $cart[$existingIndex]['quantity'];
+        if (isset($cart[$cartKey])) {
+            $cart[$cartKey]['quantity'] += $quantity;
+            $cart[$cartKey]['subtotal'] = $cart[$cartKey]['total_price'] * $cart[$cartKey]['quantity'];
         } else {
-            $cart[] = [
+            $cart[$cartKey] = [
                 'id' => $menu->id,
                 'name' => $menu->name,
-                'base_price' => $basePrice,
-                'final_price' => $finalPrice,
+                'base_price' => $pricing['base_price'],
+                'total_price' => $pricing['unit_price'],
+                'subtotal' => $pricing['subtotal'],
                 'quantity' => $quantity,
-                'subtotal' => $finalPrice * $quantity,
-                'options' => $normalizedOptions,
+                'options' => $pricing['options'],
+                'raw_options' => $pricing['raw_options'],
                 'options_signature' => $optionSignature,
                 'table_number' => $tableNumber,
                 'image' => $menu->image_url ?: $menu->image,
@@ -80,7 +93,7 @@ class CustomerController extends Controller
             ];
         }
 
-        session()->put("cart.table_{$tableNumber}", array_values($cart));
+        session()->put('cart', $cart);
 
         $cartCount = $this->countCartItems($cart);
         $cartTotal = $this->sumCartTotals($cart);
@@ -163,7 +176,7 @@ class CustomerController extends Controller
     public function getCart($tableNumber)
     {
         $table = Table::where('table_number', $tableNumber)->firstOrFail();
-        $cart = session()->get("cart.table_{$tableNumber}", []);
+        $cart = session()->get('cart', []);
 
         $cartCount = $this->countCartItems($cart);
         $cartTotal = $this->sumCartTotals($cart);
@@ -185,12 +198,12 @@ class CustomerController extends Controller
             'cart_item_id' => 'required|string'
         ]);
 
-        $cart = session()->get("cart.table_{$tableNumber}", []);
-        $cart = array_values(array_filter($cart, function ($item) use ($request) {
-            return $item['cart_item_id'] !== $request->cart_item_id;
-        }));
+        $cart = session()->get('cart', []);
+        $cart = array_filter($cart, function ($item) use ($request) {
+            return ($item['cart_item_id'] ?? null) !== $request->cart_item_id;
+        });
 
-        session()->put("cart.table_{$tableNumber}", $cart);
+        session()->put('cart', $cart);
 
         $cartCount = $this->countCartItems($cart);
         $cartTotal = $this->sumCartTotals($cart);

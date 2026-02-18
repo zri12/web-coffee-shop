@@ -10,10 +10,19 @@
     </div>
 </section>
 
-<section class="py-12 lg:py-16" x-data="cartPage()">
+<section class="py-12 lg:py-16">
     <div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
         
-        <!-- Error/Success Messages -->
+        {{-- Success/Error Messages --}}
+        @if(session('success'))
+        <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-6 rounded-lg">
+            <div class="flex items-center">
+                <span class="material-symbols-outlined text-green-500 mr-3">check_circle</span>
+                <p class="text-green-700 font-medium">{{ session('success') }}</p>
+            </div>
+        </div>
+        @endif
+
         @if(session('error'))
         <div class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-lg">
             <div class="flex items-center">
@@ -23,218 +32,159 @@
         </div>
         @endif
         
-        @if(session('success'))
-        <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-6 rounded-lg">
-            <div class="flex items-center">
-                <span class="material-symbols-outlined text-green-500 mr-3">check_circle</span>
-                <p class="text-green-700 font-medium">{{ session('success') }}</p>
+        @if(empty($cartItems))
+        {{-- Empty Cart State --}}
+        <div class="bg-white dark:bg-surface-dark border border-[#f4f2f0] dark:border-[#3E2723] rounded-xl p-12 text-center">
+            <div class="w-24 h-24 mx-auto mb-6 bg-background-light dark:bg-background-dark rounded-full flex items-center justify-center">
+                <span class="material-symbols-outlined text-6xl text-text-subtle dark:text-gray-400">shopping_cart_off</span>
             </div>
+            <h3 class="text-xl font-bold text-text-main dark:text-white mb-2">Keranjang Masih Kosong ☕</h3>
+            <p class="text-text-subtle dark:text-gray-400 mb-6">Belum ada item di keranjang Anda.</p>
+            <a href="{{ route('menu.index') }}" 
+               class="inline-flex items-center justify-center h-12 px-8 rounded-full bg-primary hover:bg-primary-dark text-white text-sm font-bold transition-colors shadow-sm">
+                Lihat Menu
+            </a>
         </div>
-        @endif
-        
+        @else
+        {{-- Cart with Items --}}
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Cart Items -->
+            {{-- Cart Items --}}
             <div class="lg:col-span-2">
-                <template x-if="items.length === 0">
-                    <div class="bg-white dark:bg-surface-dark border border-[#f4f2f0] dark:border-[#3E2723] rounded-xl p-12 text-center">
-                        <div class="w-24 h-24 mx-auto mb-6 bg-background-light dark:bg-background-dark rounded-full flex items-center justify-center">
-                            <span class="material-symbols-outlined text-4xl text-text-subtle dark:text-gray-400">shopping_cart_off</span>
+                <div class="space-y-4">
+                    @foreach($cartItems as $item)
+                    <div class="bg-white dark:bg-surface-dark border border-[#f4f2f0] dark:border-[#3E2723] rounded-xl p-4 flex items-center gap-4 shadow-sm">
+                        {{-- Product Image --}}
+                        <div class="w-20 h-20 bg-background-light dark:bg-background-dark rounded-lg flex-shrink-0 overflow-hidden">
+                            @if(!empty($item['image']))
+                                <img src="{{ $item['image'] }}" 
+                                     alt="{{ $item['name'] }}" 
+                                     class="w-full h-full object-cover"
+                                     onerror="this.onerror=null; this.src='/images/placeholder-menu.jpg';">
+                            @else
+                                <div class="w-full h-full flex items-center justify-center">
+                                    <span class="material-symbols-outlined text-3xl text-text-subtle/30">coffee</span>
+                                </div>
+                            @endif
                         </div>
-                        <h3 class="text-lg font-bold text-text-main dark:text-white mb-2">Keranjang kosong</h3>
-                        <p class="text-text-subtle dark:text-gray-400 mb-6">Belum ada item di keranjang Anda.</p>
-                        <a x-data x-bind:href="(localStorage.getItem('table_number') ? `/order/${localStorage.getItem('table_number')}/menu` : '{{ route('menu.index') }}')"
-                           class="inline-flex items-center justify-center h-12 px-8 rounded-full bg-primary hover:bg-primary-dark text-white text-sm font-bold transition-colors shadow-sm">
-                            Lihat Menu
-                        </a>
-                    </div>
-                </template>
-                
-                <template x-if="items.length > 0">
-                    <div class="space-y-4">
-                        <template x-for="(item, index) in items" :key="index">
-                            <div class="bg-white dark:bg-surface-dark border border-[#f4f2f0] dark:border-[#3E2723] rounded-xl p-4 flex items-center gap-4 shadow-sm">
-                                <!-- Image -->
-                                <div class="w-20 h-20 bg-background-light dark:bg-background-dark rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                    <template x-if="item.image">
-                                        <img :src="resolveImageUrl(item.image)" :alt="item.name" class="w-full h-full object-cover">
-                                    </template>
-                                    <template x-if="!item.image">
-                                        <span class="material-symbols-outlined text-3xl text-text-subtle/30">coffee</span>
-                                    </template>
-                                </div>
-                                
-                                <!-- Details -->
-                                <div class="flex-1 min-w-0">
-                                    <h3 class="font-bold text-text-main dark:text-white truncate text-lg" x-text="item.name"></h3>
-                                    <p class="text-primary font-bold mb-1" x-text="formatPrice(getUnitPrice(item))"></p>
-                                    <p class="text-xs text-text-subtle dark:text-gray-400" x-text="'Qty: ' + (item.quantity || 1)"></p>
-                                    
-                                    <!-- Product Options -->
-                                    <div x-show="item.options" class="text-xs text-text-subtle dark:text-gray-400 space-y-0.5 mt-2">
-                                        <!-- BEVERAGE OPTIONS -->
-                                        <template x-if="item.type === 'beverage'">
-                                            <div class="space-y-0.5">
-                                                <!-- Temperature -->
-                                                <template x-if="item.options && item.options.temperature">
-                                                    <p class="flex items-center gap-1">
-                                                        <span class="material-symbols-outlined text-[14px]">thermostat</span>
-                                                        <span>Temp: <span x-text="item.options.temperature.charAt(0).toUpperCase() + item.options.temperature.slice(1)"></span></span>
-                                                    </p>
-                                                </template>
+                        
+                        {{-- Product Details --}}
+                        <div class="flex-1 min-w-0">
+                            <h3 class="font-bold text-text-main dark:text-white truncate text-lg">{{ $item['name'] }}</h3>
+                            <p class="text-primary font-bold mb-1">Rp {{ number_format($item['total_price'] ?? $item['base_price'] ?? 0, 0, ',', '.') }}</p>
+                            <p class="text-xs text-text-subtle dark:text-gray-400">Qty: {{ $item['quantity'] ?? $item['qty'] ?? 1 }}</p>
+                            
+                            {{-- Options Display --}}
+                            @php
+                                $opts = $item['options'] ?? [];
+                                $displayLines = [];
 
-                                                <!-- Ice Level -->
-                                                <template x-if="item.options && item.options.iceLevel">
-                                                    <p class="flex items-center gap-1">
-                                                        <span class="material-symbols-outlined text-[14px]">ac_unit</span>
-                                                        <span>Ice: <span x-text="item.options.iceLevel === 'normal' ? 'Normal' : item.options.iceLevel === 'less' ? 'Less' : 'No Ice'"></span></span>
-                                                    </p>
-                                                </template>
+                                // Simple option fields
+                                if(!empty($opts['size'])) $displayLines[] = ['label' => 'Size', 'values' => [ucfirst($opts['size'])]];
+                                if(!empty($opts['portion'])) $displayLines[] = ['label' => 'Portion', 'values' => [ucfirst($opts['portion'])]];
+                                if(!empty($opts['temperature'])) $displayLines[] = ['label' => 'Temp', 'values' => [ucfirst($opts['temperature'])]];
+                                if(!empty($opts['ice_level'])) $displayLines[] = ['label' => 'Ice', 'values' => [ucfirst(str_replace('_',' ', $opts['ice_level']))]];
+                                if(!empty($opts['sugar_level'])) $displayLines[] = ['label' => 'Sugar', 'values' => [ucfirst(str_replace('_',' ', $opts['sugar_level']))]];
+                                if(!empty($opts['spice_level'])) $displayLines[] = ['label' => 'Spice', 'values' => [ucfirst($opts['spice_level'])]];
+                                if(!empty($opts['addons'])) {
+                                    $addons = array_filter((array)$opts['addons']);
+                                    if(count($addons)) {
+                                        $displayLines[] = ['label' => 'Add-ons', 'values' => array_map(fn($a)=>ucfirst(str_replace('_',' ',$a)), $addons)];
+                                    }
+                                }
 
-                                                <!-- Sugar Level -->
-                                                <template x-if="item.options && item.options.sugarLevel">
-                                                    <p class="flex items-center gap-1">
-                                                        <span class="material-symbols-outlined text-[14px]">water_drop</span>
-                                                        <span>Sugar: <span x-text="item.options.sugarLevel === 'no-sugar' ? 'No Sugar' : item.options.sugarLevel.charAt(0).toUpperCase() + item.options.sugarLevel.slice(1)"></span></span>
-                                                    </p>
-                                                </template>
-                                                
-                                                <!-- Size -->
-                                                <template x-if="item.options && item.options.size">
-                                                    <p class="flex items-center gap-1">
-                                                        <span class="material-symbols-outlined text-[14px]">height</span>
-                                                        <span>Size: <span x-text="item.options.size.charAt(0).toUpperCase() + item.options.size.slice(1)"></span></span>
-                                                    </p>
-                                                </template>
+                                // From raw_options (option_groups array)
+                                $rawOptionGroups = $item['raw_options']['option_groups'] ?? null;
+                                if(is_array($rawOptionGroups)) {
+                                    $displayLines = array_merge($displayLines,
+                                        collect($rawOptionGroups)->map(function($g){
+                                            $vals = $g['selected_values'] ?? [];
+                                            $names = collect($vals)->pluck('name')->filter()->all();
+                                            return [
+                                                'label' => $g['name'] ?? ucfirst($g['id'] ?? ''),
+                                                'values' => $names
+                                            ];
+                                        })->filter(fn($g)=>!empty($g['values']))->values()->all()
+                                    );
+                                }
 
-                                                <!-- Add-Ons -->
-                                                <template x-if="item.options && item.options.addOns && item.options.addOns.length > 0">
-                                                    <p class="flex items-center gap-1">
-                                                        <span class="material-symbols-outlined text-[14px]">add_circle</span>
-                                                        <span>Add-Ons: <span x-text="item.options.addOns.map(a => a.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ')"></span></span>
-                                                    </p>
-                                                </template>
-                                            </div>
-                                        </template>
+                                // From raw_options associative (key => ['selected_values'=>...])
+                                if(empty($rawOptionGroups) && isset($item['raw_options']) && is_array($item['raw_options'])) {
+                                    foreach ($item['raw_options'] as $key => $group) {
+                                        if ($key === 'option_groups') continue;
+                                        if (is_array($group) && isset($group['selected_values'])) {
+                                            $names = collect($group['selected_values'])->pluck('name')->filter()->all();
+                                            if (!empty($names)) {
+                                                $displayLines[] = [
+                                                    'label' => $group['name'] ?? ucfirst($key),
+                                                    'values' => $names
+                                                ];
+                                            }
+                                        }
+                                    }
+                                }
 
-                                        <!-- FOOD OPTIONS -->
-                                        <template x-if="item.type === 'food'">
-                                            <div class="space-y-0.5">
-                                                <!-- Spice Level -->
-                                                <template x-if="item.options && item.options.spiceLevel">
-                                                    <p class="flex items-center gap-1">
-                                                        <span class="material-symbols-outlined text-[14px]">local_fire_department</span>
-                                                        <span>Spice: <span x-text="item.options.spiceLevel.charAt(0).toUpperCase() + item.options.spiceLevel.slice(1)"></span></span>
-                                                    </p>
-                                                </template>
-                                                
-                                                <!-- Portion -->
-                                                <template x-if="item.options && item.options.portion">
-                                                    <p class="flex items-center gap-1">
-                                                        <span class="material-symbols-outlined text-[14px]">restaurant</span>
-                                                        <span>Portion: <span x-text="item.options.portion.charAt(0).toUpperCase() + item.options.portion.slice(1)"></span></span>
-                                                    </p>
-                                                </template>
-
-                                                <!-- Add-Ons -->
-                                                <template x-if="item.options && item.options.addOns && item.options.addOns.length > 0">
-                                                    <p class="flex items-center gap-1">
-                                                        <span class="material-symbols-outlined text-[14px]">add_circle</span>
-                                                        <span>Add-Ons: <span x-text="item.options.addOns.map(a => a.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ')"></span></span>
-                                                    </p>
-                                                </template>
-                                            </div>
-                                        </template>
-
-                                        <!-- SNACK OPTIONS -->
-                                        <template x-if="item.type === 'snack'">
-                                            <div class="space-y-0.5">
-                                                <!-- Portion -->
-                                                <template x-if="item.options && item.options.portion">
-                                                    <p class="flex items-center gap-1">
-                                                        <span class="material-symbols-outlined text-[14px]">restaurant</span>
-                                                        <span>Size: <span x-text="item.options.portion.charAt(0).toUpperCase() + item.options.portion.slice(1)"></span></span>
-                                                    </p>
-                                                </template>
-
-                                                <!-- Sauces -->
-                                                <template x-if="item.options && item.options.sauces && item.options.sauces.length > 0">
-                                                    <p class="flex items-center gap-1">
-                                                        <span class="material-symbols-outlined text-[14px]">liquor</span>
-                                                        <span>Sauces: <span x-text="item.options.sauces.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ')"></span></span>
-                                                    </p>
-                                                </template>
-                                            </div>
-                                        </template>
-
-                                        <!-- DESSERT OPTIONS -->
-                                        <template x-if="item.type === 'dessert'">
-                                            <div class="space-y-0.5">
-                                                <!-- Portion/Size -->
-                                                <template x-if="item.options && item.options.portion">
-                                                    <p class="flex items-center gap-1">
-                                                        <span class="material-symbols-outlined text-[14px]">restaurant</span>
-                                                        <span>Size: <span x-text="item.options.portion.charAt(0).toUpperCase() + item.options.portion.slice(1)"></span></span>
-                                                    </p>
-                                                </template>
-
-                                                <!-- Toppings -->
-                                                <template x-if="item.options && item.options.toppings && item.options.toppings.length > 0">
-                                                    <p class="flex items-center gap-1">
-                                                        <span class="material-symbols-outlined text-[14px]">cake</span>
-                                                        <span>Toppings: <span x-text="item.options.toppings.map(t => t.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ')"></span></span>
-                                                    </p>
-                                                </template>
-                                            </div>
-                                        </template>
-                                        
-                                        <!-- Special Request (All Types) -->
-                                        <template x-if="item.options && item.options.specialRequest && item.options.specialRequest.trim() !== ''">
-                                            <p class="flex items-start gap-1">
-                                                <span class="material-symbols-outlined text-[14px]">note</span>
-                                                <span class="flex-1 line-clamp-2">Note: <span x-text="item.options.specialRequest"></span></span>
-                                            </p>
-                                        </template>
-
-                                        <!-- Selected Variant -->
-                                        <template x-if="item.selected_variant">
-                                            <p class="flex items-center justify-between gap-2">
-                                                <span>Variant: <span x-text="item.selected_variant.name"></span></span>
-                                                <span class="font-medium text-primary" x-text="formatSignedPrice(item.selected_variant.additional_price || 0)"></span>
-                                            </p>
-                                        </template>
-
-                                        <!-- Add-On Price Breakdown -->
-                                        <template x-if="getAddons(item).length > 0">
-                                            <div class="pt-1">
-                                                <template x-for="(addon, addonIndex) in getAddons(item)" :key="`${index}-${addonIndex}`">
-                                                    <p class="flex items-center justify-between gap-2">
-                                                        <span>+ <span x-text="addon.name"></span></span>
-                                                        <span class="font-medium text-primary" x-text="formatPrice(addon.price)"></span>
-                                                    </p>
-                                                </template>
-                                            </div>
-                                        </template>
-                                    </div>
-                                </div>
-                                
-                                <!-- Subtotal (Price for this single item) -->
-                                <div class="hidden sm:block text-right min-w-[100px] flex-shrink-0">
-                                    <p class="font-bold text-text-main dark:text-white" x-text="formatPrice(getItemSubtotal(item))"></p>
-                                </div>
-                                
-                                <!-- Remove Button (No quantity controls - each item is qty=1) -->
-                                <button @click="removeItem(index)" 
-                                        class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors flex-shrink-0"
-                                        title="Remove this item">
-                                    <span class="material-symbols-outlined">delete</span>
-                                </button>
+                                // From normalized_options (fallback)
+                                if(isset($item['normalized_options']) || isset($item['normalized_options_display'])) {
+                                    $norm = $item['normalized_options'] ?? ($item['normalized_options_display'] ?? []);
+                                    if(is_array($norm)) {
+                                        foreach ($norm as $gid => $vals) {
+                                            $names = collect($vals)->pluck('name')->filter()->all();
+                                            if (!empty($names)) {
+                                                $displayLines[] = [
+                                                    'label' => ucfirst(str_replace('_',' ',$gid)),
+                                                    'values' => $names
+                                                ];
+                                            }
+                                        }
+                                    }
+                                }
+                            @endphp
+                            @if(!empty($displayLines))
+                            <div class="text-xs text-text-subtle dark:text-gray-400 mt-2 space-y-1">
+                                @foreach($displayLines as $line)
+                                    <p><span class="font-semibold text-text-main dark:text-white">{{ $line['label'] }}:</span> {{ implode(', ', $line['values']) }}</p>
+                                @endforeach
                             </div>
-                        </template>
+                            @endif
+                        </div>
+                        
+                        {{-- Subtotal --}}
+                        <div class="hidden sm:block text-right min-w-[100px] flex-shrink-0">
+                            <p class="font-bold text-text-main dark:text-white">
+                                Rp {{ number_format(($item['total_price'] ?? $item['base_price'] ?? 0) * ($item['quantity'] ?? $item['qty'] ?? 1), 0, ',', '.') }}
+                            </p>
+                        </div>
+                        
+                        {{-- Delete Button --}}
+                        <form action="{{ route('cart.remove', $item['cart_key']) }}" method="POST" class="flex-shrink-0">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" 
+                                    class="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-lg transition-colors"
+                                    onclick="return confirm('Hapus item ini dari keranjang?')"
+                                    title="Hapus item">
+                                <span class="material-symbols-outlined">delete</span>
+                            </button>
+                        </form>
                     </div>
-                </template>
+                    @endforeach
+                </div>
+                
+                {{-- Clear Cart Button --}}
+                <div class="mt-4">
+                    <form action="{{ route('cart.clear') }}" method="POST" class="inline">
+                        @csrf
+                        <button type="submit" 
+                                class="text-sm text-red-600 hover:text-red-700 font-medium"
+                                onclick="return confirm('Kosongkan seluruh keranjang?')">
+                            <span class="material-symbols-outlined text-[16px] align-middle">delete_sweep</span>
+                            Kosongkan Keranjang
+                        </button>
+                    </form>
+                </div>
             </div>
             
-            <!-- Order Summary -->
+            {{-- Order Summary --}}
             <div class="lg:col-span-1">
                 <div class="bg-white dark:bg-surface-dark border border-[#f4f2f0] dark:border-[#3E2723] rounded-xl p-6 sticky top-24 shadow-sm">
                     <h3 class="font-bold text-text-main dark:text-white text-lg mb-6 flex items-center gap-2">
@@ -244,8 +194,8 @@
                     
                     <div class="space-y-4 mb-6">
                         <div class="flex justify-between text-text-subtle dark:text-gray-400">
-                            <span>Subtotal (<span x-text="totalItems"></span> item)</span>
-                            <span class="font-medium text-text-main dark:text-white" x-text="formatPrice(subtotalPrice)"></span>
+                            <span>Subtotal ({{ count($cartItems) }} item)</span>
+                            <span class="font-medium text-text-main dark:text-white">Rp {{ number_format($subtotal, 0, ',', '.') }}</span>
                         </div>
                         <div class="flex justify-between text-text-subtle dark:text-gray-400">
                             <span>Biaya Layanan</span>
@@ -254,13 +204,13 @@
                         <hr class="border-[#f4f2f0] dark:border-[#3E2723]">
                         <div class="flex justify-between text-xl font-bold text-text-main dark:text-white">
                             <span>Total</span>
-                            <span class="text-primary" x-text="formatPrice(totalPrice)"></span>
+                            <span class="text-primary">Rp {{ number_format($total, 0, ',', '.') }}</span>
                         </div>
                     </div>
                     
-                    <form action="{{ route('checkout') }}" method="POST" x-show="items.length > 0">
+                    <form action="{{ route('checkout') }}" method="POST">
                         @csrf
-                        <input type="hidden" name="cart_items" x-bind:value="JSON.stringify(items)">
+                        <input type="hidden" name="cart_items" id="cart_items_field">
                         
                         <div class="space-y-4 mb-6">
                             <div>
@@ -272,8 +222,9 @@
                                     <span class="material-symbols-outlined text-text-subtle dark:text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 text-[20px]">person</span>
                                 </div>
                             </div>
+                            
                             <div>
-                                <label class="block text-sm font-bold text-text-main dark:text-white mb-2">Nomor Telepon (untuk pembayaran online)</label>
+                                <label class="block text-sm font-bold text-text-main dark:text-white mb-2">Nomor Telepon</label>
                                 <div class="relative">
                                     <input type="tel" name="customer_phone"
                                            class="w-full pl-10 pr-4 py-3 bg-background-light dark:bg-background-dark border border-[#e6e0db] dark:border-[#3E2723] rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" 
@@ -281,17 +232,17 @@
                                     <span class="material-symbols-outlined text-text-subtle dark:text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 text-[20px]">phone</span>
                                 </div>
                             </div>
+                            
                             <div>
                                 <label class="block text-sm font-bold text-text-main dark:text-white mb-2">Nomor Meja</label>
                                 <div class="relative">
                                     <input type="number" name="table_number" min="0"
-                                           x-model="tableNumber"
-                                           class="w-full pl-10 pr-4 py-3 bg-background-light dark:bg-background-dark border border-[#e6e0db] dark:border-[#3E2723] rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all bg-gray-100 cursor-not-allowed" 
-                                           placeholder="Contoh: 5"
-                                           readonly>
+                                           class="w-full pl-10 pr-4 py-3 bg-background-light dark:bg-background-dark border border-[#e6e0db] dark:border-[#3E2723] rounded-xl focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" 
+                                           placeholder="Contoh: 5">
                                     <span class="material-symbols-outlined text-text-subtle dark:text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 text-[20px]">table_restaurant</span>
                                 </div>
                             </div>
+                            
                             <div>
                                 <label class="block text-sm font-bold text-text-main dark:text-white mb-2">Catatan</label>
                                 <textarea name="notes" rows="2" 
@@ -299,21 +250,21 @@
                                           placeholder="Permintaan khusus..."></textarea>
                             </div>
                             
-                            <!-- Payment Method -->
+                            {{-- Payment Method --}}
                             <div>
                                 <label class="block text-sm font-bold text-text-main dark:text-white mb-2">Metode Pembayaran</label>
                                 <div class="grid grid-cols-2 gap-3">
                                     <label class="cursor-pointer">
-                                        <input type="radio" name="payment_method" value="cash" class="peer sr-only" x-model="paymentMethod">
+                                        <input type="radio" name="payment_method" value="cash" class="peer sr-only" checked>
                                         <div class="p-3 border border-[#e6e0db] dark:border-[#3E2723] rounded-xl peer-checked:border-primary peer-checked:bg-primary/5 hover:border-primary/50 transition-all text-center">
                                             <span class="material-symbols-outlined text-2xl mb-1 text-text-main dark:text-white">payments</span>
                                             <p class="text-sm font-bold text-text-main dark:text-white">Tunai</p>
                                         </div>
                                     </label>
                                     <label class="cursor-pointer">
-                                        <input type="radio" name="payment_method" value="qris" class="peer sr-only" x-model="paymentMethod">
+                                        <input type="radio" name="payment_method" value="qris" class="peer sr-only">
                                         <div class="p-3 border border-[#e6e0db] dark:border-[#3E2723] rounded-xl peer-checked:border-primary peer-checked:bg-primary/5 hover:border-primary/50 transition-all text-center">
-                                             <span class="material-symbols-outlined text-2xl mb-1 text-text-main dark:text-white">qr_code_scanner</span>
+                                            <span class="material-symbols-outlined text-2xl mb-1 text-text-main dark:text-white">qr_code_scanner</span>
                                             <p class="text-sm font-bold text-text-main dark:text-white">QRIS</p>
                                         </div>
                                     </label>
@@ -321,7 +272,7 @@
                             </div>
                         </div>
                         
-                        <button type="submit" class="w-full flex items-center justify-center h-14 px-8 rounded-xl bg-primary hover:bg-primary-dark text-white text-lg font-bold transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5" x-bind:disabled="items.length === 0">
+                        <button type="submit" class="w-full flex items-center justify-center h-14 px-8 rounded-xl bg-primary hover:bg-primary-dark text-white text-lg font-bold transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">
                             Checkout Sekarang
                             <span class="material-symbols-outlined ml-2">arrow_forward</span>
                         </button>
@@ -333,6 +284,7 @@
                 </div>
             </div>
         </div>
+        @endif
     </div>
 </section>
 
@@ -344,159 +296,32 @@ header a[href*="cart"] {
 }
 </style>
 @endpush
-
 @push('scripts')
 <script>
-    @if(isset($table))
-        window.appTableNumber = "{{ $table->table_number }}";
-    @endif
+    document.addEventListener('DOMContentLoaded', () => {
+        const tableInput = document.querySelector('input[name="table_number"]');
+        if (!tableInput) return;
 
-function cartPage() {
-    return {
-        items: [],
-        paymentMethod: 'cash',
-        taxRate: 0,
-        serviceFee: 0,
-        tableNumber: '',
-
-        loadLocalCart() {
-            try {
-                const raw = localStorage.getItem('cart');
-                const parsed = raw ? JSON.parse(raw) : [];
-                return Array.isArray(parsed) ? parsed : [];
-            } catch (e) {
-                return [];
-            }
-        },
-        
-        get totalItems() {
-            return this.items.reduce((sum, item) => sum + (Math.max(1, parseInt(item.quantity || 1, 10) || 1)), 0);
-        },
-
-        get subtotalPrice() {
-            return this.items.reduce((sum, item) => sum + this.getItemSubtotal(item), 0);
-        },
-
-        get taxAmount() {
-            return Math.round(this.subtotalPrice * this.taxRate);
-        },
-        
-        get totalPrice() {
-            return this.subtotalPrice + this.taxAmount + this.serviceFee;
-        },
-        
-        formatPrice(price) {
-            if (window.Cart && typeof window.Cart.formatPrice === 'function') {
-                return window.Cart.formatPrice(price);
-            }
-            const safe = Number(price) || 0;
-            return 'Rp ' + new Intl.NumberFormat('id-ID').format(safe);
-        },
-
-        formatSignedPrice(price) {
-            const value = Number(price) || 0;
-            if (value === 0) {
-                return 'Gratis';
-            }
-            const sign = value > 0 ? '+' : '-';
-            return `${sign}${this.formatPrice(Math.abs(value))}`;
-        },
-
-        resolveImageUrl(image) {
-            if (!image) return '';
-            const raw = String(image);
-            if (/^(https?:)?\/\//.test(raw) || raw.startsWith('/')) {
-                return raw;
-            }
-            if (raw.includes('menu-images/')) {
-                return `/storage/${raw.replace(/^\/+/, '')}`;
-            }
-            if (raw.startsWith('storage/')) {
-                return `/${raw}`;
-            }
-            if (raw.startsWith('images/')) {
-                return `/${raw}`;
-            }
-            if (raw.includes('/')) {
-                return `/storage/${raw.replace(/^\/+/, '')}`;
-            }
-            if (/\.(png|jpe?g|webp|gif|avif|svg)$/i.test(raw)) {
-                return image;
-            }
-            return `/images/menus/${raw}`;
-        },
-
-        getUnitPrice(item) {
-            const safeItem = window.Cart && typeof window.Cart.recalculateItem === 'function'
-                ? window.Cart.recalculateItem(item)
-                : item;
-            return Number(
-                safeItem.total_price ??
-                safeItem.totalPrice ??
-                safeItem.final_price ??
-                safeItem.finalPrice ??
-                safeItem.price ??
-                safeItem.base_price ??
-                safeItem.basePrice ??
-                0
-            ) || 0;
-        },
-
-        getItemSubtotal(item) {
-            const safeItem = window.Cart && typeof window.Cart.recalculateItem === 'function'
-                ? window.Cart.recalculateItem(item)
-                : item;
-            const quantity = Math.max(1, parseInt(safeItem.quantity || 1, 10) || 1);
-            return Number(safeItem.subtotal ?? (this.getUnitPrice(safeItem) * quantity)) || 0;
-        },
-
-        getAddons(item) {
-            const safeItem = window.Cart && typeof window.Cart.recalculateItem === 'function'
-                ? window.Cart.recalculateItem(item)
-                : item;
-            return Array.isArray(safeItem.addons) ? safeItem.addons : [];
-        },
-        
-        async removeItem(index) {
-            // Find item by index
-            const item = this.items[index];
-            if (item && item.cartItemId) {
-                if (confirm('Hapus item ini dari keranjang?')) {
-                    await window.Cart.remove(item.cartItemId);
-                    // The cart-updated event will update this.items
-                }
-            }
-        },
-        
-        init() {
-            // Sync with localStorage first for customer QR flow
-            this.items = this.loadLocalCart();
-
-            // Listen for global updates and storage changes
-            window.addEventListener('cart-updated', (e) => {
-                this.items = e.detail || this.loadLocalCart();
-            });
-            window.addEventListener('storage', (e) => {
-                if (e.key === 'cart') {
-                    this.items = this.loadLocalCart();
-                }
-            });
-
-            // Fallback to Cart.items if still empty
-            if (this.items.length === 0 && window.Cart && Array.isArray(window.Cart.items)) {
-                this.items = window.Cart.items;
-            }
-
-            // Force valid table number if present in global scope (for QR flow compatibility in cart page)
-            const storedTable = window.appTableNumber || localStorage.getItem('table_number') || '';
-            if (storedTable) {
-                this.tableNumber = storedTable;
-                window.Cart.tableNumber = storedTable;
-                localStorage.setItem('table_number', storedTable);
-            }
+        const storageKey = 'customer_table_number';
+        const storedTable = localStorage.getItem(storageKey);
+        if (storedTable) {
+            tableInput.value = storedTable;
         }
-    }
-}
+
+        tableInput.addEventListener('input', () => {
+            if (tableInput.value) {
+                localStorage.setItem(storageKey, tableInput.value);
+            } else {
+                localStorage.removeItem(storageKey);
+            }
+        });
+
+        const cartField = document.getElementById('cart_items_field');
+        if (cartField) {
+            cartField.value = JSON.stringify(@json($cartItems ?? []));
+        }
+    });
 </script>
 @endpush
+
 @endsection

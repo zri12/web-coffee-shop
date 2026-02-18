@@ -43,10 +43,13 @@
                     @change="applyFilters()"
                     class="w-full px-4 py-2 bg-[#f4f2f0] dark:bg-[#221910] border border-transparent focus:border-primary rounded-lg text-sm text-[#181411] dark:text-white">
                     <option value="">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="processing">Processing</option>
-                    <option value="completed">Completed</option>
-                    <option value="cancelled">Cancelled</option>
+                    <option value="waiting_payment">Menunggu Pembayaran</option>
+                    <option value="paid">Sudah Dibayar</option>
+                    <option value="preparing">Sedang Diproses</option>
+                    <option value="completed">Selesai</option>
+                    <option value="cancelled">Dibatalkan</option>
+                    <option value="pending">Legacy Pending</option>
+                    <option value="processing">Legacy Processing</option>
                 </select>
             </div>
 
@@ -68,7 +71,7 @@
                 </div>
                 <div>
                     <p class="text-sm text-[#897561] dark:text-[#a89c92]">Total Orders</p>
-                    <p class="text-xl font-bold text-[#181411] dark:text-white">{{ $orders->total() }}</p>
+                    <p class="text-xl font-bold text-[#181411] dark:text-white">{{ $summary['total'] ?? $orders->total() }}</p>
                 </div>
             </div>
         </div>
@@ -80,7 +83,7 @@
                 </div>
                 <div>
                     <p class="text-sm text-[#897561] dark:text-[#a89c92]">Completed</p>
-                    <p class="text-xl font-bold text-[#181411] dark:text-white">{{ $orders->where('status', 'completed')->count() }}</p>
+                    <p class="text-xl font-bold text-[#181411] dark:text-white">{{ $summary['completed'] ?? $orders->where('status','completed')->count() }}</p>
                 </div>
             </div>
         </div>
@@ -92,7 +95,7 @@
                 </div>
                 <div>
                     <p class="text-sm text-[#897561] dark:text-[#a89c92]">Pending</p>
-                    <p class="text-xl font-bold text-[#181411] dark:text-white">{{ $orders->where('status', 'pending')->count() }}</p>
+                    <p class="text-xl font-bold text-[#181411] dark:text-white">{{ $summary['pending'] ?? $orders->where('status','pending')->count() }}</p>
                 </div>
             </div>
         </div>
@@ -104,7 +107,7 @@
                 </div>
                 <div>
                     <p class="text-sm text-[#897561] dark:text-[#a89c92]">Total Revenue</p>
-                    <p class="text-xl font-bold text-[#181411] dark:text-white">Rp {{ number_format($orders->sum('total_amount'), 0, ',', '.') }}</p>
+                    <p class="text-xl font-bold text-[#181411] dark:text-white">Rp {{ number_format($summary['revenue'] ?? $orders->sum('total_amount'), 0, ',', '.') }}</p>
                 </div>
             </div>
         </div>
@@ -140,13 +143,29 @@
                             <span class="text-sm text-[#181411] dark:text-white">{{ $order->items->count() }} items</span>
                         </td>
                         <td class="px-4 py-3">
-                            <span class="px-2 py-1 rounded-full text-xs font-semibold
-                                @if($order->status === 'pending') bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400
-                                @elseif($order->status === 'processing') bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400
-                                @elseif($order->status === 'completed') bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400
-                                @else bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400
-                                @endif">
-                                {{ ucfirst($order->status) }}
+                            @php
+                                $status = $order->status;
+                                $badgeClass = 'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300';
+                                $label = ucfirst($status);
+                                if (in_array($status, ['waiting_payment','waiting_cashier_confirmation','pending'])) {
+                                    $badgeClass = 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400';
+                                    $label = 'Menunggu';
+                                } elseif (in_array($status, ['paid'])) {
+                                    $badgeClass = 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400';
+                                    $label = 'Sudah Dibayar';
+                                } elseif (in_array($status, ['preparing','processing'])) {
+                                    $badgeClass = 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400';
+                                    $label = 'Diproses';
+                                } elseif ($status === 'completed') {
+                                    $badgeClass = 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400';
+                                    $label = 'Selesai';
+                                } elseif ($status === 'cancelled') {
+                                    $badgeClass = 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400';
+                                    $label = 'Dibatalkan';
+                                }
+                            @endphp
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold {{ $badgeClass }}">
+                                {{ $label }}
                             </span>
                         </td>
                         <td class="px-4 py-3">
@@ -398,12 +417,19 @@ function orderHistory() {
         },
 
         statusBadge(status) {
-            switch(status) {
-                case 'processing': return 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400';
-                case 'completed': return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400';
-                case 'cancelled': return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400';
-                default: return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400';
+            if (['waiting_payment','waiting_cashier_confirmation','pending'].includes(status)) {
+                return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400';
             }
+            if (['preparing','processing'].includes(status)) {
+                return 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400';
+            }
+            if (status === 'paid' || status === 'completed') {
+                return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400';
+            }
+            if (status === 'cancelled') {
+                return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400';
+            }
+            return 'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300';
         },
 
         paymentBadge(status) {
@@ -423,7 +449,7 @@ function orderHistory() {
 
         orderTypeLabel(type) {
             if (!type) return 'Walk-in';
-            const map = { 'dine-in': 'Dine In', 'take-away': 'Take Away', 'walk-in': 'Walk-in' };
+            const map = { 'dine_in': 'Dine In', 'takeaway': 'Take Away', 'take-away': 'Take Away', 'walk-in': 'Walk-in' };
             return map[type] || type;
         },
 

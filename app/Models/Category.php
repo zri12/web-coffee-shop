@@ -16,11 +16,17 @@ class Category extends Model
         'description',
         'is_active',
         'sort_order',
+        'option_flags',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'sort_order' => 'integer',
+        'option_flags' => 'array',
+    ];
+
+    protected $appends = [
+        'option_flags_with_defaults',
     ];
 
     /**
@@ -65,5 +71,15 @@ class Category extends Model
     public function scopeOrdered($query)
     {
         return $query->orderBy('sort_order')->orderBy('name');
+    }
+
+    public function getOptionFlagsWithDefaultsAttribute(): array
+    {
+        $defaults = config('menu-options.defaults', []);
+        $stored = $this->option_flags ?? [];
+        if (!is_array($stored)) {
+            $stored = [];
+        }
+        return array_merge($defaults, $stored);
     }
 }

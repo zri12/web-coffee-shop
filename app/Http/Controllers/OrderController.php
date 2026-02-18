@@ -13,12 +13,29 @@ use Illuminate\Support\Facades\Schema;
 
 use Midtrans\Config;
 use Midtrans\Snap;
+use App\Services\PricingService;
 
 class OrderController extends Controller
 {
+    private PricingService $pricing;
+
+    public function __construct(PricingService $pricing)
+    {
+        $this->pricing = $pricing;
+    }
+
     public function cart()
     {
-        return view('pages.cart');
+        $cart = session()->get('cart', []);
+        $subtotal = array_sum(array_map(function ($item) {
+            return ($item['total_price'] ?? $item['final_price'] ?? $item['price'] ?? 0) * ($item['quantity'] ?? $item['qty'] ?? 1);
+        }, $cart));
+
+        return view('pages.cart', [
+            'cartItems' => array_values($cart),
+            'subtotal' => $subtotal,
+            'total' => $subtotal,
+        ]);
     }
 
     public function checkout(Request $request)
@@ -27,33 +44,42 @@ class OrderController extends Controller
             'customer_name' => 'required|string|max:255',
             'table_number' => 'nullable|integer|min:0',
             'notes' => 'nullable|string|max:500',
-            'cart_items' => 'required|string',
+            'cart_items' => 'nullable|string',
             'payment_method' => 'required|in:cash,qris',
         ]);
 
-        $cartItems = json_decode($request->cart_items, true);
+        $cartItems = json_decode($request->cart_items ?? '[]', true);
+        if (empty($cartItems)) {
+            $cartItems = array_values(session()->get('cart', []));
+        }
 
         if (empty($cartItems)) {
             return back()->with('error', 'Keranjang kosong');
         }
+
+        $tableNumber = $request->table_number ?? session('order_meta.table_number');
+        $orderType = session('order_meta.order_type') === 'qr'
+            ? 'dine_in'
+            : ($tableNumber ? 'dine_in' : 'takeaway');
 
         DB::beginTransaction();
 
         try {
             // Create order
             // Map order_type: dine_in for orders with table number, takeaway for no table
-            $orderType = $request->table_number ? 'dine_in' : 'takeaway';
-            
-            // Payment policy (aligned with DB enum: pending/processing/completed/cancelled)
-            // - QRIS online: payment_status pending, order status pending
-            // - Cash (pay at cashier): payment_status unpaid, order status pending
-            $paymentStatus = $request->payment_method === 'cash' ? 'unpaid' : 'pending';
-            $orderStatus = 'pending';
+            $tableNumber = $tableNumber ?? 0;
+
+            // Payment policy (new status flow)
+            // - QRIS online: payment_status pending, order status waiting_payment
+            // - Cash (bayar di kasir): payment_status unpaid, order status waiting_cashier_confirmation
+            $isCash = $request->payment_method === 'cash';
+            $paymentStatus = $isCash ? 'unpaid' : 'pending';
+            $orderStatus = $isCash ? 'waiting_cashier_confirmation' : 'waiting_payment';
             
             $order = Order::create([
                 'customer_name' => $request->customer_name,
                 'customer_phone' => $request->customer_phone ?? null,
-                'table_number' => $request->table_number ?? 0,
+                'table_number' => $tableNumber,
                 'notes' => $request->notes,
                 'order_type' => $orderType,
                 'payment_method' => $request->payment_method,
@@ -73,24 +99,14 @@ class OrderController extends Controller
                 }
                 
                 $quantity = max(1, (int)($item['quantity'] ?? 1));
-                $unitPrice = (float) (
-                    $item['final_price_per_item']
-                    ?? $item['finalPrice']
-                    ?? $item['final_price']
-                    ?? $item['total_price']
-                    ?? $item['price']
-                    ?? $menu->price
-                );
+                $pricing = $this->pricing->calculate($menu, $item['raw_options'] ?? $item['options'] ?? [], $quantity);
+                $unitPrice = $pricing['unit_price'];
 
                 if ($unitPrice <= 0) {
                     throw new \Exception("Harga item {$menu->name} tidak valid.");
                 }
 
-                $itemSubtotal = (float) (
-                    $item['final_price_total']
-                    ?? $item['subtotal']
-                    ?? ($unitPrice * $quantity)
-                );
+                $itemSubtotal = $pricing['subtotal'];
 
                 if ($itemSubtotal <= 0) {
                     $itemSubtotal = $unitPrice * $quantity;
@@ -170,6 +186,7 @@ class OrderController extends Controller
                     'unit_price' => $unitPrice,
                     'subtotal' => $itemSubtotal,
                     'notes' => $notes,
+                    'options' => $pricing['raw_options'] ?? ($item['raw_options'] ?? $item['options'] ?? []),
                 ];
                 
                 // Add menu_name if column exists
@@ -198,9 +215,6 @@ class OrderController extends Controller
             $order->update(['total_amount' => $totalAmount]);
 
             // Create payment record
-            // Keep payment record status aligned with order payment_status
-            $paymentStatus = $request->payment_method === 'cash' ? 'unpaid' : 'pending';
-            
             $payment = Payment::create([
                 'order_id' => $order->id,
                 'amount' => $totalAmount,
@@ -284,6 +298,10 @@ class OrderController extends Controller
             }
 
             DB::commit();
+
+            // Clear session cart after successful order
+            session()->forget('cart');
+            session()->forget('order_meta');
 
             // Redirect based on payment method
             if ($request->payment_method === 'cash') {

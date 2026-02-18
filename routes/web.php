@@ -9,6 +9,10 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\MenuOptionController;
+use App\Http\Controllers\Admin\IngredientController as AdminIngredientController;
+use App\Http\Controllers\Admin\InventoryAnalyticsController;
+use App\Http\Controllers\Admin\RecipeController as AdminRecipeController;
 use App\Http\Controllers\Dashboard\DashboardController;
 use App\Http\Controllers\Dashboard\MenuController as DashboardMenuController;
 use App\Http\Controllers\Dashboard\OrderController as DashboardOrderController;
@@ -107,9 +111,15 @@ Route::get('/db-check', function () {
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/menu', [MenuController::class, 'index'])->name('menu.index');
 Route::get('/menu/{slug}', [MenuController::class, 'show'])->name('menu.show');
+Route::get('/menu/{menu}/options', [MenuOptionController::class, 'forMenu'])->name('menu.options');
 
 // Cart & Checkout
-Route::get('/cart', [OrderController::class, 'cart'])->name('cart');
+Route::get('/cart', [\App\Http\Controllers\CartController::class, 'index'])->name('cart');
+Route::post('/cart/add', [\App\Http\Controllers\CartController::class, 'add'])->name('cart.add');
+Route::delete('/cart/{cartKey}', [\App\Http\Controllers\CartController::class, 'remove'])->name('cart.remove');
+Route::post('/cart/clear', [\App\Http\Controllers\CartController::class, 'clear'])->name('cart.clear');
+Route::patch('/cart/{cartKey}', [\App\Http\Controllers\CartController::class, 'updateQuantity'])->name('cart.update');
+Route::get('/cart/count', [\App\Http\Controllers\CartController::class, 'getCount'])->name('cart.count');
 Route::post('/checkout', [OrderController::class, 'checkout'])->name('checkout');
 Route::get('/order/{orderNumber}/waiting', [OrderController::class, 'waiting'])->name('order.waiting');
 Route::get('/order/{orderNumber}/success', [OrderController::class, 'success'])->name('order.success');
@@ -156,11 +166,29 @@ Route::middleware('guest')->group(function () {
 
 Route::post('/logout', [AuthController::class, 'webLogout'])->name('logout')->middleware('auth');
 
+// Shared Admin/Manager Inventory Routes (Protected)
+Route::middleware(['auth', 'role:admin,manager'])->prefix('admin')->name('admin.')->group(function () {
+    // Ingredients
+    Route::get('/ingredients', [AdminIngredientController::class, 'index'])->name('ingredients.index');
+    Route::get('/ingredients/{ingredient}', [AdminIngredientController::class, 'show'])->name('ingredients.show');
+    Route::post('/ingredients', [AdminIngredientController::class, 'store'])->name('ingredients.store');
+    Route::put('/ingredients/{ingredient}', [AdminIngredientController::class, 'update'])->name('ingredients.update');
+    Route::delete('/ingredients/{ingredient}', [AdminIngredientController::class, 'destroy'])->name('ingredients.destroy');
+    Route::post('/ingredients/{ingredient}/restock', [AdminIngredientController::class, 'restock'])->name('ingredients.restock');
+    Route::get('/ingredients/{ingredient}/history', [AdminIngredientController::class, 'history'])->name('ingredients.history');
+
+    // Inventory Analytics
+    Route::get('/analytics/inventory', [InventoryAnalyticsController::class, 'index'])->name('analytics.inventory');
+
+    // API for menu builder
+    Route::get('/api/ingredients', [AdminRecipeController::class, 'getIngredients'])->name('api.ingredients');
+});
+
 // Admin Routes (Protected)
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     // Dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
-    
+
     // Menu Management
     Route::get('/menus', [DashboardController::class, 'menus'])->name('menus');
     Route::get('/menus/{menu}/edit', [DashboardController::class, 'editMenu'])->name('menus.edit');
@@ -204,31 +232,6 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/logs/login', [DashboardController::class, 'loginLogs'])->name('logs.login');
     Route::get('/logs/transactions', [DashboardController::class, 'transactionLogs'])->name('logs.transactions');
     Route::get('/logs/changes', [DashboardController::class, 'changeLogs'])->name('logs.changes');
-    
-    
-    // Inventory Management (Admin + Manager)
-    Route::middleware('role:admin,manager')->group(function () {
-        Route::get('/ingredients', [App\Http\Controllers\Admin\IngredientController::class, 'index'])->name('ingredients.index');
-        Route::post('/ingredients', [App\Http\Controllers\Admin\IngredientController::class, 'store'])->name('ingredients.store');
-        Route::put('/ingredients/{ingredient}', [App\Http\Controllers\Admin\IngredientController::class, 'update'])->name('ingredients.update');
-        Route::delete('/ingredients/{ingredient}', [App\Http\Controllers\Admin\IngredientController::class, 'destroy'])->name('ingredients.destroy');
-        Route::get('/ingredients/{ingredient}/history', [App\Http\Controllers\Admin\IngredientController::class, 'history'])->name('ingredients.history');
-        Route::post('/ingredients/{ingredient}/restock', [App\Http\Controllers\Admin\IngredientController::class, 'restock'])->name('ingredients.restock');
-        
-        // Analytics
-        Route::get('/analytics/ingredients', [App\Http\Controllers\Admin\AnalyticsController::class, 'ingredients'])->name('analytics.ingredients');
-        Route::get('/analytics/menu-availability', [App\Http\Controllers\Admin\AnalyticsController::class, 'menuAvailability'])->name('analytics.menu-availability');
-        
-        // Recipes
-        Route::post('/recipes', [App\Http\Controllers\Admin\RecipeController::class, 'store'])->name('recipes.store');
-        Route::put('/recipes/{recipe}', [App\Http\Controllers\Admin\RecipeController::class, 'update'])->name('recipes.update');
-        Route::delete('/recipes/{recipe}', [App\Http\Controllers\Admin\RecipeController::class, 'destroy'])->name('recipes.destroy');
-        Route::get('/api/ingredients', [App\Http\Controllers\Admin\RecipeController::class, 'getIngredients'])->name('api.ingredients');
-        Route::get('/menus/{menu}/recipes', [App\Http\Controllers\Dashboard\MenuController::class, 'getRecipes'])->name('api.menu.recipes');
-        
-        // Analytics
-        Route::get('/analytics/inventory', [App\Http\Controllers\Admin\InventoryAnalyticsController::class, 'index'])->name('analytics.inventory');
-    });
     
     // Profile
     Route::get('/profile', [DashboardController::class, 'profile'])->name('profile');

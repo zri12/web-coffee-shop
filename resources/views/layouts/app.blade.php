@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', $systemSettings['cafe_name'] ?? 'Cafe') - Cafe Web Ordering</title>
+    @include('layouts.partials.favicon')
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
@@ -508,6 +509,24 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             Cart.updateBadge();
+            // Sync badge with server session cart
+            fetch('/cart/count', { headers: { 'X-Requested-With': 'XMLHttpRequest' }})
+                .then(res => res.json())
+                .then(data => {
+                    if (typeof data.count !== 'undefined') {
+                        const badge = document.getElementById('cart-badge');
+                        const totalLabel = document.getElementById('cart-total-inline');
+                        if (badge) {
+                            badge.classList.toggle('hidden', data.count === 0);
+                            badge.innerText = data.count > 99 ? '99+' : data.count;
+                        }
+                        if (totalLabel) {
+                            totalLabel.classList.toggle('hidden', data.count === 0);
+                            totalLabel.innerText = Cart.formatPrice(data.total || 0);
+                        }
+                    }
+                })
+                .catch(() => {});
         });
     </script>
 </body>

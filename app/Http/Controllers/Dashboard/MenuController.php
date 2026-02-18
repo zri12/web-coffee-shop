@@ -51,7 +51,6 @@ class MenuController extends Controller
     public function edit(Menu $menu)
     {
         $categories = Category::active()->ordered()->get();
-        $menu->load('recipes.ingredient'); // Eager load recipes with ingredients
         return view('dashboard.menus.form', compact('menu', 'categories'));
     }
 
@@ -96,25 +95,11 @@ class MenuController extends Controller
         return redirect()->route('dashboard.menus')->with('success', 'Menu berhasil dihapus');
     }
     
-    
     public function toggleAvailability(Menu $menu)
     {
         $menu->update(['is_available' => !$menu->is_available]);
         
         $status = $menu->is_available ? 'diaktifkan' : 'dinonaktifkan';
         return back()->with('success', "Menu berhasil {$status}");
-    }
-
-    /**
-     * Get recipes for a menu (API)
-     */
-    public function getRecipes(Menu $menu)
-    {
-        $recipes = $menu->recipes()->with('ingredient')->get();
-        
-        return response()->json([
-            'success' => true,
-            'recipes' => $recipes
-        ]);
     }
 }

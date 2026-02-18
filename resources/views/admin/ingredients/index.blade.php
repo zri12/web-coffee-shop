@@ -173,7 +173,7 @@
                             </span>
                         </td>
                         <td class="px-6 py-4">
-                            <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div class="flex items-center justify-end gap-2 transition-all">
                                 <button onclick="openRestockModal({{ $ingredient->id }})" 
                                         class="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors tooltip" title="Restock">
                                     <span class="material-symbols-outlined text-[20px]">add_shopping_cart</span>

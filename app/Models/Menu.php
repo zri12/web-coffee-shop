@@ -18,14 +18,16 @@ class Menu extends Model
         'image_url',
         'is_available',
         'is_featured',
+        'addons',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
         'is_available' => 'boolean',
         'is_featured' => 'boolean',
+        'addons' => 'array',
     ];
-    
+
     /**
      * Get image attribute (alias for image_url for backward compatibility)
      */
@@ -227,5 +229,34 @@ class Menu extends Model
         }
         
         return 'Stok habis: ' . implode(', ', $insufficientIngredients);
+    }
+
+    /**
+     * Normalize addons payload for storage.
+     */
+    public static function normalizeAddons(?array $addons): array
+    {
+        if (empty($addons) || !is_array($addons)) {
+            return [];
+        }
+
+        $normalized = [];
+
+        foreach ($addons as $addon) {
+            $name = trim($addon['name'] ?? '');
+            if ($name === '') {
+                continue;
+            }
+
+            $priceValue = $addon['price'] ?? 0;
+            $price = is_numeric($priceValue) ? (float) $priceValue : 0;
+
+            $normalized[] = [
+                'name' => $name,
+                'price' => max(0, $price),
+            ];
+        }
+
+        return array_values($normalized);
     }
 }

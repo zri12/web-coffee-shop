@@ -184,16 +184,10 @@
                 isFeatured: false,
                 type: 'food'
             },
-            // Option states
-            temperature: 'ice',
-            iceLevel: 'normal',
-            sugarLevel: 'normal',
-            size: null,
-            spiceLevel: 'mild',
-            portion: null,
-            toppings: [],
-            addOns: [],
-            sauces: [],
+            // Option states (DB-driven)
+            optionGroups: [],
+            selections: {},
+            loadingOptions: false,
             specialRequest: '',
             toast: {
                 show: false,
@@ -302,7 +296,7 @@
                 }
                 this.refreshCart();
             },
-            showProductDetail(payload) {
+            async showProductDetail(payload) {
                 const type = (() => {
                     const s = (payload.category || '').toLowerCase();
                     if (s.includes('coffee') || s.includes('kopi') || s.includes('drink')) return 'beverage';
@@ -324,119 +318,131 @@
                 this.resetOptions();
                 this.showDetail = true;
                 document.body.style.overflow = 'hidden';
+                await this.loadOptionsForProduct(payload.id);
             },
             resetOptions() {
-                this.temperature = 'ice';
-                this.iceLevel = 'normal';
-                this.sugarLevel = 'normal';
-                this.size = null;
-                this.spiceLevel = 'mild';
-                this.portion = null;
-                this.toppings = [];
-                this.addOns = [];
-                this.sauces = [];
+                this.optionGroups = [];
+                this.selections = {};
                 this.specialRequest = '';
             },
-            buildOptions() {
-                const opts = {};
-                if (this.selectedProduct.type === 'beverage') {
-                    opts.temperature = this.temperature;
-                    if (this.temperature === 'ice') opts.iceLevel = this.iceLevel;
-                    opts.sugarLevel = this.sugarLevel;
-                    if (this.size) opts.size = this.size;
-                    if (this.addOns.length) opts.addOns = this.addOns;
-                } else if (this.selectedProduct.type === 'food') {
-                    opts.spiceLevel = this.spiceLevel;
-                    if (this.portion) opts.portion = this.portion;
-                    if (this.addOns.length) opts.addOns = this.addOns;
-                } else if (this.selectedProduct.type === 'snack') {
-                    if (this.portion) opts.portion = this.portion;
-                    if (this.sauces.length) opts.sauces = this.sauces;
-                } else if (this.selectedProduct.type === 'dessert') {
-                    if (this.portion) opts.portion = this.portion;
-                    if (this.toppings.length) opts.toppings = this.toppings;
+            async loadOptionsForProduct(menuId) {
+                this.loadingOptions = true;
+                try {
+                    const res = await fetch(`/menu/${menuId}/options`);
+                    const json = await res.json();
+                    this.optionGroups = json?.data?.option_groups ?? [];
+                    this.selections = {};
+                } catch (e) {
+                    console.error(e);
+                    this.optionGroups = [];
+                } finally {
+                    this.loadingOptions = false;
                 }
-                if (this.specialRequest.trim()) opts.specialRequest = this.specialRequest.trim();
-                return opts;
             },
-            calculatePriceWithOptions(base, type, options) {
-                let total = Number(base) || 0;
-                if (type === 'beverage') {
-                    if (options.size === 'large') total += 8000;
-                    (options.addOns || []).forEach(a => {
-                        if (a === 'extra-shot') total += 5000;
-                        if (a === 'whipped-cream' || a === 'caramel-syrup') total += 3000;
-                    });
-                } else if (type === 'food' || type === 'snack' || type === 'dessert') {
-                    if (options.portion === 'large') total += 5000;
-                    if (options.portion === 'small') total -= 5000;
-                    (options.addOns || []).forEach(a => {
-                        if (a === 'extra-cheese' || a === 'extra-rice') total += 5000;
-                        if (a === 'extra-egg') total += 3000;
-                    });
-                    (options.toppings || []).forEach(t => {
-                        if (t === 'chocolate' || t === 'caramel') total += 3000;
-                        if (t === 'whipped') total += 5000;
-                        if (t === 'ice-cream') total += 8000;
-                    });
-                    (options.sauces || []).forEach(s => { if (s === 'bbq') total += 2000; });
+            toggleOption(group, value) {
+                if (group.type === 'single') {
+                    this.$set ? this.$set(this.selections, group.id, value.id) : (this.selections[group.id] = value.id);
+                } else {
+                    const current = this.selections[group.id] || [];
+                    if (current.includes(value.id)) {
+                        this.selections[group.id] = current.filter(v => v !== value.id);
+                    } else {
+                        this.selections[group.id] = [...current, value.id];
+                    }
                 }
+            },
+            previewSelection(group) {
+                const optionNames = (group.values || []).map(v => v.name).join(', ');
+                this.showToast('Preview', `${group.name}: ${optionNames || 'No values'}`, 'visibility', 'info');
+            },
+            isSelected(group, valueId) {
+                const sel = this.selections[group.id];
+                return group.type === 'single' ? sel === valueId : Array.isArray(sel) && sel.includes(valueId);
+            },
+            hasSelection(group) {
+                const sel = this.selections[group.id];
+                if (group.type === 'single') return !!sel;
+                return Array.isArray(sel) && sel.length > 0;
+            },
+            buildOptions() {
+                const groups = this.optionGroups.map(group => {
+                    const selected = this.selections[group.id];
+                    const values = (group.values || []).filter(v => group.type === 'single'
+                        ? v.id === selected
+                        : Array.isArray(selected) && selected.includes(v.id)
+                    ).map(v => ({ id: v.id, name: v.name, price_adjustment: v.price_adjustment }));
+                    return {
+                        id: group.id,
+                        name: group.name,
+                        type: group.type,
+                        is_required: group.is_required,
+                        selected_values: values,
+                    };
+                });
+                const payload = { option_groups: groups };
+                if (this.specialRequest.trim()) payload.special_request = this.specialRequest.trim();
+                return payload;
+            },
+            calculatePriceWithOptions(base) {
+                let total = Number(base) || 0;
+                this.optionGroups.forEach(group => {
+                    const selected = this.selections[group.id];
+                    const values = group.values || [];
+                    if (group.type === 'single' && selected) {
+                        const val = values.find(v => v.id === selected);
+                        if (val) total += Number(val.price_adjustment || 0);
+                    }
+                    if (group.type === 'multiple' && Array.isArray(selected)) {
+                        selected.forEach(id => {
+                            const val = values.find(v => v.id === id);
+                            if (val) total += Number(val.price_adjustment || 0);
+                        });
+                    }
+                });
                 return total;
             },
             canAddToCart() {
-                if (!this.showDetail) return true;
-                const type = this.selectedProduct.type;
-                if (type === 'beverage') return !!this.size;
-                if (['food','snack','dessert'].includes(type)) return !!this.portion;
-                return true;
+                if (!this.showDetail || this.loadingOptions) return false;
+                if (!this.optionGroups.length) return true;
+                return this.optionGroups.every(g => !g.is_required || this.hasSelection(g));
             },
             calculateItemPrice() {
-                const opts = this.buildOptions();
-                return this.calculatePriceWithOptions(this.selectedProduct.priceRaw, this.selectedProduct.type, opts);
+                return this.calculatePriceWithOptions(this.selectedProduct.priceRaw);
             },
             async addToCartWithOptions() {
                 if (!this.canAddToCart()) return;
                 this.busy = true;
                 try {
-                    window.Cart?.setTable?.(this.tableNumber);
-                    localStorage.setItem('table_number', this.tableNumber);
-
                     const options = this.buildOptions();
                     options.type = this.selectedProduct.type;
-                    const finalPrice = this.calculatePriceWithOptions(
-                        this.selectedProduct.priceRaw,
-                        this.selectedProduct.type,
-                        options
-                    );
+                    const payload = {
+                        menu_id: this.selectedProduct.id,
+                        quantity: 1,
+                        options,
+                        order_type: 'qr',
+                        table_number: this.tableNumber
+                    };
 
-                    if (window.Cart?.add) {
-                        window.Cart.add(
-                            this.selectedProduct.id,
-                            this.selectedProduct.name,
-                            this.selectedProduct.priceRaw,
-                            this.selectedProduct.image,
-                            1,
-                            options
-                        );
-                        const cart = this.loadCartPreferred();
-                        this.syncCartTotals(cart);
-                    } else {
-                        const cart = this.loadCartPreferred();
-                        cart.push({
-                            id: this.selectedProduct.id,
-                            name: this.selectedProduct.name,
-                            price: this.selectedProduct.priceRaw,
-                            base_price: this.selectedProduct.priceRaw,
-                            final_price: finalPrice,
-                            final_price_per_item: finalPrice,
-                            final_price_total: finalPrice,
-                            quantity: 1,
-                            image: this.selectedProduct.image,
-                            type: this.selectedProduct.type,
-                            options
-                        });
-                        this.saveCart(cart);
-                        this.syncCartTotals(cart);
+                    const res = await fetch('/cart/add', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name=\"csrf-token\"]').content,
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await res.json();
+                    if (!res.ok || !data.success) {
+                        throw new Error(data.message || 'Gagal menambahkan ke keranjang');
+                    }
+                    this.cartCount = data.cart_count ?? this.cartCount;
+                    const totalNumber = data.cart_total ?? 0;
+                    this.cartTotal = totalNumber;
+                    const badge = document.getElementById('cart-badge');
+                    if (badge && this.cartCount > 0) {
+                        badge.classList.remove('hidden');
+                        badge.innerText = this.cartCount > 99 ? '99+' : this.cartCount;
                     }
                     this.showDetail = false;
                     document.body.style.overflow = '';

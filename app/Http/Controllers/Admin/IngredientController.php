@@ -46,7 +46,7 @@ class IngredientController extends Controller
         $totalIngredients = Ingredient::count();
         $lowStockCount = Ingredient::lowStock()->count();
         $outOfStockCount = Ingredient::outOfStock()->count();
-        $mostUsed = $this->stockService->getMostUsedIngredient(7);
+        $mostUsed = $this->stockService->getMostUsedIngredient(7) ?? ['ingredient_name' => 'N/A', 'total_used' => 0, 'unit' => ''];
 
         // Get unique categories
         $categories = Ingredient::select('category')->distinct()->pluck('category');

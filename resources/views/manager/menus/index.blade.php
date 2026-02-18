@@ -84,8 +84,14 @@
                     <tr class="hover:bg-gray-50 dark:hover:bg-[#2c241b]/50 transition-colors group">
                         <td class="px-6 py-4">
                            <div class="w-12 h-12 rounded-lg bg-gray-100 dark:bg-[#3d362e] overflow-hidden border border-[#e6e0db] dark:border-[#3d362e]">
-                                @if($menu->image)
-                                    <img src="{{ asset('storage/' . $menu->image) }}" alt="{{ $menu->name }}" class="w-full h-full object-cover">
+                                @php
+                                    // Use resilient image helper with fallbacks (local storage, absolute URL, AI placeholder)
+                                    $imgSrc = $menu->display_image_url;
+                                @endphp
+                                @if($imgSrc)
+                                    <img src="{{ $imgSrc }}" alt="{{ $menu->name }}"
+                                         class="w-full h-full object-cover"
+                                         onerror="this.onerror=null;this.src='{{ $menu->placeholder_image_url }}';">
                                 @else
                                     <div class="w-full h-full flex items-center justify-center text-[#897561]">
                                         <span class="material-symbols-outlined text-[20px]">image</span>
@@ -240,6 +246,47 @@
                             <label class="block text-sm font-bold text-[#181411] dark:text-white mb-2">Product Image</label>
                             <input type="file" name="image" accept="image/*" class="w-full px-4 py-2 bg-gray-50 dark:bg-[#2c241b] border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-[#181411] dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90">
                             <p class="text-xs text-[#897561] mt-1">Max size: 2MB. Supported formats: JPG, PNG, WEBP</p>
+                        </div>
+
+                        <div x-data="menuAddonsForm(@json(old('addons', [])))" class="space-y-3">
+                            <div class="flex items-center justify-between pt-2">
+                                <div>
+                                    <p class="text-xs uppercase tracking-wide text-[#a89c92]">Add-ons</p>
+                                    <h3 class="text-lg font-semibold text-[#181411] dark:text-white">Product add-ons</h3>
+                                </div>
+                                <button type="button" @click="addRow()" class="text-primary text-xs font-semibold flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[18px]">add</span>
+                                    Add add-on
+                                </button>
+                            </div>
+                            <template x-for="(addon, index) in addons" :key="index">
+                                <div class="grid grid-cols-2 gap-3 items-end">
+                                    <div>
+                                        <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Name</label>
+                                        <input type="text" :name="'addons['+index+'][name]'" x-model="addon.name"
+                                               class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="Extra shot">
+                                    </div>
+                                    <div>
+                                        <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Price (Rp)</label>
+                                        <input type="number" min="0" step="500" :name="'addons['+index+'][price]'" x-model="addon.price"
+                                               class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="0">
+                                    </div>
+                                    <button type="button" @click="removeRow(index)"
+                                            class="text-red-600 text-xs font-semibold justify-self-start flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[18px]">delete</span>
+                                        Remove
+                                    </button>
+                                </div>
+                            </template>
+                            <template x-if="addons.length === 0">
+                                <p class="text-xs text-[#897561]">Define optional extras that customers can add per item.</p>
+                            </template>
+                            @error('addons.*.name')
+                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                            @enderror
+                            @error('addons.*.price')
+                                <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                            @enderror
                         </div>
                     </div>
 

@@ -17,26 +17,6 @@
                  <h2 class="text-[28px] md:text-[40px] font-bold text-[#2F2D2C] leading-tight">Our Menu</h2>
             </div>
 
-            <div class="border border-[#F6D8BB] bg-[#FFF8F2] rounded-xl px-4 py-3 mb-3 text-sm text-[#2F2D2C] flex flex-col gap-2">
-                <div class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary text-[20px]">table_restaurant</span>
-                    <p class="font-semibold">Nomor Meja</p>
-                </div>
-                <div class="flex gap-2 flex-wrap">
-                    <input type="number"
-                           min="1"
-                           placeholder="Masukkan nomor meja..."
-                           x-model="tableInput"
-                           class="flex-1 rounded-lg border border-[#E6E0DB] px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary transition-all">
-                    <button type="button"
-                            @click="storeTableNumber()"
-                            class="px-4 py-2 rounded-lg bg-primary text-white font-semibold shadow-sm hover:bg-primary-dark transition-colors">
-                        Simpan Meja
-                    </button>
-                </div>
-                <p class="text-xs text-[#7c7a74]" x-text="tableNumber ? `Meja aktif: ${tableNumber}` : 'Nomor meja akan digunakan saat checkout dan add-to-cart.'"></p>
-            </div>
-
             <!-- CATEGORIES (Horizontal Scroll) -->
             <div class="flex gap-3 overflow-x-auto hide-scrollbar pb-2" id="category-nav">
                 @php
@@ -224,7 +204,6 @@ document.addEventListener('alpine:init', () => {
         cartCount: 0,
         cartTotal: 0,
         tableNumber: @json($table->table_number ?? null),
-        tableInput: '',
         sections: [],
         
         // Product Detail Modal
@@ -248,7 +227,6 @@ document.addEventListener('alpine:init', () => {
         init() {
             // Update cart info from window.Cart
             this.updateCartInfo();
-            this.syncTableNumber();
 
             // Initialize sections
             this.$nextTick(() => {
@@ -258,11 +236,6 @@ document.addEventListener('alpine:init', () => {
             // Listen for global cart updates
             window.addEventListener('cart-updated', (e) => {
                 this.updateCartInfo(e.detail);
-            });
-            window.addEventListener('storage', (e) => {
-                if (e.key === 'customer_table_number') {
-                    this.syncTableNumber();
-                }
             });
         },
 
@@ -350,16 +323,12 @@ document.addEventListener('alpine:init', () => {
                 menu_id: this.selectedProduct.id,
                 quantity: 1,
                 options,
+                order_type: 'menu',
+                table_number: this.tableNumber || null,
             };
 
-            const endpoint = this.cartEndpoint();
-            if (!endpoint) {
-                alert('Nomor meja tidak tersedia untuk pemesanan.');
-                return;
-            }
-
             try {
-                const response = await fetch(endpoint, {
+                const response = await fetch('/cart/add', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -373,9 +342,15 @@ document.addEventListener('alpine:init', () => {
 
                 if (response.ok && data.success) {
                     this.cartCount = data.cart_count ?? this.cartCount;
-                    this.cartTotal = data.cart_total ?? this.cartTotal;
+                    const totalNumber = data.cart_total ?? 0;
+                    this.cartTotal = this.formatPrice(totalNumber);
+                    const badge = document.getElementById('cart-badge');
+                    if (badge && this.cartCount > 0) {
+                        badge.classList.remove('hidden');
+                        badge.innerText = this.cartCount > 99 ? '99+' : this.cartCount;
+                    }
 
-                    alert('Produk ditambahkan ke keranjang!');
+                    this.showModernToast('Ditambahkan', 'Produk masuk ke keranjang', 'check_circle');
                     this.showDetail = false;
                     document.body.style.overflow = '';
                     this.resetOptions();
@@ -384,11 +359,11 @@ document.addEventListener('alpine:init', () => {
                         window.Cart.updateBadge();
                     }
                 } else {
-                    alert(data.message || 'Gagal menambahkan ke keranjang');
+                    this.showModernToast('Gagal', data.message || 'Gagal menambahkan', 'error', 'error');
                 }
             } catch (error) {
                 console.error('Error adding to cart:', error);
-                alert('Terjadi kesalahan');
+                this.showModernToast('Error', 'Terjadi kesalahan', 'error', 'error');
             }
         },
 
@@ -422,25 +397,6 @@ document.addEventListener('alpine:init', () => {
 
         isVariantSelected() {
             return true;
-        },
-
-        syncTableNumber() {
-            const stored = localStorage.getItem('customer_table_number');
-            if (stored) {
-                this.tableNumber = stored;
-                this.tableInput = stored;
-            } else if (window.appTableNumber) {
-                this.tableNumber = window.appTableNumber;
-                this.tableInput = window.appTableNumber;
-            }
-        },
-
-        storeTableNumber() {
-            if (!this.tableInput) {
-                return;
-            }
-            localStorage.setItem('customer_table_number', this.tableInput);
-            this.tableNumber = this.tableInput;
         },
 
         canAddToCart() {
@@ -485,6 +441,22 @@ document.addEventListener('alpine:init', () => {
             return this.getCurrentPricing().final_price_per_item || 0;
         },
 
+        showModernToast(title, message, icon = 'check_circle', type = 'success') {
+            // Prefer global Cart toast if available
+            if (window.Cart && typeof window.Cart.showToast === 'function') {
+                window.Cart.showToast(message);
+                return;
+            }
+            const existing = document.getElementById('smart-toast');
+            if (existing) existing.remove();
+            const toast = document.createElement('div');
+            toast.id = 'smart-toast';
+            toast.className = `fixed top-4 right-4 z-50 px-4 py-3 rounded-2xl shadow-2xl text-white flex items-start gap-3 ${type === 'error' ? 'bg-red-600' : 'bg-emerald-600'} max-w-sm`;
+            toast.innerHTML = `<span class="material-symbols-outlined mt-[2px]">${icon}</span><div><p class="font-semibold">${title}</p><p class="text-sm opacity-90">${message}</p></div>`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2600);
+        },
+
         scrollToCategory(id) {
             this.activeCategory = id;
             setTimeout(() => {
@@ -512,11 +484,7 @@ document.addEventListener('alpine:init', () => {
         },
 
         cartEndpoint() {
-            const table = this.tableNumber || window.appTableNumber || null;
-            if (!table) {
-                return null;
-            }
-            return `/order/${table}/cart`;
+            return '/cart/add';
         },
 
         goToCheckout() {

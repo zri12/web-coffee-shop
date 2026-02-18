@@ -184,18 +184,27 @@
         @foreach($order->items as $item)
         <div class="item">
             <div class="item-name">{{ $item->quantity }}x {{ $item->menu_name ?? $item->menu->name }}</div>
-            
-            @if($item->notes)
-            <div class="item-options">
+
+            @if($item->options_text)
                 @php
-                    // Parse notes to extract options
-                    $notes = $item->notes;
-                    $lines = explode(',', $notes);
+                    // Break options into separate lines for clarity on the kitchen ticket
+                    $optionLines = array_filter(array_map('trim', explode(',', $item->options_text)));
                 @endphp
-                @foreach($lines as $line)
-                    <div>- {{ trim($line) }}</div>
-                @endforeach
-            </div>
+                <div class="item-options">
+                    @foreach($optionLines as $line)
+                        <div>- {{ $line }}</div>
+                    @endforeach
+                </div>
+            @endif
+
+            @if($item->notes)
+                <div class="item-notes">
+                    @php
+                        // Keep manual notes visible; normalize separators for readability
+                        $notes = str_replace('|', ', ', $item->notes);
+                    @endphp
+                    Note: {{ $notes }}
+                </div>
             @endif
         </div>
         @endforeach

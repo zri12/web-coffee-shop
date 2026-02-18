@@ -3,7 +3,7 @@
 @section('title', 'Inventory Analytics')
 
 @section('content')
-<div class="min-h-screen bg-gradient-to-br from-[#F6E9D7]/40 via-white to-[#EBA83A]/10 p-6">
+<div class="min-h-screen bg-white p-6">
     <!-- Header with Coffee Branding -->
     <div class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

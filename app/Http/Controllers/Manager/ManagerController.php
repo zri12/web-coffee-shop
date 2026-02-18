@@ -40,7 +40,7 @@ class ManagerController extends Controller
 
         // 4) Table occupancy (distinct tables with active orders)
         $totalTables = \App\Models\Table::count();
-        $occupiedTables = \App\Models\Order::whereIn('status', ['pending', 'processing'])
+        $occupiedTables = \App\Models\Order::whereIn('status', ['pending', 'processing', 'waiting_payment', 'waiting_cashier_confirmation', 'paid', 'preparing'])
             ->whereNotNull('table_number')
             ->distinct('table_number')
             ->count('table_number');
@@ -137,27 +137,28 @@ class ManagerController extends Controller
         return view('manager.menus.index', compact('menus', 'categories'));
     }
     
-    public function createMenu()
-    {
-        $categories = \App\Models\Category::all();
-        return view('manager.menus.create', compact('categories'));
-    }
-    
     public function storeMenu(Request $request)
     {
-        $request->validate([
+        $rules = [
             'name' => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
             'price' => 'required|numeric|min:0',
             'description' => 'nullable|string',
-            'image' => 'nullable|image|max:2048'
-        ]);
+            'image' => 'nullable|image|max:2048',
+            'addons' => 'array',
+            'addons.*.name' => 'nullable|string|max:120',
+            'addons.*.price' => 'nullable|numeric|min:0',
+        ];
+
+        $request->validate($rules);
         
         $data = $request->only(['name', 'category_id', 'price', 'description']);
         
         if ($request->hasFile('image')) {
             $data['image_url'] = $request->file('image')->store('menu-images', 'public');
         }
+
+        $data['addons'] = \App\Models\Menu::normalizeAddons($request->input('addons', []));
         
         \App\Models\Menu::create($data);
         
@@ -168,6 +169,7 @@ class ManagerController extends Controller
     {
         $menu = \App\Models\Menu::findOrFail($id);
         $categories = \App\Models\Category::all();
+
         return view('manager.menus.edit', compact('menu', 'categories'));
     }
     
@@ -175,13 +177,18 @@ class ManagerController extends Controller
     {
         $menu = \App\Models\Menu::findOrFail($id);
         
-        $request->validate([
+        $rules = [
             'name' => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
             'price' => 'required|numeric|min:0',
             'description' => 'nullable|string',
-            'image' => 'nullable|image|max:2048'
-        ]);
+            'image' => 'nullable|image|max:2048',
+            'addons' => 'array',
+            'addons.*.name' => 'nullable|string|max:120',
+            'addons.*.price' => 'nullable|numeric|min:0',
+        ];
+
+        $request->validate($rules);
         
         $data = $request->only(['name', 'category_id', 'price', 'description']);
         
@@ -191,6 +198,8 @@ class ManagerController extends Controller
             }
             $data['image_url'] = $request->file('image')->store('menu-images', 'public');
         }
+
+        $data['addons'] = \App\Models\Menu::normalizeAddons($request->input('addons', []));
         
         $menu->update($data);
         
@@ -246,9 +255,22 @@ class ManagerController extends Controller
         // Build query with filters
         $query = \App\Models\Order::with(['items', 'payment']);
 
-        // Apply status filter
+        // Apply status filter (supports new + legacy)
         if ($request->has('status') && $request->status !== 'all') {
-            $query->where('status', $request->status);
+            $statusMap = [
+                'waiting_payment' => ['waiting_payment', 'waiting_cashier_confirmation', 'pending'],
+                'paid' => ['paid'],
+                'preparing' => ['preparing', 'processing'],
+                'completed' => ['completed'],
+                'cancelled' => ['cancelled'],
+                'pending' => ['pending'],
+                'processing' => ['processing'],
+            ];
+
+            $status = $request->status;
+            if (isset($statusMap[$status])) {
+                $query->whereIn('status', $statusMap[$status]);
+            }
         }
 
         // Apply payment method filter
@@ -290,8 +312,8 @@ class ManagerController extends Controller
 
         // Get order statistics
         $totalOrders = \App\Models\Order::count();
-        $pendingOrders = \App\Models\Order::where('status', 'pending')->count();
-        $processingOrders = \App\Models\Order::where('status', 'processing')->count();
+        $pendingOrders = \App\Models\Order::whereIn('status', ['waiting_payment', 'waiting_cashier_confirmation', 'pending'])->count();
+        $processingOrders = \App\Models\Order::whereIn('status', ['preparing', 'processing'])->count();
         $completedOrders = \App\Models\Order::where('status', 'completed')->count();
 
         // Get filtered orders
@@ -880,4 +902,5 @@ class ManagerController extends Controller
             ], 500);
         }
     }
+
 }

@@ -5,6 +5,7 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Admin Dashboard') - {{ $systemSettings['cafe_name'] ?? config('app.name') }}</title>
+    @include('layouts.partials.favicon')
 
     <!-- Anti-FOUC guard: hide until critical assets are ready -->
     <style id="fouc-guard">html.fouc-prep, html.fouc-prep body { visibility: hidden; }</style>
