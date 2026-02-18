@@ -69,7 +69,7 @@
                         </td>
                         <td class="px-6 py-4">
                             <div class="flex items-center justify-center gap-2">
-                                <button @click="editMode = true; currentCategory = {{ $category->toJson() }}; showModal = true" 
+                                <button @click="editMode = true; currentCategory = @json($category->only(['id','name','description','is_active','option_flags'])); showModal = true" 
                                         class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors">
                                     <span class="material-symbols-outlined text-[20px]">edit</span>
                                 </button>
@@ -124,7 +124,7 @@
                         </div>
                     </div>
                     <div class="flex gap-2 flex-shrink-0">
-                        <button @click="editMode = true; currentCategory = {{ $category->toJson() }}; showModal = true" 
+                        <button @click="editMode = true; currentCategory = @json($category->only(['id','name','description','is_active','option_flags'])); showModal = true" 
                                 class="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors touch-manipulation">
                             <span class="material-symbols-outlined text-[20px]">edit</span>
                         </button>
