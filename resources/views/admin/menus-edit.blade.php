@@ -100,7 +100,7 @@
                 <label class="block text-sm font-bold text-[#181411] dark:text-white mb-3">Product Image</label>
                 <div class="mb-4">
                     <p class="text-xs font-bold text-[#897561] uppercase tracking-wider mb-2">Current Image:</p>
-                    <img src="{{ $menu->display_image_url }}" alt="{{ $menu->name }}" class="w-32 h-32 object-cover rounded-lg border border-[#e6e0db] dark:border-[#3d362e]" onerror="this.onerror=null;this.src='https://placehold.co/160x160?text=Menu';">
+                    <img src="{{ $menu->display_image_url }}" alt="{{ $menu->name }}" class="w-32 h-32 object-cover rounded-lg border border-[#e6e0db] dark:border-[#3d362e]" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22160%22><rect width=%22160%22 height=%22160%22 fill=%22%23f3f4f6%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-family=%22Arial%22 font-size=%2216%22>Menu</text></svg>'; this.style.background='#f3f4f6';">
                 </div>
             <input type="file" name="image" accept="image/*"
                    class="w-full px-4 py-3 rounded-lg border border-[#e6e0db] dark:border-[#3d362e] bg-white dark:bg-[#0f0d0b] text-[#181411] dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent text-base">

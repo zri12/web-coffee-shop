@@ -41,18 +41,27 @@ class Menu extends Model
      */
     public function getDisplayImageUrlAttribute(): string
     {
+        $isSecure = request()->isSecure();
+
         foreach ([$this->image_url, $this->image] as $candidate) {
             if (!$candidate || !is_string($candidate)) {
                 continue;
             }
 
             if (Str::startsWith($candidate, ['http://', 'https://'])) {
+                // Upgrade to https when current request is secure
+                if ($isSecure && Str::startsWith($candidate, 'http://')) {
+                    return preg_replace('#^http://#', 'https://', $candidate);
+                }
                 return $candidate;
             }
 
             $normalized = ltrim($candidate, '/');
             // Any stored path (menus/, images/, menu-images/, etc.) → serve from public storage
-            return asset('storage/' . $normalized);
+            $url = $isSecure
+                ? secure_asset('storage/' . $normalized)
+                : asset('storage/' . $normalized);
+            return $url;
         }
 
         // Prefer AI route as soft fallback

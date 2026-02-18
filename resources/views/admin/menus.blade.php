@@ -87,7 +87,7 @@
                                 <img src="{{ $menu->display_image_url }}"
                                      alt="{{ $menu->name }}"
                                      class="w-full h-full object-cover"
-                                     onerror="this.onerror=null;this.src='https://placehold.co/160x160?text=Menu';">
+                                     onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22160%22><rect width=%22160%22 height=%22160%22 fill=%22%23f3f4f6%22/><text x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 fill=%22%239ca3af%22 font-family=%22Arial%22 font-size=%2216%22>Menu</text></svg>'; this.style.background='#f3f4f6';">
                             </div>
                         </td>
                         <td class="px-6 py-4">
