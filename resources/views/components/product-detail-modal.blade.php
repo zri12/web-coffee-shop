@@ -57,300 +57,68 @@
                 <p class="text-[14px] text-[#9B9B9B] leading-relaxed" x-text="selectedProduct.description"></p>
             </div>
 
-            <!-- Options Container -->
-            <div x-show="selectedProduct.type === 'beverage'" class="space-y-5">
-                
-                <!-- Temperature Option -->
-                <div>
-                    <h3 class="text-[16px] font-semibold text-[#2F2D2C] mb-3">Temperature</h3>
-                    <div class="flex gap-3">
-                        <button @click="temperature = 'ice'" 
-                                :class="temperature === 'ice' ? 'bg-[#C67C4E] text-white' : 'bg-[#F9F9F9] text-[#2F2D2C]'"
-                                class="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all flex items-center justify-center gap-2">
-                            <span class="material-symbols-outlined text-[18px]">ac_unit</span>
-                            <span>Ice</span>
-                        </button>
-                        <button @click="temperature = 'hot'" 
-                                :class="temperature === 'hot' ? 'bg-[#C67C4E] text-white' : 'bg-[#F9F9F9] text-[#2F2D2C]'"
-                                class="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all flex items-center justify-center gap-2">
-                            <span class="material-symbols-outlined text-[18px]">local_fire_department</span>
-                            <span>Hot</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Ice Level Option (only show when temperature is ice) -->
-                <div x-show="temperature === 'ice'">
-                    <h3 class="text-[16px] font-semibold text-[#2F2D2C] mb-3">Ice Level</h3>
-                    <div class="flex gap-3">
-                        <button @click="iceLevel = 'normal'" 
-                                :class="iceLevel === 'normal' ? 'bg-[#C67C4E] text-white' : 'bg-[#F9F9F9] text-[#2F2D2C]'"
-                                class="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all">
-                            Normal
-                        </button>
-                        <button @click="iceLevel = 'less'" 
-                                :class="iceLevel === 'less' ? 'bg-[#C67C4E] text-white' : 'bg-[#F9F9F9] text-[#2F2D2C]'"
-                                class="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all">
-                            Less
-                        </button>
-                        <button @click="iceLevel = 'no-ice'" 
-                                :class="iceLevel === 'no-ice' ? 'bg-[#C67C4E] text-white' : 'bg-[#F9F9F9] text-[#2F2D2C]'"
-                                class="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all">
-                            No Ice
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Sugar Level Option -->
-                <div>
-                    <h3 class="text-[16px] font-semibold text-[#2F2D2C] mb-3">Sugar Level</h3>
-                    <div class="flex gap-3">
-                        <button @click="sugarLevel = 'normal'" 
-                                :class="sugarLevel === 'normal' ? 'bg-[#C67C4E] text-white' : 'bg-[#F9F9F9] text-[#2F2D2C]'"
-                                class="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all">
-                            Normal
-                        </button>
-                        <button @click="sugarLevel = 'less'" 
-                                :class="sugarLevel === 'less' ? 'bg-[#C67C4E] text-white' : 'bg-[#F9F9F9] text-[#2F2D2C]'"
-                                class="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all">
-                            Less
-                        </button>
-                        <button @click="sugarLevel = 'no-sugar'" 
-                                :class="sugarLevel === 'no-sugar' ? 'bg-[#C67C4E] text-white' : 'bg-[#F9F9F9] text-[#2F2D2C]'"
-                                class="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all">
-                            No Sugar
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Size Option -->
-                <div>
-                    <h3 class="text-[16px] font-semibold text-[#2F2D2C] mb-3">Size</h3>
-                    <div class="flex gap-3">
-                        <button @click="size = 'regular'" 
-                                :class="size === 'regular' ? 'border-2 border-[#C67C4E] bg-[#FFF5F0]' : 'border-2 border-[#E8E8E8] bg-white'"
-                                class="flex-1 py-4 rounded-xl transition-all">
-                            <div class="text-center">
-                                <div class="text-[18px] font-bold text-[#2F2D2C] mb-1">Regular</div>
-                                <div class="text-[12px] text-[#9B9B9B]">Standard</div>
+            <!-- Options -->
+            <div class="space-y-4">
+                <template x-if="loadingOptions">
+                    <div class="text-sm text-[#7c7a74]">Loading options...</div>
+                </template>
+                <template x-if="!loadingOptions && optionGroups.length === 0">
+                    <div class="text-sm text-[#7c7a74]">No custom options for this product.</div>
+                </template>
+                <template x-for="group in optionGroups" :key="group.id">
+                    <div class="rounded-2xl border border-[#E8E8E8] bg-white shadow-sm p-4 space-y-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="flex items-center gap-2">
+                                <h3 class="text-[16px] font-semibold text-[#2F2D2C]" x-text="group.name"></h3>
+                                <span class="text-[11px] px-2 py-0.5 rounded-full bg-[#f3e8df] text-[#7c5b3a]" x-text="group.type === 'single' ? 'Single' : 'Multiple'"></span>
+                                <template x-if="group.is_required">
+                                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Required</span>
+                                </template>
                             </div>
-                        </button>
-                        <button @click="size = 'large'" 
-                                :class="size === 'large' ? 'border-2 border-[#C67C4E] bg-[#FFF5F0]' : 'border-2 border-[#E8E8E8] bg-white'"
-                                class="flex-1 py-4 rounded-xl transition-all">
-                            <div class="text-center">
-                                <div class="text-[18px] font-bold text-[#2F2D2C] mb-1">Large</div>
-                                <div class="text-[12px] text-[#9B9B9B]">+Rp 8.000</div>
-                            </div>
-                        </button>
+                            <template x-if="!group.values.length">
+                                <span class="text-xs text-[#c94e4e]">No active values</span>
+                            </template>
+                        </div>
+                        <div class="space-y-3">
+                            <template x-for="value in group.values" :key="value.id">
+                                <label class="flex items-center gap-3 p-3 rounded-xl border-2 transition-all"
+                                       :class="[
+                                            isSelected(group, value.id) ? 'border-[#C67C4E] bg-[#FFF5F0]' : 'border-[#E8E8E8] hover:border-[#C67C4E]',
+                                            !value.is_available ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+                                       ].join(' ')"
+                                       :aria-disabled="!value.is_available">
+                                    <input
+                                        :type="group.type === 'single' ? 'radio' : 'checkbox'"
+                                        class="w-5 h-5 text-[#C67C4E] rounded focus:ring-[#C67C4E]"
+                                        :name="'option-' + group.id"
+                                        :value="value.id"
+                                        :disabled="!value.is_available"
+                                        @change="toggleOption(group, value)"
+                                        :checked="isSelected(group, value.id)"
+                                    >
+                                    <div class="flex-1 space-y-1">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <span class="text-[14px] font-semibold text-[#2F2D2C]" x-text="value.name"></span>
+                                            <span class="text-[12px] text-[#9B9B9B]" x-text="
+                                                value.price_adjustment === 0
+                                                    ? 'Free'
+                                                    : `${value.price_adjustment > 0 ? '+ ' : '- '}${formatPrice(Math.abs(value.price_adjustment))}`
+                                            "></span>
+                                        </div>
+                                        <div class="flex items-center gap-2 text-[12px]">
+                                            <template x-if="!value.is_available">
+                                                <span class="px-2 py-0.5 rounded-full bg-red-100 text-red-700">Unavailable</span>
+                                            </template>
+                                            <template x-if="value.is_available && value.stock !== null">
+                                                <span class="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700" x-text="'Stock: '+value.stock"></span>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </label>
+                            </template>
+                        </div>
                     </div>
-                </div>
-
-                <!-- Add-Ons for Beverages -->
-                <div>
-                    <h3 class="text-[16px] font-semibold text-[#2F2D2C] mb-3">Add-Ons (Optional)</h3>
-                    <div class="space-y-2">
-                        <label class="flex items-center gap-3 p-3 rounded-xl border-2 border-[#E8E8E8] cursor-pointer hover:border-[#C67C4E] transition-all">
-                            <input type="checkbox" x-model="addOns" value="extra-shot" class="w-5 h-5 text-[#C67C4E] rounded">
-                            <span class="flex-1 text-[14px] font-medium text-[#2F2D2C]">Extra Shot</span>
-                            <span class="text-[12px] text-[#9B9B9B]">+Rp 5.000</span>
-                        </label>
-                        <label class="flex items-center gap-3 p-3 rounded-xl border-2 border-[#E8E8E8] cursor-pointer hover:border-[#C67C4E] transition-all">
-                            <input type="checkbox" x-model="addOns" value="whipped-cream" class="w-5 h-5 text-[#C67C4E] rounded">
-                            <span class="flex-1 text-[14px] font-medium text-[#2F2D2C]">Whipped Cream</span>
-                            <span class="text-[12px] text-[#9B9B9B]">+Rp 3.000</span>
-                        </label>
-                        <label class="flex items-center gap-3 p-3 rounded-xl border-2 border-[#E8E8E8] cursor-pointer hover:border-[#C67C4E] transition-all">
-                            <input type="checkbox" x-model="addOns" value="caramel-syrup" class="w-5 h-5 text-[#C67C4E] rounded">
-                            <span class="flex-1 text-[14px] font-medium text-[#2F2D2C]">Caramel Syrup</span>
-                            <span class="text-[12px] text-[#9B9B9B]">+Rp 3.000</span>
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Options for Food/Snack -->
-            <div x-show="selectedProduct.type === 'food'" class="space-y-5">
-                <!-- Spice Level -->
-                <div>
-                    <h3 class="text-[16px] font-semibold text-[#2F2D2C] mb-3">Spice Level</h3>
-                    <div class="flex gap-3">
-                        <button @click="spiceLevel = 'mild'" 
-                                :class="spiceLevel === 'mild' ? 'bg-[#C67C4E] text-white' : 'bg-[#F9F9F9] text-[#2F2D2C]'"
-                                class="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all">
-                            Mild
-                        </button>
-                        <button @click="spiceLevel = 'medium'" 
-                                :class="spiceLevel === 'medium' ? 'bg-[#C67C4E] text-white' : 'bg-[#F9F9F9] text-[#2F2D2C]'"
-                                class="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all">
-                            Medium
-                        </button>
-                        <button @click="spiceLevel = 'spicy'" 
-                                :class="spiceLevel === 'spicy' ? 'bg-[#C67C4E] text-white' : 'bg-[#F9F9F9] text-[#2F2D2C]'"
-                                class="flex-1 py-3 rounded-xl font-semibold text-[14px] transition-all">
-                            Spicy
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Portion -->
-                <div>
-                    <h3 class="text-[16px] font-semibold text-[#2F2D2C] mb-3">Portion</h3>
-                    <div class="flex gap-3">
-                        <button @click="portion = 'regular'" 
-                                :class="portion === 'regular' ? 'border-2 border-[#C67C4E] bg-[#FFF5F0]' : 'border-2 border-[#E8E8E8] bg-white'"
-                                class="flex-1 py-4 rounded-xl transition-all">
-                            <div class="text-center">
-                                <div class="text-[16px] font-bold text-[#2F2D2C] mb-1">Regular</div>
-                                <div class="text-[12px] text-[#9B9B9B]">Standard</div>
-                            </div>
-                        </button>
-                        <button @click="portion = 'large'" 
-                                :class="portion === 'large' ? 'border-2 border-[#C67C4E] bg-[#FFF5F0]' : 'border-2 border-[#E8E8E8] bg-white'"
-                                class="flex-1 py-4 rounded-xl transition-all">
-                            <div class="text-center">
-                                <div class="text-[16px] font-bold text-[#2F2D2C] mb-1">Large</div>
-                                <div class="text-[12px] text-[#9B9B9B]">+Rp 5.000</div>
-                            </div>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Add-Ons for Food -->
-                <div>
-                    <h3 class="text-[16px] font-semibold text-[#2F2D2C] mb-3">Add-Ons (Optional)</h3>
-                    <div class="space-y-2">
-                        <label class="flex items-center gap-3 p-3 rounded-xl border-2 border-[#E8E8E8] cursor-pointer hover:border-[#C67C4E] transition-all">
-                            <input type="checkbox" x-model="addOns" value="extra-cheese" class="w-5 h-5 text-[#C67C4E] rounded">
-                            <span class="flex-1 text-[14px] font-medium text-[#2F2D2C]">Extra Cheese</span>
-                            <span class="text-[12px] text-[#9B9B9B]">+Rp 5.000</span>
-                        </label>
-                        <label class="flex items-center gap-3 p-3 rounded-xl border-2 border-[#E8E8E8] cursor-pointer hover:border-[#C67C4E] transition-all">
-                            <input type="checkbox" x-model="addOns" value="extra-egg" class="w-5 h-5 text-[#C67C4E] rounded">
-                            <span class="flex-1 text-[14px] font-medium text-[#2F2D2C]">Extra Egg</span>
-                            <span class="text-[12px] text-[#9B9B9B]">+Rp 3.000</span>
-                        </label>
-                        <label class="flex items-center gap-3 p-3 rounded-xl border-2 border-[#E8E8E8] cursor-pointer hover:border-[#C67C4E] transition-all">
-                            <input type="checkbox" x-model="addOns" value="extra-rice" class="w-5 h-5 text-[#C67C4E] rounded">
-                            <span class="flex-1 text-[14px] font-medium text-[#2F2D2C]">Extra Rice</span>
-                            <span class="text-[12px] text-[#9B9B9B]">+Rp 5.000</span>
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Options for Snack -->
-            <div x-show="selectedProduct.type === 'snack'" class="space-y-5">
-                <!-- Size/Portion for Snack -->
-                <div>
-                    <h3 class="text-[16px] font-semibold text-[#2F2D2C] mb-3">Size</h3>
-                    <div class="flex gap-3">
-                        <button @click="portion = 'small'" 
-                                :class="portion === 'small' ? 'border-2 border-[#C67C4E] bg-[#FFF5F0]' : 'border-2 border-[#E8E8E8] bg-white'"
-                                class="flex-1 py-4 rounded-xl transition-all">
-                            <div class="text-center">
-                                <div class="text-[16px] font-bold text-[#2F2D2C] mb-1">Small</div>
-                                <div class="text-[12px] text-[#9B9B9B]">-Rp 5.000</div>
-                            </div>
-                        </button>
-                        <button @click="portion = 'regular'" 
-                                :class="portion === 'regular' ? 'border-2 border-[#C67C4E] bg-[#FFF5F0]' : 'border-2 border-[#E8E8E8] bg-white'"
-                                class="flex-1 py-4 rounded-xl transition-all">
-                            <div class="text-center">
-                                <div class="text-[16px] font-bold text-[#2F2D2C] mb-1">Regular</div>
-                                <div class="text-[12px] text-[#9B9B9B]">Standard</div>
-                            </div>
-                        </button>
-                        <button @click="portion = 'large'" 
-                                :class="portion === 'large' ? 'border-2 border-[#C67C4E] bg-[#FFF5F0]' : 'border-2 border-[#E8E8E8] bg-white'"
-                                class="flex-1 py-4 rounded-xl transition-all">
-                            <div class="text-center">
-                                <div class="text-[16px] font-bold text-[#2F2D2C] mb-1">Large</div>
-                                <div class="text-[12px] text-[#9B9B9B]">+Rp 5.000</div>
-                            </div>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Sauce Options for Snack -->
-                <div>
-                    <h3 class="text-[16px] font-semibold text-[#2F2D2C] mb-3">Sauce Options</h3>
-                    <div class="space-y-2">
-                        <label class="flex items-center gap-3 p-3 rounded-xl border-2 border-[#E8E8E8] cursor-pointer hover:border-[#C67C4E] transition-all">
-                            <input type="checkbox" x-model="sauces" value="ketchup" class="w-5 h-5 text-[#C67C4E] rounded">
-                            <span class="flex-1 text-[14px] font-medium text-[#2F2D2C]">Ketchup</span>
-                            <span class="text-[12px] text-[#9B9B9B]">Free</span>
-                        </label>
-                        <label class="flex items-center gap-3 p-3 rounded-xl border-2 border-[#E8E8E8] cursor-pointer hover:border-[#C67C4E] transition-all">
-                            <input type="checkbox" x-model="sauces" value="mayonnaise" class="w-5 h-5 text-[#C67C4E] rounded">
-                            <span class="flex-1 text-[14px] font-medium text-[#2F2D2C]">Mayonnaise</span>
-                            <span class="text-[12px] text-[#9B9B9B]">Free</span>
-                        </label>
-                        <label class="flex items-center gap-3 p-3 rounded-xl border-2 border-[#E8E8E8] cursor-pointer hover:border-[#C67C4E] transition-all">
-                            <input type="checkbox" x-model="sauces" value="chili" class="w-5 h-5 text-[#C67C4E] rounded">
-                            <span class="flex-1 text-[14px] font-medium text-[#2F2D2C]">Chili Sauce</span>
-                            <span class="text-[12px] text-[#9B9B9B]">Free</span>
-                        </label>
-                        <label class="flex items-center gap-3 p-3 rounded-xl border-2 border-[#E8E8E8] cursor-pointer hover:border-[#C67C4E] transition-all">
-                            <input type="checkbox" x-model="sauces" value="bbq" class="w-5 h-5 text-[#C67C4E] rounded">
-                            <span class="flex-1 text-[14px] font-medium text-[#2F2D2C]">BBQ Sauce</span>
-                            <span class="text-[12px] text-[#9B9B9B]">+Rp 2.000</span>
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Options for Dessert -->
-            <div x-show="selectedProduct.type === 'dessert'" class="space-y-5">
-                <!-- Size/Portion for Dessert -->
-                <div>
-                    <h3 class="text-[16px] font-semibold text-[#2F2D2C] mb-3">Size</h3>
-                    <div class="flex gap-3">
-                        <button @click="portion = 'regular'" 
-                                :class="portion === 'regular' ? 'border-2 border-[#C67C4E] bg-[#FFF5F0]' : 'border-2 border-[#E8E8E8] bg-white'"
-                                class="flex-1 py-4 rounded-xl transition-all">
-                            <div class="text-center">
-                                <div class="text-[16px] font-bold text-[#2F2D2C] mb-1">Regular</div>
-                                <div class="text-[12px] text-[#9B9B9B]">Standard</div>
-                            </div>
-                        </button>
-                        <button @click="portion = 'large'" 
-                                :class="portion === 'large' ? 'border-2 border-[#C67C4E] bg-[#FFF5F0]' : 'border-2 border-[#E8E8E8] bg-white'"
-                                class="flex-1 py-4 rounded-xl transition-all">
-                            <div class="text-center">
-                                <div class="text-[16px] font-bold text-[#2F2D2C] mb-1">Large</div>
-                                <div class="text-[12px] text-[#9B9B9B]">+Rp 8.000</div>
-                            </div>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Topping -->
-                <div>
-                    <h3 class="text-[16px] font-semibold text-[#2F2D2C] mb-3">Extra Topping</h3>
-                    <div class="space-y-2">
-                        <label class="flex items-center gap-3 p-3 rounded-xl border-2 border-[#E8E8E8] cursor-pointer hover:border-[#C67C4E] transition-all">
-                            <input type="checkbox" x-model="toppings" value="chocolate" class="w-5 h-5 text-[#C67C4E] rounded">
-                            <span class="flex-1 text-[14px] font-medium text-[#2F2D2C]">Chocolate Sauce</span>
-                            <span class="text-[12px] text-[#9B9B9B]">+Rp 3.000</span>
-                        </label>
-                        <label class="flex items-center gap-3 p-3 rounded-xl border-2 border-[#E8E8E8] cursor-pointer hover:border-[#C67C4E] transition-all">
-                            <input type="checkbox" x-model="toppings" value="caramel" class="w-5 h-5 text-[#C67C4E] rounded">
-                            <span class="flex-1 text-[14px] font-medium text-[#2F2D2C]">Caramel Drizzle</span>
-                            <span class="text-[12px] text-[#9B9B9B]">+Rp 3.000</span>
-                        </label>
-                        <label class="flex items-center gap-3 p-3 rounded-xl border-2 border-[#E8E8E8] cursor-pointer hover:border-[#C67C4E] transition-all">
-                            <input type="checkbox" x-model="toppings" value="whipped" class="w-5 h-5 text-[#C67C4E] rounded">
-                            <span class="flex-1 text-[14px] font-medium text-[#2F2D2C]">Whipped Cream</span>
-                            <span class="text-[12px] text-[#9B9B9B]">+Rp 5.000</span>
-                        </label>
-                        <label class="flex items-center gap-3 p-3 rounded-xl border-2 border-[#E8E8E8] cursor-pointer hover:border-[#C67C4E] transition-all">
-                            <input type="checkbox" x-model="toppings" value="ice-cream" class="w-5 h-5 text-[#C67C4E] rounded">
-                            <span class="flex-1 text-[14px] font-medium text-[#2F2D2C]">Ice Cream</span>
-                            <span class="text-[12px] text-[#9B9B9B]">+Rp 8.000</span>
-                        </label>
-                    </div>
-                </div>
+                </template>
             </div>
 
             <!-- Special Request -->
