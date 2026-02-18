@@ -68,13 +68,7 @@
                 <template x-for="group in optionGroups" :key="group.id">
                     <div class="rounded-2xl border border-[#E8E8E8] bg-white shadow-sm p-4 space-y-3">
                         <div class="flex items-center justify-between gap-3">
-                            <div class="flex items-center gap-2">
-                                <h3 class="text-[16px] font-semibold text-[#2F2D2C]" x-text="group.name"></h3>
-                                <span class="text-[11px] px-2 py-0.5 rounded-full bg-[#f3e8df] text-[#7c5b3a]" x-text="group.type === 'single' ? 'Single' : 'Multiple'"></span>
-                                <template x-if="group.is_required">
-                                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Required</span>
-                                </template>
-                            </div>
+                            <h3 class="text-[16px] font-semibold text-[#2F2D2C]" x-text="group.name"></h3>
                             <template x-if="!group.values.length">
                                 <span class="text-xs text-[#c94e4e]">No active values</span>
                             </template>
@@ -122,7 +116,7 @@
             </div>
 
             <!-- Special Request -->
-            <div class="mt-5">
+            <div class="mt-5" x-show="!loadingOptions">
                 <h3 class="text-[16px] font-semibold text-[#2F2D2C] mb-3">Special Request</h3>
                 <textarea 
                     x-model="specialRequest"
