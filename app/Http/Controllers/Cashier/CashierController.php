@@ -522,11 +522,22 @@ class CashierController extends Controller
             ], 400);
         }
         
+        $previousStatus = strtolower((string)$order->status);
+
         // Log status change
         \Log::info("Order {$order->order_number} status changed from {$order->status} to {$newStatus} by " . auth()->user()->name);
         
         // Update with validated clean value
         $order->update(['status' => $newStatus]);
+
+        // Deduct ingredients once when moving into preparing/processing
+        if (!in_array($previousStatus, ['preparing', 'processing']) && in_array($newStatus, ['preparing', 'processing'])) {
+            try {
+                $order->deductIngredients();
+            } catch (\Throwable $e) {
+                \Log::error("Ingredient deduction failed for order {$order->order_number}: {$e->getMessage()}");
+            }
+        }
         
         return response()->json([
             'success' => true,

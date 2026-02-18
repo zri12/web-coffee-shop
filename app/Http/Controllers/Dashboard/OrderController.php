@@ -132,7 +132,19 @@ class OrderController extends Controller
             'status' => 'required|in:pending,processing,ready,completed,cancelled',
         ]);
         
-        $order->update(['status' => $request->status]);
+        $previousStatus = strtolower((string)$order->status);
+        $newStatus = strtolower($request->status);
+
+        $order->update(['status' => $newStatus]);
+
+        // Deduct ingredients when entering processing state (only once)
+        if (!in_array($previousStatus, ['processing', 'ready']) && in_array($newStatus, ['processing', 'ready'])) {
+            try {
+                $order->deductIngredients();
+            } catch (\Throwable $e) {
+                \Log::error("Ingredient deduction failed (dashboard) for order {$order->order_number}: {$e->getMessage()}");
+            }
+        }
         
         return back()->with('success', 'Status pesanan berhasil diperbarui');
     }

@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Manager;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Models\Ingredient;
+use App\Models\ProductRecipe;
 
 class ManagerController extends Controller
 {
@@ -169,8 +171,10 @@ class ManagerController extends Controller
     {
         $menu = \App\Models\Menu::findOrFail($id);
         $categories = \App\Models\Category::all();
+        $ingredients = Ingredient::orderBy('name')->get();
+        $menuRecipes = $menu->recipes()->with('ingredient')->get();
 
-        return view('manager.menus.edit', compact('menu', 'categories'));
+        return view('manager.menus.edit', compact('menu', 'categories', 'ingredients', 'menuRecipes'));
     }
     
     public function updateMenu(Request $request, $id)
@@ -186,22 +190,45 @@ class ManagerController extends Controller
             'addons' => 'array',
             'addons.*.name' => 'nullable|string|max:120',
             'addons.*.price' => 'nullable|numeric|min:0',
+            'recipes' => 'array',
+            'recipes.*.ingredient_id' => 'nullable|exists:ingredients,id',
+            'recipes.*.quantity_used' => 'nullable|numeric|min:0.01',
         ];
 
         $request->validate($rules);
         
-        $data = $request->only(['name', 'category_id', 'price', 'description']);
-        
-        if ($request->hasFile('image')) {
-            if ($menu->image_url) {
-                \Storage::disk('public')->delete($menu->image_url);
+        DB::transaction(function () use ($request, $menu) {
+            $data = $request->only(['name', 'category_id', 'price', 'description']);
+            
+            if ($request->hasFile('image')) {
+                if ($menu->image_url) {
+                    \Storage::disk('public')->delete($menu->image_url);
+                }
+                $data['image_url'] = $request->file('image')->store('menu-images', 'public');
             }
-            $data['image_url'] = $request->file('image')->store('menu-images', 'public');
-        }
 
-        $data['addons'] = \App\Models\Menu::normalizeAddons($request->input('addons', []));
-        
-        $menu->update($data);
+            $data['addons'] = \App\Models\Menu::normalizeAddons($request->input('addons', []));
+            
+            $menu->update($data);
+
+            // Sync recipes
+            $recipes = collect($request->input('recipes', []))
+                ->filter(fn($r) => !empty($r['ingredient_id']) && !empty($r['quantity_used']) && $r['quantity_used'] > 0)
+                ->map(function ($r) use ($menu) {
+                    return [
+                        'product_id' => $menu->id,
+                        'ingredient_id' => $r['ingredient_id'],
+                        'quantity_used' => $r['quantity_used'],
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                })->values();
+
+            ProductRecipe::where('product_id', $menu->id)->delete();
+            if ($recipes->isNotEmpty()) {
+                ProductRecipe::insert($recipes->toArray());
+            }
+        });
         
         return redirect()->route('manager.menus')->with('success', 'Menu item updated successfully');
     }

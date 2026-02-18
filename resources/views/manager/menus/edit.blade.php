@@ -124,6 +124,54 @@
                     @enderror
                 </div>
 
+                <!-- Recipe / Ingredients -->
+                <div x-data="recipeForm(@json($initialRecipes))" class="space-y-3 mt-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs uppercase tracking-wide text-[#a89c92]">Resep</p>
+                            <h3 class="text-lg font-semibold text-[#181411] dark:text-white">Bahan per porsi</h3>
+                            <p class="text-xs text-[#897561]">Stok otomatis berkurang saat status pesanan masuk dapur.</p>
+                        </div>
+                        <button type="button" @click="addRow()" class="text-primary text-xs font-semibold flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[18px]">add</span>
+                            Tambah bahan
+                        </button>
+                    </div>
+                    <template x-for="(recipe, index) in recipes" :key="index">
+                        <div class="grid grid-cols-12 gap-3 items-end border border-[#f0e9df] dark:border-[#3d362e] rounded-lg p-3 bg-gray-50/60 dark:bg-[#1f1914]">
+                            <div class="col-span-7">
+                                <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Ingredient</label>
+                                <select :name="'recipes['+index+'][ingredient_id]'" x-model="recipe.ingredient_id"
+                                        class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary">
+                                    <option value=\"\">Pilih bahan</option>
+                                    @foreach($ingredients as $ingredient)
+                                        <option value=\"{{ $ingredient->id }}\">{{ $ingredient->name }} ({{ $ingredient->unit }})</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-span-4">
+                                <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Kuantitas / porsi</label>
+                                <input type="number" min="0.01" step="0.01" :name="'recipes['+index+'][quantity_used]'"
+                                       x-model="recipe.quantity_used"
+                                       class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="0.00">
+                            </div>
+                            <button type="button" @click="removeRow(index)"
+                                    class="col-span-1 text-red-600 text-xs font-semibold justify-self-start flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[18px]">delete</span>
+                            </button>
+                        </div>
+                    </template>
+                    <template x-if="recipes.length === 0">
+                        <p class="text-xs text-[#897561]">Belum ada bahan. Tambahkan bahan agar stok berkurang otomatis saat produksi.</p>
+                    </template>
+                    @error('recipes.*.ingredient_id')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                    @error('recipes.*.quantity_used')
+                        <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
+                    @enderror
+                </div>
+
             </div>
 
             <div class="flex gap-3 mt-6">
@@ -134,3 +182,31 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    function menuAddonsForm(initialAddons = []) {
+        return {
+            addons: initialAddons.length ? initialAddons : [{ name: '', price: '' }],
+            addRow() {
+                this.addons.push({ name: '', price: '' });
+            },
+            removeRow(index) {
+                this.addons.splice(index, 1);
+            }
+        }
+    }
+
+    function recipeForm(initialRecipes = []) {
+        return {
+            recipes: initialRecipes.length ? initialRecipes : [],
+            addRow() {
+                this.recipes.push({ ingredient_id: '', quantity_used: '' });
+            },
+            removeRow(index) {
+                this.recipes.splice(index, 1);
+            }
+        }
+    }
+</script>
+@endpush
