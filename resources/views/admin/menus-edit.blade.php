@@ -18,7 +18,24 @@
 
     <!-- Edit Form -->
     <div class="bg-white dark:bg-[#1a1612] rounded-xl border border-[#e6e0db] dark:border-[#3d362e] shadow-sm p-6">
-        <form action="{{ route('admin.menus.update', $menu->id) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+        @php
+            $initialRecipes = old('recipes') ?? ($menuRecipes ?? collect())->map(function($r){
+                return [
+                    'ingredient_id' => $r->ingredient_id,
+                    'quantity_used' => (float) $r->quantity_used,
+                ];
+            })->toArray();
+            $initialAddons = old('addons', $menu->addons ?? []);
+        @endphp
+        <form action="{{ route('admin.menus.update', $menu->id) }}" method="POST" enctype="multipart/form-data" class="space-y-6"
+              x-data="{
+                recipes: @json($initialRecipes ?: []),
+                addons: @json($initialAddons ?: [{name:'',price:''}]),
+                addRecipe(){ this.recipes.push({ ingredient_id:'', quantity_used:'' }); },
+                removeRecipe(i){ this.recipes.splice(i,1); },
+                addAddon(){ this.addons.push({ name:'', price:'' }); },
+                removeAddon(i){ this.addons.splice(i,1); }
+              }">
             @csrf
             @method('PUT')
 
@@ -107,13 +124,13 @@
                     @enderror
                 </div>
 
-                <div x-data="menuAddonsForm(@json(old('addons', $menu->addons ?? [])))" class="space-y-3">
+                <div class="space-y-3">
                     <div class="flex items-center justify-between pt-2">
                         <div>
                             <p class="text-xs uppercase tracking-wide text-[#a89c92]">Add-ons</p>
                             <h3 class="text-lg font-semibold text-[#181411] dark:text-white">Product add-ons</h3>
                         </div>
-                        <button type="button" @click="addRow()" class="text-primary text-xs font-semibold flex items-center gap-1">
+                        <button type="button" @click="addAddon()" class="text-primary text-xs font-semibold flex items-center gap-1">
                             <span class="material-symbols-outlined text-[18px]">add</span>
                             Add add-on
                         </button>
@@ -130,7 +147,7 @@
                                 <input type="number" min="0" step="500" :name="'addons['+index+'][price]'" x-model="addon.price"
                                        class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="0">
                             </div>
-                            <button type="button" @click="removeRow(index)"
+                            <button type="button" @click="removeAddon(index)"
                                     class="text-red-600 text-xs font-semibold justify-self-start flex items-center gap-1">
                                 <span class="material-symbols-outlined text-[18px]">delete</span>
                                 Remove
@@ -144,6 +161,54 @@
                         <span class="text-red-500 text-sm block">{{ $message }}</span>
                     @enderror
                     @error('addons.*.price')
+                        <span class="text-red-500 text-sm block">{{ $message }}</span>
+                    @enderror
+                </div>
+
+                <!-- Recipe / Ingredients -->
+                <div class="space-y-3 pt-2 border-t border-[#e6e0db] dark:border-[#3d362e]">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs uppercase tracking-wide text-[#a89c92]">Resep</p>
+                            <h3 class="text-lg font-semibold text-[#181411] dark:text-white">Bahan per porsi</h3>
+                            <p class="text-xs text-[#897561]">Stok bahan otomatis berkurang saat pesanan diproses.</p>
+                        </div>
+                        <button type="button" @click="addRecipe()" class="text-primary text-xs font-semibold flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[18px]">add</span>
+                            Tambah bahan
+                        </button>
+                    </div>
+                    <template x-for="(recipe, index) in recipes" :key="index">
+                        <div class="grid grid-cols-12 gap-3 items-end border border-[#f0e9df] dark:border-[#3d362e] rounded-lg p-3 bg-gray-50/60 dark:bg-[#1f1914]">
+                            <div class="col-span-7">
+                                <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Ingredient</label>
+                                <select :name=\"'recipes['+index+'][ingredient_id]'\" x-model=\"recipe.ingredient_id\"
+                                        class=\"w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary\">
+                                    <option value=\"\">Pilih bahan</option>
+                                    @foreach($ingredients as $ingredient)
+                                        <option value=\"{{ $ingredient->id }}\">{{ $ingredient->name }} ({{ $ingredient->unit }})</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-span-4">
+                                <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Kuantitas / porsi</label>
+                                <input type="number" min="0.01" step="0.01" :name=\"'recipes['+index+'][quantity_used]'\"
+                                       x-model=\"recipe.quantity_used\"
+                                       class=\"w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary\" placeholder=\"0.00\">
+                            </div>
+                            <button type="button" @click="removeRecipe(index)"
+                                    class="col-span-1 text-red-600 text-xs font-semibold justify-self-start flex items-center gap-1">
+                                <span class="material-symbols-outlined text-[18px]">delete</span>
+                            </button>
+                        </div>
+                    </template>
+                    <template x-if="recipes.length === 0">
+                        <p class="text-xs text-[#897561]">Belum ada bahan. Tambahkan komposisi agar stok berkurang otomatis.</p>
+                    </template>
+                    @error('recipes.*.ingredient_id')
+                        <span class="text-red-500 text-sm block">{{ $message }}</span>
+                    @enderror
+                    @error('recipes.*.quantity_used')
                         <span class="text-red-500 text-sm block">{{ $message }}</span>
                     @enderror
                 </div>

@@ -7,6 +7,8 @@ use App\Models\Category;
 use App\Models\Menu;
 use App\Models\Order;
 use App\Models\User;
+use App\Models\Ingredient;
+use App\Models\ProductRecipe;
 use App\Services\SystemSettingsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -126,8 +128,9 @@ class DashboardController extends Controller
 
         $menus = $query->latest()->paginate(10)->appends($request->query());
         $categories = Category::where('is_active', true)->get();
+        $ingredients = Ingredient::orderBy('name')->get();
         
-        return view('admin.menus', compact('menus', 'categories'));
+        return view('admin.menus', compact('menus', 'categories', 'ingredients'));
     }
 
     public function storeMenu(Request $request)
@@ -142,6 +145,9 @@ class DashboardController extends Controller
             'addons' => 'array',
             'addons.*.name' => 'nullable|string|max:120',
             'addons.*.price' => 'nullable|numeric|min:0',
+            'recipes' => 'array',
+            'recipes.*.ingredient_id' => 'nullable|exists:ingredients,id',
+            'recipes.*.quantity_used' => 'nullable|numeric|min:0.01',
         ]);
 
         if ($request->hasFile('image')) {
@@ -150,7 +156,24 @@ class DashboardController extends Controller
 
         $validated['addons'] = Menu::normalizeAddons($request->input('addons', []));
 
-        Menu::create($validated);
+        DB::transaction(function () use ($validated, $request) {
+            $menu = Menu::create($validated);
+
+            $recipes = collect($request->input('recipes', []))
+                ->filter(fn($r) => !empty($r['ingredient_id']) && !empty($r['quantity_used']) && $r['quantity_used'] > 0)
+                ->map(function ($r) use ($menu) {
+                    return [
+                        'product_id' => $menu->id,
+                        'ingredient_id' => $r['ingredient_id'],
+                        'quantity_used' => $r['quantity_used'],
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                });
+            if ($recipes->isNotEmpty()) {
+                ProductRecipe::insert($recipes->toArray());
+            }
+        });
 
         return redirect()->back()->with('success', 'Menu berhasil ditambahkan');
     }
@@ -158,7 +181,9 @@ class DashboardController extends Controller
     public function editMenu(Menu $menu)
     {
         $categories = Category::where('is_active', true)->get();
-        return view('admin.menus-edit', compact('menu', 'categories'));
+        $ingredients = Ingredient::orderBy('name')->get();
+        $menuRecipes = $menu->recipes()->with('ingredient')->get();
+        return view('admin.menus-edit', compact('menu', 'categories', 'ingredients', 'menuRecipes'));
     }
 
     public function updateMenu(Request $request, Menu $menu)
@@ -173,6 +198,9 @@ class DashboardController extends Controller
             'addons' => 'array',
             'addons.*.name' => 'nullable|string|max:120',
             'addons.*.price' => 'nullable|numeric|min:0',
+            'recipes' => 'array',
+            'recipes.*.ingredient_id' => 'nullable|exists:ingredients,id',
+            'recipes.*.quantity_used' => 'nullable|numeric|min:0.01',
         ]);
 
         if ($request->hasFile('image')) {
@@ -181,7 +209,26 @@ class DashboardController extends Controller
 
         $validated['addons'] = Menu::normalizeAddons($request->input('addons', []));
 
-        $menu->update($validated);
+        DB::transaction(function () use ($menu, $validated, $request) {
+            $menu->update($validated);
+
+            $recipes = collect($request->input('recipes', []))
+                ->filter(fn($r) => !empty($r['ingredient_id']) && !empty($r['quantity_used']) && $r['quantity_used'] > 0)
+                ->map(function ($r) use ($menu) {
+                    return [
+                        'product_id' => $menu->id,
+                        'ingredient_id' => $r['ingredient_id'],
+                        'quantity_used' => $r['quantity_used'],
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ];
+                });
+
+            ProductRecipe::where('product_id', $menu->id)->delete();
+            if ($recipes->isNotEmpty()) {
+                ProductRecipe::insert($recipes->toArray());
+            }
+        });
 
         return redirect()->back()->with('success', 'Menu berhasil diupdate');
     }
