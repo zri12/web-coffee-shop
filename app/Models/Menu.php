@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 
 class Menu extends Model
 {
@@ -58,10 +59,11 @@ class Menu extends Model
 
             $normalized = ltrim($candidate, '/');
             // Any stored path (menus/, images/, menu-images/, etc.) → serve from public storage
-            $url = $isSecure
-                ? secure_asset('storage/' . $normalized)
-                : asset('storage/' . $normalized);
-            return $url;
+            if (Storage::disk('public')->exists($normalized)) {
+                return $isSecure
+                    ? secure_asset('storage/' . $normalized)
+                    : asset('storage/' . $normalized);
+            }
         }
 
         // Prefer AI route as soft fallback
