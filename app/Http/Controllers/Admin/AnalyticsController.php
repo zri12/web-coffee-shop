@@ -8,6 +8,7 @@ use App\Models\IngredientLog;
 use App\Models\Menu;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class AnalyticsController extends Controller
 {
@@ -32,7 +33,7 @@ class AnalyticsController extends Controller
         $totalIngredients = Ingredient::count();
         $lowStockCount = Ingredient::where('status', 'Hampir Habis')->count();
         $outOfStockCount = Ingredient::where('status', 'Habis')->count();
-        $totalUsageThisWeek = IngredientLog::where('type', 'Order Deduct')
+        $totalUsageThisWeek = $this->outScope(IngredientLog::query())
             ->where('created_at', '>=', now()->subDays(7))
             ->sum(DB::raw('ABS(change_amount)'));
 
@@ -53,7 +54,7 @@ class AnalyticsController extends Controller
      */
     private function getWeeklyUsage()
     {
-        return IngredientLog::where('type', 'Order Deduct')
+        return $this->outScope(IngredientLog::query())
             ->where('created_at', '>=', now()->subDays(7))
             ->selectRaw('DATE(created_at) as date, SUM(ABS(change_amount)) as total')
             ->groupBy('date')
@@ -66,7 +67,7 @@ class AnalyticsController extends Controller
      */
     private function getTopConsumedIngredients(int $limit = 5)
     {
-        return IngredientLog::where('type', 'Order Deduct')
+        return $this->outScope(IngredientLog::query())
             ->where('created_at', '>=', now()->subDays(30))
             ->selectRaw('ingredient_id, SUM(ABS(change_amount)) as total_used')
             ->groupBy('ingredient_id')
@@ -93,7 +94,7 @@ class AnalyticsController extends Controller
 
         for ($i = 0; $i < $days; $i++) {
             $date = $startDate->copy()->addDays($i)->format('Y-m-d');
-            $usage = IngredientLog::where('type', 'Order Deduct')
+            $usage = $this->outScope(IngredientLog::query())
                 ->whereDate('created_at', $date)
                 ->sum(DB::raw('ABS(change_amount)'));
             
@@ -116,8 +117,7 @@ class AnalyticsController extends Controller
 
         foreach ($ingredients as $ingredient) {
             // Calculate average daily usage
-            $avgDailyUsage = IngredientLog::where('ingredient_id', $ingredient->id)
-                ->where('type', 'Order Deduct')
+            $avgDailyUsage = $this->outScope(IngredientLog::where('ingredient_id', $ingredient->id))
                 ->where('created_at', '>=', now()->subDays(30))
                 ->avg(DB::raw('ABS(change_amount)'));
 
@@ -137,6 +137,18 @@ class AnalyticsController extends Controller
         }
 
         return collect($forecast)->sortBy('days_remaining');
+    }
+
+    private function outScope($query)
+    {
+        $hasDirection = Schema::hasColumn('ingredient_logs', 'direction');
+        return $query->where(function ($q) use ($hasDirection) {
+            if ($hasDirection) {
+                $q->where('direction', 'OUT')->orWhere('type', 'Order Deduct');
+            } else {
+                $q->where('type', 'Order Deduct');
+            }
+        });
     }
 
     /**

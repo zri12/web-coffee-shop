@@ -8,6 +8,7 @@ use App\Models\IngredientLog;
 use App\Services\StockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class InventoryAnalyticsController extends Controller
 {
@@ -70,8 +71,7 @@ class InventoryAnalyticsController extends Controller
         $startDate = now()->subDays($days)->startOfDay();
         $endDate = now()->endOfDay();
 
-        $logs = IngredientLog::with('ingredient')
-            ->where('type', 'Order Deduct')
+        $logs = $this->outScope(IngredientLog::with('ingredient'))
             ->whereBetween('created_at', [$startDate, $endDate])
             ->get();
 
@@ -113,8 +113,7 @@ class InventoryAnalyticsController extends Controller
         $startDate = now()->subDays($days)->startOfDay();
         $endDate = now()->endOfDay();
 
-        $logs = IngredientLog::with('ingredient')
-            ->where('type', 'Order Deduct')
+        $logs = $this->outScope(IngredientLog::with('ingredient'))
             ->whereBetween('created_at', [$startDate, $endDate])
             ->get();
 
@@ -145,8 +144,7 @@ class InventoryAnalyticsController extends Controller
         $startDate = now()->subDays($days)->startOfDay();
         $endDate = now()->endOfDay();
 
-        $query = IngredientLog::with('ingredient')
-            ->where('type', 'Order Deduct')
+        $query = $this->outScope(IngredientLog::with('ingredient'))
             ->whereBetween('created_at', [$startDate, $endDate]);
 
         if ($ingredientId) {
@@ -180,5 +178,17 @@ class InventoryAnalyticsController extends Controller
             'low_stock' => $lowStock,
             'out_of_stock' => $outOfStock
         ]);
+    }
+
+    private function outScope($query)
+    {
+        $hasDirection = Schema::hasColumn('ingredient_logs', 'direction');
+        return $query->where(function ($q) use ($hasDirection) {
+            if ($hasDirection) {
+                $q->where('direction', 'OUT')->orWhere('type', 'Order Deduct');
+            } else {
+                $q->where('type', 'Order Deduct');
+            }
+        });
     }
 }

@@ -13,12 +13,19 @@ class IngredientLog extends Model
         'ingredient_id',
         'change_amount',
         'type',
+        'direction',
         'reference_id',
+        'order_id',
+        'product_id',
+        'previous_stock',
+        'new_stock',
         'note',
     ];
 
     protected $casts = [
         'change_amount' => 'decimal:2',
+        'previous_stock' => 'decimal:2',
+        'new_stock' => 'decimal:2',
         'created_at' => 'datetime',
     ];
 
@@ -38,7 +45,10 @@ class IngredientLog extends Model
      */
     public function scopeOrderDeductions($query)
     {
-        return $query->where('type', 'Order Deduct');
+        return $query->where(function ($q) {
+            $q->where('type', 'Order Deduct')
+              ->orWhere('direction', 'OUT');
+        });
     }
 
     /**
@@ -46,7 +56,10 @@ class IngredientLog extends Model
      */
     public function scopeRestocks($query)
     {
-        return $query->where('type', 'Restock');
+        return $query->where(function ($q) {
+            $q->where('type', 'Restock')
+              ->orWhere('direction', 'IN');
+        });
     }
 
     /**
@@ -82,6 +95,8 @@ class IngredientLog extends Model
         return match ($this->type) {
             'Order Deduct' => 'bg-red-100 text-red-800',
             'Restock' => 'bg-green-100 text-green-800',
+            'IN' => 'bg-green-100 text-green-800',
+            'OUT' => 'bg-red-100 text-red-800',
             default => 'bg-gray-100 text-gray-800',
         };
     }

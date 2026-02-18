@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 class Ingredient extends Model
 {
@@ -81,35 +82,76 @@ class Ingredient extends Model
     /**
      * Deduct stock and create log
      */
-    public function deductStock(float $amount, int $orderId, string $note = null): void
+    public function deductStock(float $amount, ?int $orderId = null, ?string $note = null, ?int $productId = null, string $type = 'Order Deduct'): void
     {
+        $previous = $this->stock;
         $this->stock -= $amount;
         $this->updateStatus();
         
-        // Create log entry
-        $this->logs()->create([
+        // Create log entry (backward compatible if new columns not migrated yet)
+        $payload = [
             'change_amount' => -$amount,
-            'type' => 'Order Deduct',
-            'reference_id' => $orderId,
+            'type' => $type,
             'note' => $note,
-        ]);
+        ];
+
+        if (Schema::hasColumn('ingredient_logs', 'direction')) {
+            $payload['direction'] = 'OUT';
+        }
+        if (Schema::hasColumn('ingredient_logs', 'order_id')) {
+            $payload['order_id'] = $orderId;
+        }
+        if (Schema::hasColumn('ingredient_logs', 'product_id')) {
+            $payload['product_id'] = $productId;
+        }
+        if (Schema::hasColumn('ingredient_logs', 'reference_id')) {
+            $payload['reference_id'] = $orderId;
+        }
+        if (Schema::hasColumn('ingredient_logs', 'previous_stock')) {
+            $payload['previous_stock'] = $previous;
+        }
+        if (Schema::hasColumn('ingredient_logs', 'new_stock')) {
+            $payload['new_stock'] = $this->stock;
+        }
+
+        $this->logs()->create($payload);
     }
 
     /**
      * Restock ingredient and create log
      */
-    public function restockIngredient(float $amount, string $note = null): void
+    public function restockIngredient(float $amount, ?string $note = null, ?int $orderId = null, ?int $productId = null, string $type = 'Restock'): void
     {
+        $previous = $this->stock;
         $this->stock += $amount;
         $this->updateStatus();
         
-        // Create log entry
-        $this->logs()->create([
+        $payload = [
             'change_amount' => $amount,
-            'type' => 'Restock',
-            'reference_id' => null,
+            'type' => $type,
             'note' => $note,
-        ]);
+        ];
+
+        if (Schema::hasColumn('ingredient_logs', 'direction')) {
+            $payload['direction'] = 'IN';
+        }
+        if (Schema::hasColumn('ingredient_logs', 'order_id')) {
+            $payload['order_id'] = $orderId;
+        }
+        if (Schema::hasColumn('ingredient_logs', 'product_id')) {
+            $payload['product_id'] = $productId;
+        }
+        if (Schema::hasColumn('ingredient_logs', 'reference_id')) {
+            $payload['reference_id'] = $orderId;
+        }
+        if (Schema::hasColumn('ingredient_logs', 'previous_stock')) {
+            $payload['previous_stock'] = $previous;
+        }
+        if (Schema::hasColumn('ingredient_logs', 'new_stock')) {
+            $payload['new_stock'] = $this->stock;
+        }
+
+        $this->logs()->create($payload);
     }
 
     /**

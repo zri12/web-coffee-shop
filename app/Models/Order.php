@@ -162,46 +162,10 @@ class Order extends Model
     }
 
     /**
-     * Deduct ingredients for all items in the order based on product recipes.
-     * Runs idempotently per order+ingredient: skips if a log already exists.
+     * Delegate ingredient deduction to StockService (idempotent).
      */
-    public function deductIngredients(): void
+    public function deductIngredients(bool $withTransaction = true): void
     {
-        $items = $this->items()->with(['menu.recipes.ingredient'])->get();
-
-        foreach ($items as $item) {
-            $menu = $item->menu;
-            if (!$menu) {
-                continue;
-            }
-
-            foreach ($menu->recipes as $recipe) {
-                $ingredient = $recipe->ingredient;
-                if (!$ingredient) {
-                    continue;
-                }
-
-                $requiredAmount = (float) $recipe->quantity_used * (int) $item->quantity;
-
-                // Prevent double deduction for the same order + ingredient
-                $alreadyLogged = \App\Models\IngredientLog::where('ingredient_id', $ingredient->id)
-                    ->where('reference_id', $this->id)
-                    ->where('type', 'Order Deduct')
-                    ->exists();
-
-                if ($alreadyLogged) {
-                    continue;
-                }
-
-                $ingredient->deductStock($requiredAmount, $this->id, "Order {$this->order_number} - {$item->menu_name}");
-            }
-
-            // Refresh menu availability after deductions
-            try {
-                $menu->updateAvailabilityByStock();
-            } catch (\Throwable $e) {
-                \Log::warning("Failed to update availability for menu {$menu->id}: {$e->getMessage()}");
-            }
-        }
+        app(\App\Services\StockService::class)->deductStockForOrder($this, $withTransaction);
     }
 }

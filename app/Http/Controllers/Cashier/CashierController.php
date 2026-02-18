@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Cashier;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\PricingService;
+use App\Services\StockService;
+use Illuminate\Support\Facades\DB;
 
 class CashierController extends Controller
 {
@@ -493,18 +495,15 @@ class CashierController extends Controller
     // Update Order Status
     public function updateOrderStatus(Request $request, $id)
     {
-        $order = \App\Models\Order::findOrFail($id);
+        $order = \App\Models\Order::with('items.menu.recipes.ingredient')->findOrFail($id);
+        $stockService = app(StockService::class);
         
-        // Valid status constants: Support both old and new status values
-        // OLD: pending, processing, completed, cancelled
-        // NEW: waiting_payment, paid, preparing, completed, cancelled
         $validStatuses = ['waiting_payment', 'waiting_cashier_confirmation', 'paid', 'preparing', 'completed', 'cancelled', 'pending', 'processing'];
         
         $validated = $request->validate([
             'status' => 'required|in:waiting_payment,waiting_cashier_confirmation,paid,preparing,completed,cancelled,pending,processing'
         ]);
         
-        // Ensure status is clean and valid
         $newStatus = strtolower(trim($validated['status']));
         
         if (!in_array($newStatus, $validStatuses)) {
@@ -514,7 +513,6 @@ class CashierController extends Controller
             ], 400);
         }
         
-        // BUSINESS RULE: Cannot start preparing unpaid orders
         if (in_array($newStatus, ['preparing', 'processing']) && $order->payment_status !== 'paid') {
             return response()->json([
                 'success' => false,
@@ -523,22 +521,70 @@ class CashierController extends Controller
         }
         
         $previousStatus = strtolower((string)$order->status);
+        \Log::info("Order {$order->order_number} status change requested from {$order->status} to {$newStatus} by " . auth()->user()->name);
 
-        // Log status change
-        \Log::info("Order {$order->order_number} status changed from {$order->status} to {$newStatus} by " . auth()->user()->name);
-        
-        // Update with validated clean value
-        $order->update(['status' => $newStatus]);
+        // Handle start preparing
+        if (in_array($newStatus, ['preparing', 'processing'])) {
+            // If already preparing/processing, just acknowledge without double deduct
+            if (in_array($previousStatus, ['preparing', 'processing'])) {
+                $order->update(['status' => $newStatus]);
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Order already in preparing state'
+                ]);
+            }
 
-        // Deduct ingredients once when moving into preparing/processing
-        if (!in_array($previousStatus, ['preparing', 'processing']) && in_array($newStatus, ['preparing', 'processing'])) {
+            $validation = $stockService->validateStockForOrder($order);
+            if (!$validation['valid']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Stok bahan tidak mencukupi: ' . implode(', ', $validation['errors'])
+                ], 400);
+            }
+
             try {
-                $order->deductIngredients();
+                DB::transaction(function () use ($order, $newStatus, $stockService) {
+                    $order->update(['status' => $newStatus]);
+                    $stockService->deductStockForOrder($order, false);
+                });
             } catch (\Throwable $e) {
                 \Log::error("Ingredient deduction failed for order {$order->order_number}: {$e->getMessage()}");
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal memproses stok bahan. ' . $e->getMessage()
+                ], 500);
             }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order status updated successfully'
+            ]);
         }
-        
+
+        // Handle cancellation after preparing: rollback stock
+        if ($newStatus === 'cancelled' && in_array($previousStatus, ['preparing', 'processing'])) {
+            try {
+                DB::transaction(function () use ($order, $newStatus, $stockService) {
+                    $stockService->rollbackStockForOrder($order, false);
+                    $order->update(['status' => $newStatus]);
+                });
+            } catch (\Throwable $e) {
+                \Log::error("Rollback failed for order {$order->order_number}: {$e->getMessage()}");
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Gagal melakukan rollback stok: ' . $e->getMessage()
+                ], 500);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Order dibatalkan dan stok dikembalikan'
+            ]);
+        }
+
+        // Other transitions (no stock impact)
+        $order->update(['status' => $newStatus]);
+
         return response()->json([
             'success' => true,
             'message' => 'Order status updated successfully'

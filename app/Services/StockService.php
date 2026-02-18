@@ -8,13 +8,13 @@ use App\Models\Ingredient;
 use App\Models\IngredientLog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class StockService
 {
     /**
-     * Validate if sufficient stock exists for an order
-     * 
-     * @param Order $order
+     * Validate if sufficient stock exists for an order.
+     *
      * @return array ['valid' => bool, 'errors' => array, 'requirements' => array]
      */
     public function validateStockForOrder(Order $order): array
@@ -22,13 +22,13 @@ class StockService
         $requiredIngredients = $this->calculateRequiredStock($order);
         $errors = [];
 
-        foreach ($requiredIngredients as $ingredientId => $data) {
+        foreach ($requiredIngredients as $data) {
             $ingredient = $data['ingredient'];
             $required = $data['required'];
 
-            if ($ingredient->stock < $required) {
-                $errors[] = "{$ingredient->name} (tersedia: {$ingredient->formatted_stock}, dibutuhkan: " . 
-                           number_format($required, 2) . " {$ingredient->unit})";
+            if ($ingredient && $ingredient->stock < $required) {
+                $errors[] = "{$ingredient->name} (tersedia: {$ingredient->formatted_stock}, dibutuhkan: " .
+                    number_format($required, 2) . " {$ingredient->unit})";
             }
         }
 
@@ -40,24 +40,22 @@ class StockService
     }
 
     /**
-     * Calculate required stock for an order
-     * 
-     * @param Order $order
+     * Calculate required stock for an order.
+     *
      * @return array [ingredient_id => ['ingredient' => Ingredient, 'required' => float]]
      */
     public function calculateRequiredStock(Order $order): array
     {
         $requiredIngredients = [];
 
-        // Load order items with menu and recipes
         $order->load('items.menu.recipes.ingredient');
 
         foreach ($order->items as $item) {
             if (!$item->menu || $item->menu->recipes->count() === 0) {
-                continue; // Skip items without recipes
+                continue;
             }
 
-            $quantity = max(1, (int)$item->quantity);
+            $quantity = max(1, (int) $item->quantity);
 
             foreach ($item->menu->recipes as $recipe) {
                 $ingredientId = $recipe->ingredient_id;
@@ -76,142 +74,176 @@ class StockService
         return $requiredIngredients;
     }
 
-    /**
-     * Deduct stock for an order
-     * 
-     * @param Order $order
-     * @return void
-     * @throws \Exception
-     */
-    public function deductStockForOrder(Order $order): void
+    private function alreadyDeducted(Order $order): bool
     {
-        // Validate first
+        $hasDirection = Schema::hasColumn('ingredient_logs', 'direction');
+        $hasOrderId = Schema::hasColumn('ingredient_logs', 'order_id');
+        $hasReference = Schema::hasColumn('ingredient_logs', 'reference_id');
+
+        return IngredientLog::where(function ($q) use ($hasDirection) {
+                if ($hasDirection) {
+                    $q->where('direction', 'OUT')->orWhere('type', 'Order Deduct');
+                } else {
+                    $q->where('type', 'Order Deduct');
+                }
+            })
+            ->when($hasOrderId, fn($q) => $q->where('order_id', $order->id))
+            ->when(!$hasOrderId && $hasReference, fn($q) => $q->where('reference_id', $order->id))
+            ->exists();
+    }
+
+    /**
+     * Deduct stock for an order (idempotent per order).
+     */
+    public function deductStockForOrder(Order $order, bool $withTransaction = true): void
+    {
+        if ($this->alreadyDeducted($order)) {
+            Log::info("Skip deduction: order #{$order->order_number} already deducted.");
+            return;
+        }
+
         $validation = $this->validateStockForOrder($order);
-        
         if (!$validation['valid']) {
             throw new \Exception('Stok tidak mencukupi: ' . implode(', ', $validation['errors']));
         }
 
-        DB::beginTransaction();
+        $runner = function () use ($order) {
+            $order->load('items.menu.recipes.ingredient');
 
-        try {
-            foreach ($validation['requirements'] as $ingredientId => $data) {
-                $ingredient = $data['ingredient'];
-                $required = $data['required'];
+            foreach ($order->items as $item) {
+                if (!$item->menu || $item->menu->recipes->isEmpty()) {
+                    continue;
+                }
 
-                // Deduct stock and create log
-                $ingredient->deductStock(
-                    $required,
-                    $order->id,
-                    "Order #{$order->order_number}"
-                );
+                $qty = max(1, (int) $item->quantity);
 
-                Log::info("Stock deducted for order", [
-                    'order_id' => $order->id,
-                    'order_number' => $order->order_number,
-                    'ingredient' => $ingredient->name,
-                    'amount' => $required,
-                    'remaining_stock' => $ingredient->stock,
-                ]);
+                foreach ($item->menu->recipes as $recipe) {
+                    $ingredient = $recipe->ingredient;
+                    if (!$ingredient) {
+                        continue;
+                    }
+
+                    $required = (float) $recipe->quantity_used * $qty;
+
+                    $ingredient->deductStock(
+                        $required,
+                        $order->id,
+                        "Order #{$order->order_number} - {$item->menu_name}",
+                        $item->menu_id
+                    );
+
+                    Log::info('Stock deducted for order', [
+                        'order_id' => $order->id,
+                        'order_number' => $order->order_number,
+                        'ingredient' => $ingredient->name,
+                        'product_id' => $item->menu_id,
+                        'amount' => $required,
+                        'remaining_stock' => $ingredient->stock,
+                    ]);
+                }
             }
 
-            DB::commit();
-
-            Log::info("✅ Stock deduction completed for order #{$order->order_number}");
-            
-            // Update menu availability after stock deduction
             $this->updateMenuAvailability();
+        };
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error("❌ Stock deduction failed for order #{$order->order_number}: " . $e->getMessage());
-            throw $e;
+        if ($withTransaction) {
+            DB::transaction($runner);
+        } else {
+            $runner();
         }
+
+        Log::info("Stock deduction completed for order #{$order->order_number}");
     }
 
     /**
-     * Rollback stock for an order (in case of cancellation)
-     * 
-     * @param Order $order
-     * @return void
+     * Roll back stock for an order cancellation.
      */
-    public function rollbackStockForOrder(Order $order): void
+    public function rollbackStockForOrder(Order $order, bool $withTransaction = true): void
     {
-        DB::beginTransaction();
+        $hasDirection = Schema::hasColumn('ingredient_logs', 'direction');
+        $hasOrderId = Schema::hasColumn('ingredient_logs', 'order_id');
+        $hasReference = Schema::hasColumn('ingredient_logs', 'reference_id');
 
-        try {
-            // Find all deduction logs for this order
-            $logs = IngredientLog::where('type', 'Order Deduct')
-                ->where('reference_id', $order->id)
+        $alreadyRestored = IngredientLog::when($hasOrderId, fn($q) => $q->where('order_id', $order->id))
+            ->when(!$hasOrderId && $hasReference, fn($q) => $q->where('reference_id', $order->id))
+            ->when($hasDirection, fn($q) => $q->where('direction', 'IN'))
+            ->exists();
+
+        if ($alreadyRestored) {
+            Log::info("Skip rollback: order #{$order->order_number} already restocked.");
+            return;
+        }
+
+        $runner = function () use ($order) {
+            $logs = IngredientLog::where(function ($q) use ($hasDirection) {
+                    if ($hasDirection) {
+                        $q->where('direction', 'OUT')->orWhere('type', 'Order Deduct');
+                    } else {
+                        $q->where('type', 'Order Deduct');
+                    }
+                })
+                ->when($hasOrderId, fn($q) => $q->where('order_id', $order->id))
+                ->when(!$hasOrderId && $hasReference, fn($q) => $q->where('reference_id', $order->id))
                 ->get();
 
             foreach ($logs as $log) {
                 $ingredient = $log->ingredient;
-                
-                // Add back the deducted amount
+                if (!$ingredient) {
+                    continue;
+                }
+
                 $ingredient->restockIngredient(
                     abs($log->change_amount),
-                    "Rollback for cancelled order #{$order->order_number}"
+                    "Rollback for cancelled order #{$order->order_number}",
+                    $order->id,
+                    $log->product_id,
+                    'Restock'
                 );
 
-                Log::info("Stock rolled back", [
+                Log::info('Stock rolled back', [
                     'order_id' => $order->id,
                     'ingredient' => $ingredient->name,
                     'amount' => abs($log->change_amount),
                 ]);
             }
 
-            DB::commit();
+            $this->updateMenuAvailability();
+        };
 
-            Log::info("✅ Stock rollback completed for order #{$order->order_number}");
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error("❌ Stock rollback failed for order #{$order->order_number}: " . $e->getMessage());
-            throw $e;
+        if ($withTransaction) {
+            DB::transaction($runner);
+        } else {
+            $runner();
         }
+
+        Log::info("Stock rollback completed for order #{$order->order_number}");
     }
 
-    /**
-     * Get low stock ingredients
-     * 
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
     public function getLowStockIngredients()
     {
         return Ingredient::lowStock()->get();
     }
 
-    /**
-     * Get out of stock ingredients
-     * 
-     * @return \Illuminate\Database\Eloquent\Collection
-     */
     public function getOutOfStockIngredients()
     {
         return Ingredient::outOfStock()->get();
     }
 
     /**
-     * Get ingredient usage statistics
-     * 
-     * @param int $days Number of days to analyze
-     * @return array
+     * Aggregate ingredient usage statistics.
      */
     public function getUsageStatistics(int $days = 7): array
     {
         $startDate = now()->subDays($days)->startOfDay();
         $endDate = now()->endOfDay();
 
-        $logs = IngredientLog::with('ingredient')
-            ->where('type', 'Order Deduct')
+        $logs = $this->scopeOrderOut(IngredientLog::with('ingredient'))
             ->whereBetween('created_at', [$startDate, $endDate])
             ->get();
 
         $statistics = [];
 
         foreach ($logs as $log) {
-            // Skip orphaned logs (ingredient deleted)
             if (!$log->ingredient) {
                 continue;
             }
@@ -233,7 +265,6 @@ class StockService
             $statistics[$ingredientId]['usage_count']++;
         }
 
-        // Sort by total used (descending)
         usort($statistics, function ($a, $b) {
             return $b['total_used'] <=> $a['total_used'];
         });
@@ -241,12 +272,6 @@ class StockService
         return $statistics;
     }
 
-    /**
-     * Get most used ingredient
-     * 
-     * @param int $days
-     * @return array|null
-     */
     public function getMostUsedIngredient(int $days = 7): ?array
     {
         $statistics = $this->getUsageStatistics($days);
@@ -254,26 +279,40 @@ class StockService
     }
 
     /**
-     * Update all menu availability based on current stock levels
-     * 
-     * @return void
+     * Apply OUT filter compatibly (supports old schema without direction column).
+     */
+    public function scopeOrderOut($query)
+    {
+        $hasDirection = Schema::hasColumn('ingredient_logs', 'direction');
+
+        return $query->where(function ($q) use ($hasDirection) {
+            if ($hasDirection) {
+                $q->where('direction', 'OUT')->orWhere('type', 'Order Deduct');
+            } else {
+                $q->where('type', 'Order Deduct');
+            }
+        });
+    }
+
+    /**
+     * Update menu availability based on ingredient stock.
      */
     public function updateMenuAvailability(): void
     {
-        Log::info("🔄 Updating menu availability based on stock levels");
-        
+        Log::info('Updating menu availability based on stock levels');
+
         $menus = Menu::with('recipes.ingredient')->get();
         $updated = 0;
-        
+
         foreach ($menus as $menu) {
             $wasBefore = $menu->is_available;
             $menu->updateAvailabilityByStock();
-            
+
             if ($wasBefore !== $menu->is_available) {
                 $updated++;
             }
         }
-        
-        Log::info("✅ Menu availability update completed. {$updated} menus updated.");
+
+        Log::info("Menu availability update completed. {$updated} menus updated.");
     }
 }

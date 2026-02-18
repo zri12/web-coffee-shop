@@ -25,17 +25,9 @@
                     'quantity_used' => (float) $r->quantity_used,
                 ];
             })->toArray();
-            $initialAddons = old('addons', $menu->addons ?? []);
+            $initialAddons = old('addons', $menu->addons ?? [['name'=>'','price'=>'']]);
         @endphp
-        <form action="{{ route('admin.menus.update', $menu->id) }}" method="POST" enctype="multipart/form-data" class="space-y-6"
-              x-data="{
-                recipes: @json($initialRecipes ?: []),
-                addons: @json($initialAddons ?: [['name'=>'','price'=>'']]),
-                addRecipe(){ this.recipes.push({ ingredient_id:'', quantity_used:'' }); },
-                removeRecipe(i){ this.recipes.splice(i,1); },
-                addAddon(){ this.addons.push({ name:'', price:'' }); },
-                removeAddon(i){ this.addons.splice(i,1); }
-              }">
+        <form id="editMenuForm" action="{{ route('admin.menus.update', $menu->id) }}" method="POST" enctype="multipart/form-data" class="space-y-6">
             @csrf
             @method('PUT')
 
@@ -103,115 +95,110 @@
                 @enderror
             </div>
 
-                <!-- Product Image -->
-                <div>
-                    <label class="block text-sm font-bold text-[#181411] dark:text-white mb-3">Product Image</label>
-                    
-                    <!-- Current Image -->
-                    @if($menu->display_image_url)
+            <!-- Product Image -->
+            <div>
+                <label class="block text-sm font-bold text-[#181411] dark:text-white mb-3">Product Image</label>
+                @if($menu->display_image_url)
                 <div class="mb-4">
                     <p class="text-xs font-bold text-[#897561] uppercase tracking-wider mb-2">Current Image:</p>
                     <img src="{{ $menu->display_image_url }}" alt="{{ $menu->name }}" class="w-32 h-32 object-cover rounded-lg border border-[#e6e0db] dark:border-[#3d362e]">
                 </div>
                 @endif
+                <input type="file" name="image" accept="image/*"
+                       class="w-full px-4 py-3 rounded-lg border border-[#e6e0db] dark:border-[#3d362e] bg-white dark:bg-[#0f0d0b] text-[#181411] dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent text-base">
+                <p class="text-xs text-[#897561] mt-2">Leave empty to keep current image. Max size: 2MB. Supported formats: JPG, PNG, WEBP</p>
+                @error('image')
+                    <span class="text-red-500 text-sm mt-1 block">{{ $message }}</span>
+                @enderror
+            </div>
 
-                <!-- File Input -->
-                    <input type="file" name="image" accept="image/*"
-                           class="w-full px-4 py-3 rounded-lg border border-[#e6e0db] dark:border-[#3d362e] bg-white dark:bg-[#0f0d0b] text-[#181411] dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent text-base">
-                    <p class="text-xs text-[#897561] mt-2">Leave empty to keep current image. Max size: 2MB. Supported formats: JPG, PNG, WEBP</p>
-                    @error('image')
-                        <span class="text-red-500 text-sm mt-1 block">{{ $message }}</span>
-                    @enderror
+            <!-- Addons -->
+            <div class="space-y-3" id="edit-menu-addons">
+                <div class="flex items-center justify-between pt-2">
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-[#a89c92]">Add-ons</p>
+                        <h3 class="text-lg font-semibold text-[#181411] dark:text-white">Product add-ons</h3>
+                    </div>
+                    <button type="button" id="edit-menu-add-addon" class="text-primary text-xs font-semibold flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[18px]">add</span>
+                        Add add-on
+                    </button>
                 </div>
-
-                <div class="space-y-3">
-                    <div class="flex items-center justify-between pt-2">
+                <div id="edit-menu-addon-container" class="space-y-2">
+                    @foreach($initialAddons as $i => $addon)
+                    <div class="grid grid-cols-2 gap-3 items-end addon-row">
                         <div>
-                            <p class="text-xs uppercase tracking-wide text-[#a89c92]">Add-ons</p>
-                            <h3 class="text-lg font-semibold text-[#181411] dark:text-white">Product add-ons</h3>
+                            <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Name</label>
+                            <input type="text" name="addons[{{ $i }}][name]" value="{{ $addon['name'] ?? '' }}"
+                                   class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="Extra shot">
                         </div>
-                        <button type="button" @click="addAddon()" class="text-primary text-xs font-semibold flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[18px]">add</span>
-                            Add add-on
+                        <div>
+                            <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Price (Rp)</label>
+                            <input type="number" min="0" step="500" name="addons[{{ $i }}][price]" value="{{ $addon['price'] ?? '' }}"
+                                   class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="0">
+                        </div>
+                        <button type="button" class="text-red-600 text-xs font-semibold justify-self-start flex items-center gap-1 remove-addon-btn">
+                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                            Remove
                         </button>
                     </div>
-                    <template x-for="(addon, index) in addons" :key="index">
-                        <div class="grid grid-cols-2 gap-3 items-end">
-                            <div>
-                                <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Name</label>
-                                <input type="text" :name="'addons['+index+'][name]'" x-model="addon.name"
-                                       class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="Extra shot">
-                            </div>
-                            <div>
-                                <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Price (Rp)</label>
-                                <input type="number" min="0" step="500" :name="'addons['+index+'][price]'" x-model="addon.price"
-                                       class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="0">
-                            </div>
-                            <button type="button" @click="removeAddon(index)"
-                                    class="text-red-600 text-xs font-semibold justify-self-start flex items-center gap-1">
-                                <span class="material-symbols-outlined text-[18px]">delete</span>
-                                Remove
-                            </button>
-                        </div>
-                    </template>
-                    <template x-if="addons.length === 0">
-                        <p class="text-xs text-[#897561]">Define optional extras that customers can add per item.</p>
-                    </template>
-                    @error('addons.*.name')
-                        <span class="text-red-500 text-sm block">{{ $message }}</span>
-                    @enderror
-                    @error('addons.*.price')
-                        <span class="text-red-500 text-sm block">{{ $message }}</span>
-                    @enderror
+                    @endforeach
                 </div>
+                @error('addons.*.name')
+                    <p class="text-red-500 text-sm block">{{ $message }}</p>
+                @enderror
+                @error('addons.*.price')
+                    <p class="text-red-500 text-sm block">{{ $message }}</p>
+                @enderror
+            </div>
 
-                <!-- Recipe / Ingredients -->
-                <div class="space-y-3 pt-2 border-t border-[#e6e0db] dark:border-[#3d362e]">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p class="text-xs uppercase tracking-wide text-[#a89c92]">Resep</p>
-                            <h3 class="text-lg font-semibold text-[#181411] dark:text-white">Bahan per porsi</h3>
-                            <p class="text-xs text-[#897561]">Stok bahan otomatis berkurang saat pesanan diproses.</p>
+            <!-- Recipe / Ingredients -->
+            <div class="space-y-3 pt-2 border-t border-[#e6e0db] dark:border-[#3d362e]" id="edit-menu-recipes">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-[#a89c92]">Resep</p>
+                        <h3 class="text-lg font-semibold text-[#181411] dark:text-white">Bahan per porsi</h3>
+                        <p class="text-xs text-[#897561]">Stok bahan otomatis berkurang saat pesanan diproses.</p>
+                    </div>
+                    <button type="button" id="edit-menu-add-recipe" class="text-primary text-xs font-semibold flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[18px]">add</span>
+                        Tambah bahan
+                    </button>
+                </div>
+                <div id="edit-menu-recipe-container" class="space-y-2">
+                    @foreach($initialRecipes as $i => $recipe)
+                    <div class="grid grid-cols-12 gap-3 items-end border border-[#f0e9df] dark:border-[#3d362e] rounded-lg p-3 bg-gray-50/60 dark:bg-[#1f1914] recipe-row">
+                        <div class="col-span-7">
+                            <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Ingredient</label>
+                            <select name="recipes[{{ $i }}][ingredient_id]" class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary">
+                                <option value="">Pilih bahan</option>
+                                @foreach($ingredients as $ingredient)
+                                    <option value="{{ $ingredient->id }}" {{ ($recipe['ingredient_id'] ?? null)==$ingredient->id ? 'selected':'' }}>{{ $ingredient->name }} ({{ $ingredient->unit }})</option>
+                                @endforeach
+                            </select>
                         </div>
-                        <button type="button" @click="addRecipe()" class="text-primary text-xs font-semibold flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[18px]">add</span>
-                            Tambah bahan
+                        <div class="col-span-4">
+                            <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Kuantitas / porsi</label>
+                            <input type="number" min="0.01" step="0.01" name="recipes[{{ $i }}][quantity_used]" value="{{ $recipe['quantity_used'] ?? '' }}"
+                                   class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="0.00">
+                        </div>
+                        <button type="button" class="col-span-1 text-red-600 text-xs font-semibold justify-self-start flex items-center gap-1 remove-recipe-btn">
+                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                            Remove
                         </button>
                     </div>
-                    <template x-for="(recipe, index) in recipes" :key="index">
-                        <div class="grid grid-cols-12 gap-3 items-end border border-[#f0e9df] dark:border-[#3d362e] rounded-lg p-3 bg-gray-50/60 dark:bg-[#1f1914]">
-                            <div class="col-span-7">
-                                <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Ingredient</label>
-                                <select :name=\"'recipes['+index+'][ingredient_id]'\" x-model=\"recipe.ingredient_id\"
-                                        class=\"w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary\">
-                                    <option value=\"\">Pilih bahan</option>
-                                    @foreach($ingredients as $ingredient)
-                                        <option value=\"{{ $ingredient->id }}\">{{ $ingredient->name }} ({{ $ingredient->unit }})</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-span-4">
-                                <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Kuantitas / porsi</label>
-                                <input type="number" min="0.01" step="0.01" :name=\"'recipes['+index+'][quantity_used]'\"
-                                       x-model=\"recipe.quantity_used\"
-                                       class=\"w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary\" placeholder=\"0.00\">
-                            </div>
-                            <button type="button" @click="removeRecipe(index)"
-                                    class="col-span-1 text-red-600 text-xs font-semibold justify-self-start flex items-center gap-1">
-                                <span class="material-symbols-outlined text-[18px]">delete</span>
-                            </button>
-                        </div>
-                    </template>
-                    <template x-if="recipes.length === 0">
-                        <p class="text-xs text-[#897561]">Belum ada bahan. Tambahkan komposisi agar stok berkurang otomatis.</p>
-                    </template>
-                    @error('recipes.*.ingredient_id')
-                        <span class="text-red-500 text-sm block">{{ $message }}</span>
-                    @enderror
-                    @error('recipes.*.quantity_used')
-                        <span class="text-red-500 text-sm block">{{ $message }}</span>
-                    @enderror
+                    @endforeach
                 </div>
+                @if(empty($initialRecipes))
+                    <p class="text-xs text-[#897561]">Belum ada bahan. Tambahkan komposisi agar stok berkurang otomatis.</p>
+                @endif
+                @error('recipes.*.ingredient_id')
+                    <span class="text-red-500 text-sm block">{{ $message }}</span>
+                @enderror
+                @error('recipes.*.quantity_used')
+                    <span class="text-red-500 text-sm block">{{ $message }}</span>
+                @enderror
+            </div>
 
             <!-- Action Buttons -->
             <div class="flex gap-4 mt-8 pt-6 border-t border-[#e6e0db] dark:border-[#3d362e]">
@@ -242,3 +229,76 @@
 </div>
 @endif
 @endsection
+
+@push('scripts')
+<div class="hidden" data-ingredients-options>
+    @foreach($ingredients as $ingredient)
+        <option value="{{ $ingredient->id }}">{{ $ingredient->name }} ({{ $ingredient->unit }})</option>
+    @endforeach
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const ingredientOptions = document.querySelector('[data-ingredients-options]')?.innerHTML || '';
+
+    function bindAddons(containerSelector, addBtnSelector) {
+        const container = document.querySelector(containerSelector);
+        const addBtn = document.querySelector(addBtnSelector);
+        if (!container || !addBtn) return;
+        const tpl = () => {
+            const i = container.querySelectorAll('.addon-row').length;
+            return `<div class="grid grid-cols-2 gap-3 items-end addon-row">
+                <div>
+                    <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Name</label>
+                    <input type="text" name="addons[${i}][name]" class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="Extra shot">
+                </div>
+                <div>
+                    <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Price (Rp)</label>
+                    <input type="number" min="0" step="500" name="addons[${i}][price]" class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="0">
+                </div>
+                <button type="button" class="text-red-600 text-xs font-semibold justify-self-start flex items-center gap-1 remove-addon-btn">
+                    <span class="material-symbols-outlined text-[18px]">delete</span>
+                    Remove
+                </button>
+            </div>`;
+        };
+        addBtn.addEventListener('click', (e) => { e.preventDefault(); container.insertAdjacentHTML('beforeend', tpl()); });
+        container.addEventListener('click', (e) => {
+            const btn = e.target.closest('.remove-addon-btn');
+            if (btn) { e.preventDefault(); btn.closest('.addon-row')?.remove(); }
+        });
+    }
+
+    function bindRecipes(containerSelector, addBtnSelector) {
+        const container = document.querySelector(containerSelector);
+        const addBtn = document.querySelector(addBtnSelector);
+        if (!container || !addBtn) return;
+        const tpl = () => {
+            const i = container.querySelectorAll('.recipe-row').length;
+            return `<div class="grid grid-cols-12 gap-3 items-end border border-[#f0e9df] dark:border-[#3d362e] rounded-lg p-3 bg-gray-50/60 dark:bg-[#1f1914] recipe-row">
+                <div class="col-span-7">
+                    <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Ingredient</label>
+                    <select name="recipes[${i}][ingredient_id]" class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary">
+                        <option value=\"\">Pilih bahan</option>${ingredientOptions}
+                    </select>
+                </div>
+                <div class="col-span-4">
+                    <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Kuantitas / porsi</label>
+                    <input type="number" min="0.01" step="0.01" name="recipes[${i}][quantity_used]" class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="0.00">
+                </div>
+                <button type="button" class="col-span-1 text-red-600 text-xs font-semibold justify-self-start flex items-center gap-1 remove-recipe-btn">
+                    <span class="material-symbols-outlined text-[18px]">delete</span>
+                </button>
+            </div>`;
+        };
+        addBtn.addEventListener('click', (e) => { e.preventDefault(); container.insertAdjacentHTML('beforeend', tpl()); });
+        container.addEventListener('click', (e) => {
+            const btn = e.target.closest('.remove-recipe-btn');
+            if (btn) { e.preventDefault(); btn.closest('.recipe-row')?.remove(); }
+        });
+    }
+
+    bindAddons('#edit-menu-addon-container', '#edit-menu-add-addon');
+    bindRecipes('#edit-menu-recipe-container', '#edit-menu-add-recipe');
+});
+</script>
+@endpush

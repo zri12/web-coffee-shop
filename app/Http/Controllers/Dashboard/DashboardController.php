@@ -37,10 +37,10 @@ class DashboardController extends Controller
             'pending_orders' => Order::where('status', 'pending')->count(),
             'preparing_orders' => Order::where('status', 'processing')->count(), // 'processing' maps to 'Preparing'
             'completed_orders_today' => Order::whereDate('created_at', today())->where('status', 'completed')->count(),
-            'total_revenue_today' => Order::whereDate('created_at', today())
-                ->where('status', 'completed')
-                ->sum('total_amount'),
             'total_menus' => Menu::count(),
+            'available_menus' => Menu::where('is_available', true)->count(),
+            'low_stock' => Ingredient::lowStock()->count(),
+            'out_stock' => Ingredient::outOfStock()->count(),
         ];
         
         // Recent orders
