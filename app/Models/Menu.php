@@ -58,6 +58,9 @@ class Menu extends Model
             }
 
             $normalized = ltrim($candidate, '/');
+            if (Str::startsWith($normalized, 'storage/')) {
+                $normalized = Str::after($normalized, 'storage/');
+            }
             // Serve from public storage only if file exists; otherwise continue to fallback
             try {
                 if (Storage::disk('public')->exists($normalized)) {
