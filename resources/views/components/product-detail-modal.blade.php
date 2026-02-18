@@ -375,7 +375,7 @@
                     class="w-full py-4 rounded-2xl font-bold text-[16px] shadow-lg transition-all flex items-center justify-center gap-2"
                     :class="canAddToCart() ? 'bg-[#C67C4E] text-white hover:bg-[#A05E35] active:scale-[0.99]' : 'bg-gray-300 text-gray-500 cursor-not-allowed'">
                 <span class="material-symbols-outlined">add_shopping_cart</span>
-                <span x-text="canAddToCart() ? `Add to Cart · ${(typeof formatPrice === 'function' ? formatPrice(calculateItemPrice()) : calculateItemPrice())}` : 'Pilih varian dulu'"></span>
+                <span x-text="canAddToCart() ? `Add to Cart - ${(typeof formatPrice === 'function' ? formatPrice(calculateItemPrice()) : calculateItemPrice())}` : 'Pilih varian dulu'"></span>
             </button>
             <p class="text-[12px] text-center text-[#9B9B9B] mt-2">Each item added individually with chosen options</p>
         </div>
