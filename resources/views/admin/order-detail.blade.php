@@ -36,18 +36,22 @@
                         </thead>
                         <tbody class="divide-y divide-[#e6e0db] dark:divide-[#3d362e]">
                             @foreach($order->items as $item)
+                            @php
+                                $displayPrice = $item->unit_price ?? $item->price ?? optional($item->menu)->price ?? 0;
+                                $displaySubtotal = $item->subtotal ?? ($displayPrice * ($item->quantity ?? 1));
+                            @endphp
                             <tr class="hover:bg-gray-50 dark:hover:bg-[#2c241b] transition-colors">
                                 <td class="px-6 py-4 text-[#181411] dark:text-white font-medium">
                                     {{ $item->menu_name ?? $item->menu->name ?? 'Unknown Item' }}
                                 </td>
                                 <td class="px-6 py-4 text-right text-[#897561] dark:text-[#a89c92]">
-                                    Rp {{ number_format($item->price, 0, ',', '.') }}
+                                    Rp {{ number_format($displayPrice, 0, ',', '.') }}
                                 </td>
                                 <td class="px-6 py-4 text-right font-bold text-[#181411] dark:text-white">
                                     {{ $item->quantity }}
                                 </td>
                                 <td class="px-6 py-4 text-right font-bold text-[#181411] dark:text-white">
-                                    Rp {{ number_format($item->price * $item->quantity, 0, ',', '.') }}
+                                    Rp {{ number_format($displaySubtotal, 0, ',', '.') }}
                                 </td>
                             </tr>
                             @endforeach
