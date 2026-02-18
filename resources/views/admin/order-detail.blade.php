@@ -37,8 +37,15 @@
                         <tbody class="divide-y divide-[#e6e0db] dark:divide-[#3d362e]">
                             @foreach($order->items as $item)
                             @php
-                                $displayPrice = $item->unit_price ?? $item->price ?? optional($item->menu)->price ?? 0;
-                                $displaySubtotal = $item->subtotal ?? ($displayPrice * ($item->quantity ?? 1));
+                                $rawPrice = $item->unit_price ?? $item->price;
+                                $fallbackPrice = optional($item->menu)->price;
+                                $calcPrice = $rawPrice && $rawPrice > 0 ? $rawPrice : ($fallbackPrice ?: 0);
+                                // As last resort, derive from subtotal/qty
+                                if ((!$calcPrice || $calcPrice == 0) && $item->subtotal && $item->quantity) {
+                                    $calcPrice = $item->subtotal / max(1, $item->quantity);
+                                }
+                                $displayPrice = $calcPrice;
+                                $displaySubtotal = $item->subtotal ?? ($displayPrice * max(1, ($item->quantity ?? 1)));
                             @endphp
                             <tr class="hover:bg-gray-50 dark:hover:bg-[#2c241b] transition-colors">
                                 <td class="px-6 py-4 text-[#181411] dark:text-white font-medium">
