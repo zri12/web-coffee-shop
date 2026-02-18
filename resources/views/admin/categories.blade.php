@@ -254,7 +254,7 @@
                                         class="w-full px-3 py-2 rounded-2xl border text-sm font-semibold transition-colors text-left">
                                     <span x-text="option.name"></span>
                                 </button>
-                                <input type="hidden" :name=\"'option_flags[' + option.key + ']'\" :value=\"optionSettings[option.key] ? 1 : 0\">
+                                <input type="hidden" :name="'option_flags[' + option.key + ']'" :value="optionSettings[option.key] ? 1 : 0">
                             </div>
                         </template>
                     </div>
