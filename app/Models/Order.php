@@ -195,6 +195,13 @@ class Order extends Model
 
                 $ingredient->deductStock($requiredAmount, $this->id, "Order {$this->order_number} - {$item->menu_name}");
             }
+
+            // Refresh menu availability after deductions
+            try {
+                $menu->updateAvailabilityByStock();
+            } catch (\Throwable $e) {
+                \Log::warning("Failed to update availability for menu {$menu->id}: {$e->getMessage()}");
+            }
         }
     }
 }
