@@ -51,10 +51,8 @@ class Menu extends Model
             }
 
             $normalized = ltrim($candidate, '/');
-
-            if (str_contains($normalized, 'menu-images/')) {
-                return asset('storage/' . $normalized);
-            }
+            // Any stored path (menus/, images/, menu-images/, etc.) → serve from public storage
+            return asset('storage/' . $normalized);
         }
 
         // Prefer AI route as soft fallback
