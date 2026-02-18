@@ -57,7 +57,14 @@ class Menu extends Model
             }
         }
 
-        return $this->ai_image_url;
+        // Prefer AI route as soft fallback
+        $ai = $this->ai_image_url;
+        if (!empty($ai)) {
+            return $ai;
+        }
+
+        // Absolute last fallback to a neutral placeholder
+        return 'https://placehold.co/320x320?text=Menu';
     }
 
     /**

@@ -98,17 +98,15 @@
             <!-- Product Image -->
             <div>
                 <label class="block text-sm font-bold text-[#181411] dark:text-white mb-3">Product Image</label>
-                @if($menu->display_image_url)
                 <div class="mb-4">
                     <p class="text-xs font-bold text-[#897561] uppercase tracking-wider mb-2">Current Image:</p>
-                    <img src="{{ $menu->display_image_url }}" alt="{{ $menu->name }}" class="w-32 h-32 object-cover rounded-lg border border-[#e6e0db] dark:border-[#3d362e]">
+                    <img src="{{ $menu->display_image_url }}" alt="{{ $menu->name }}" class="w-32 h-32 object-cover rounded-lg border border-[#e6e0db] dark:border-[#3d362e]" onerror="this.onerror=null;this.src='https://placehold.co/160x160?text=Menu';">
                 </div>
-                @endif
-                <input type="file" name="image" accept="image/*"
-                       class="w-full px-4 py-3 rounded-lg border border-[#e6e0db] dark:border-[#3d362e] bg-white dark:bg-[#0f0d0b] text-[#181411] dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent text-base">
-                <p class="text-xs text-[#897561] mt-2">Leave empty to keep current image. Max size: 2MB. Supported formats: JPG, PNG, WEBP</p>
-                @error('image')
-                    <span class="text-red-500 text-sm mt-1 block">{{ $message }}</span>
+            <input type="file" name="image" accept="image/*"
+                   class="w-full px-4 py-3 rounded-lg border border-[#e6e0db] dark:border-[#3d362e] bg-white dark:bg-[#0f0d0b] text-[#181411] dark:text-white focus:ring-2 focus:ring-primary focus:border-transparent text-base">
+            <p class="text-xs text-[#897561] mt-2">Leave empty to keep current image. Max size: 2MB. Supported formats: JPG, PNG, WEBP</p>
+            @error('image')
+                <span class="text-red-500 text-sm mt-1 block">{{ $message }}</span>
                 @enderror
             </div>
 

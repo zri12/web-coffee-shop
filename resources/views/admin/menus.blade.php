@@ -84,14 +84,11 @@
                     <tr class="hover:bg-gray-50 dark:hover:bg-[#2c241b]/50 transition-colors group">
                         <td class="px-6 py-4">
                            <div class="w-12 h-12 rounded-lg bg-gray-100 dark:bg-[#3d362e] overflow-hidden border border-[#e6e0db] dark:border-[#3d362e]">
-                                @if($menu->display_image_url)
-                                    <img src="{{ $menu->display_image_url }}" alt="{{ $menu->name }}" class="w-full h-full object-cover">
-                                @else
-                                    <div class="w-full h-full flex items-center justify-center text-[#897561]">
-                                        <span class="material-symbols-outlined text-[20px]">image</span>
-                                    </div>
-                                @endif
-                           </div>
+                                <img src="{{ $menu->display_image_url }}"
+                                     alt="{{ $menu->name }}"
+                                     class="w-full h-full object-cover"
+                                     onerror="this.onerror=null;this.src='https://placehold.co/160x160?text=Menu';">
+                            </div>
                         </td>
                         <td class="px-6 py-4">
                             <div class="font-bold text-[#181411] dark:text-white text-base">{{ $menu->name }}</div>
