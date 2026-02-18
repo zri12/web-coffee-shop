@@ -58,12 +58,10 @@ class Menu extends Model
             }
 
             $normalized = ltrim($candidate, '/');
-            // Any stored path (menus/, images/, menu-images/, etc.) → serve from public storage
-            if (Storage::disk('public')->exists($normalized)) {
-                return $isSecure
-                    ? secure_asset('storage/' . $normalized)
-                    : asset('storage/' . $normalized);
-            }
+            // Serve from public storage regardless; onerror in views will fallback if actually missing
+            return $isSecure
+                ? secure_asset('storage/' . $normalized)
+                : asset('storage/' . $normalized);
         }
 
         // Prefer AI route as soft fallback
