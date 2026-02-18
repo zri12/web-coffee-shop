@@ -202,7 +202,7 @@
                 @endphp
                 <form action="{{ route('admin.menus.store') }}" method="POST" enctype="multipart/form-data"
                       x-data="{
-                        addons: @json($initialAddons ?: [{name:'',price:''}]),
+                        addons: @json($initialAddons ?: [['name'=>'','price'=>'']]),
                         recipes: @json($initialRecipes ?: []),
                         addAddon(){ this.addons.push({name:'',price:''}); },
                         removeAddon(i){ this.addons.splice(i,1); },

@@ -30,7 +30,7 @@
         <form action="{{ route('admin.menus.update', $menu->id) }}" method="POST" enctype="multipart/form-data" class="space-y-6"
               x-data="{
                 recipes: @json($initialRecipes ?: []),
-                addons: @json($initialAddons ?: [{name:'',price:''}]),
+                addons: @json($initialAddons ?: [['name'=>'','price'=>'']]),
                 addRecipe(){ this.recipes.push({ ingredient_id:'', quantity_used:'' }); },
                 removeRecipe(i){ this.recipes.splice(i,1); },
                 addAddon(){ this.addons.push({ name:'', price:'' }); },
