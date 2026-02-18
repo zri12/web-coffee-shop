@@ -58,10 +58,16 @@ class Menu extends Model
             }
 
             $normalized = ltrim($candidate, '/');
-            // Serve from public storage regardless; onerror in views will fallback if actually missing
-            return $isSecure
-                ? secure_asset('storage/' . $normalized)
-                : asset('storage/' . $normalized);
+            // Serve from public storage only if file exists; otherwise continue to fallback
+            try {
+                if (Storage::disk('public')->exists($normalized)) {
+                    return $isSecure
+                        ? secure_asset('storage/' . $normalized)
+                        : asset('storage/' . $normalized);
+                }
+            } catch (\Throwable $e) {
+                // If storage check fails (read-only env), skip to fallback
+            }
         }
 
         // Prefer AI route as soft fallback
