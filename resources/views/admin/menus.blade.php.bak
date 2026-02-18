@@ -149,9 +149,9 @@
                 @endforeach
                 
                 @if ($menus->hasMorePages())
-                    <a href="{{ $menus->nextPageUrl() }}" class="px-3 py-1 border border-[#e6e0db] dark:border-[#3d362e] rounded bg-white dark:bg-[#1a1612] text-[#5c4d40] dark:text-[#a89c92] hover:bg-gray-50 dark:hover_bg-[#2c241b] text-sm">Next</a>
+                    <a href="{{ $menus->nextPageUrl() }}" class="px-3 py-1 border border-[#e6e0db] dark:border-[#3d362e] rounded bg-white dark:bg-[#1a1612] text-[#5c4d40] dark:text-[#a89c92] hover:bg-gray-50 dark:hover:bg-[#2c241b] text-sm">Next</a>
                 @else
-                    <span class="px-3 py-1 border border-[#e6e0db] dark_border-[#3d362e] rounded bg-gray-100 dark_bg-[#2c241b] text-[#897561] opacity-50 text-sm cursor-not-allowed">Next</span>
+                    <span class="px-3 py-1 border border-[#e6e0db] dark:border-[#3d362e] rounded bg-gray-100 dark:bg-[#2c241b] text-[#897561] opacity-50 text-sm cursor-not-allowed">Next</span>
                 @endif
             </div>
         </div>
@@ -177,7 +177,7 @@
                 <h4 class="text-xl font-bold text-[#181411] dark:text-white">{{ $menus->total() }}</h4>
             </div>
         </div>
-        <div class="bg-red-50 dark:bg-[#1a1612] border border-red-100 dark:border-[#3d362e] p-4 rounded-xl flex items_center gap-4">
+        <div class="bg-red-50 dark:bg-[#1a1612] border border-red-100 dark:border-[#3d362e] p-4 rounded-xl flex items-center gap-4">
             <div class="bg-red-100 dark:bg-red-900/20 p-3 rounded-full text-red-600">
                 <span class="material-symbols-outlined">warning</span>
             </div>
@@ -195,7 +195,7 @@
 
             <span class="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
 
-            <div x-show="showAddModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block w_full max-w-2xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white dark:bg-[#1a1612] shadow-xl rounded-2xl border border-[#e6e0db] dark:border-[#3d362e]">
+            <div x-show="showAddModal" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block w-full max-w-2xl p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white dark:bg-[#1a1612] shadow-xl rounded-2xl border border-[#e6e0db] dark:border-[#3d362e]">
                 @php
                     $initialAddons = old('addons', []);
                     $initialRecipes = old('recipes', []);
@@ -211,8 +211,8 @@
                       }">
                     @csrf
                     <div class="flex items-center justify-between mb-6">
-                        <h3 class="text-xl font-bold text-[#181411] dark:text_white">Add New Menu Item</h3>
-                        <button type="button" @click="showAddModal = false" class="text-[#897561] hover:text-[#181411] dark:hover:text_white transition-colors">
+                        <h3 class="text-xl font-bold text-[#181411] dark:text-white">Add New Menu Item</h3>
+                        <button type="button" @click="showAddModal = false" class="text-[#897561] hover:text-[#181411] dark:hover:text-white transition-colors">
                             <span class="material-symbols-outlined">close</span>
                         </button>
                     </div>
@@ -220,14 +220,14 @@
                     <div class="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
                         <!-- Name -->
                         <div>
-                            <label class="block text-sm font-bold text-[#181411] dark:text_white mb-2">Product Name *</label>
-                            <input type="text" name="name" required class="w-full px-4 py-2 bg-gray-50 dark:bg-[#2c241b] border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-[#181411] dark:text_white">
+                            <label class="block text-sm font-bold text-[#181411] dark:text-white mb-2">Product Name *</label>
+                            <input type="text" name="name" required class="w-full px-4 py-2 bg-gray-50 dark:bg-[#2c241b] border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-[#181411] dark:text-white">
                         </div>
 
                         <!-- Category -->
                         <div>
-                            <label class="block text-sm font-bold text-[#181411] dark:text_white mb-2">Category *</label>
-                            <select name="category_id" required class="w-full px-4 py-2 bg-gray-50 dark:bg-[#2c241b] border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-[#181411] dark:text_white">
+                            <label class="block text-sm font-bold text-[#181411] dark:text-white mb-2">Category *</label>
+                            <select name="category_id" required class="w-full px-4 py-2 bg-gray-50 dark:bg-[#2c241b] border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-[#181411] dark:text-white">
                                 <option value="">Select Category</option>
                                 @foreach($categories as $category)
                                     <option value="{{ $category->id }}">{{ $category->name }}</option>
@@ -237,58 +237,56 @@
 
                         <!-- Price -->
                         <div>
-                            <label class="block text-sm font-bold text-[#181411] dark:text_white mb-2">Price (Rp) *</label>
-                            <input type="number" name="price" required min="0" step="1000" class="w-full px-4 py-2 bg-gray-50 dark:bg-[#2c241b] border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-[#181411] dark:text_white">
+                            <label class="block text-sm font-bold text-[#181411] dark:text-white mb-2">Price (Rp) *</label>
+                            <input type="number" name="price" required min="0" step="1000" class="w-full px-4 py-2 bg-gray-50 dark:bg-[#2c241b] border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-[#181411] dark:text-white">
                         </div>
 
                         <!-- Description -->
                         <div>
-                            <label class="block text-sm font-bold text-[#181411] dark:text_white mb-2">Description</label>
-                            <textarea name="description" rows="3" class="w-full px-4 py-2 bg-gray-50 dark:bg[#2c241b] border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline_none focus:ring-2 focus:ring-primary/50 text-[#181411] dark:text_white"></textarea>
+                            <label class="block text-sm font-bold text-[#181411] dark:text-white mb-2">Description</label>
+                            <textarea name="description" rows="3" class="w-full px-4 py-2 bg-gray-50 dark:bg-[#2c241b] border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-[#181411] dark:text-white"></textarea>
                         </div>
 
                         <!-- Image -->
                         <div>
-                            <label class="block text-sm font-bold text-[#181411] dark:text_white mb-2">Product Image</label>
-                            <input type="file" name="image" accept="image/*" class="w-full px-4 py-2 bg-gray-50 dark:bg[#2c241b] border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text_sm focus:outline-none focus:ring-2 focus:ring-primary/50 text[#181411] dark:text_white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text_white hover:file:bg-primary/90">
+                            <label class="block text-sm font-bold text-[#181411] dark:text-white mb-2">Product Image</label>
+                            <input type="file" name="image" accept="image/*" class="w-full px-4 py-2 bg-gray-50 dark:bg-[#2c241b] border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-[#181411] dark:text-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90">
                             <p class="text-xs text-[#897561] mt-1">Max size: 2MB. Supported formats: JPG, PNG, WEBP</p>
                         </div>
 
-                        @php
-                            $initialAddons = old('addons', [['name' => '', 'price' => '']]);
-                            $initialRecipes = old('recipes', []);
-                        @endphp
-                        <div class="space-y-3" id="add-menu-addons">
+                        <div class="space-y-3">
                             <div class="flex items-center justify-between">
                                 <div>
                                     <p class="text-xs uppercase tracking-wide text-[#a89c92]">Add-ons</p>
-                                    <h3 class="text-lg font-semibold text[#181411] dark:text_white">Product Add-ons</h3>
+                                    <h3 class="text-lg font-semibold text-[#181411] dark:text-white">Product Add-ons</h3>
                                 </div>
-                                <button type="button" id="add-menu-add-addon" class="text-primary text-xs font-semibold flex items-center gap-1">
+                                <button type="button" @click="addAddon()" class="text-primary text-xs font-semibold flex items-center gap-1">
                                     <span class="material-symbols-outlined text-[18px]">add</span>
                                     Add add-on
                                 </button>
                             </div>
-                            <div id="add-menu-addon-container" class="space-y-2">
-                                @foreach($initialAddons as $i => $addon)
-                                <div class="grid grid-cols-2 gap-3 items-end addon-row">
+                            <template x-for="(addon, index) in addons" :key="index">
+                                <div class="grid grid-cols-2 gap-3 items-end">
                                     <div>
                                         <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Name</label>
-                                        <input type="text" name="addons[{{ $i }}][name]" value="{{ $addon['name'] ?? '' }}"
+                                        <input type="text" :name="'addons['+index+'][name]'" x-model="addon.name"
                                                class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="Extra shot">
                                     </div>
                                     <div>
                                         <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Price (Rp)</label>
-                                        <input type="number" min="0" step="500" name="addons[{{ $i }}][price]" value="{{ $addon['price'] ?? '' }}"
-                                               class="w-full px-3 py-2 border border-[#e6e0db] dark-border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="0">
+                                        <input type="number" min="0" step="500" :name="'addons['+index+'][price]'" x-model="addon.price"
+                                               class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="0">
                                     </div>
-                                    <button type="button" class="text-red-600 text-xs font-semibold justify-self-start flex items-center gap-1 remove-addon-btn">
+                                    <button type="button" @click="removeAddon(index)"
+                                            class="text-red-600 text-xs font-semibold justify-self-start flex items-center gap-1">
                                         <span class="material-symbols-outlined text-[18px]">delete</span>
                                         Remove
                                     </button>
                                 </div>
-                                @endforeach
-                            </div>
+                            </template>
+                            <template x-if="addons.length === 0">
+                                <p class="text-xs text-[#897561]">No add-ons yet. Define extras to appear on the detail modal.</p>
+                            </template>
                             @error('addons.*.name')
                                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                             @enderror
@@ -298,44 +296,45 @@
                         </div>
 
                         <!-- Recipe / Ingredients -->
-                        <div class="space-y-3 pt-2 border-t border[#e6e0db] dark:border[#3d362e] mt-4" id="add-menu-recipes">
+                        <div class="space-y-3 pt-2 border-t border-[#e6e0db] dark:border-[#3d362e] mt-4">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-xs uppercase tracking-wide text[#a89c92]">Resep</p>
-                                    <h3 class="text-lg font-semibold text[#181411] dark:text_white">Bahan per porsi</h3>
-                                    <p class="text-xs text[#897561]">Stok bahan otomatis berkurang saat pesanan diproses.</p>
+                                    <p class="text-xs uppercase tracking-wide text-[#a89c92]">Resep</p>
+                                    <h3 class="text-lg font-semibold text-[#181411] dark:text-white">Bahan per porsi</h3>
+                                    <p class="text-xs text-[#897561]">Stok bahan otomatis berkurang saat pesanan diproses.</p>
                                 </div>
-                                <button type="button" id="add-menu-add-recipe" class="text-primary text-xs font-semibold flex items-center gap-1">
+                                <button type="button" @click="addRecipe()" class="text-primary text-xs font-semibold flex items-center gap-1">
                                     <span class="material-symbols-outlined text-[18px]">add</span>
                                     Tambah bahan
                                 </button>
                             </div>
-                            <div id="add-menu-recipe-container" class="space-y-2">
-                                @foreach($initialRecipes as $i => $recipe)
-                                <div class="grid grid-cols-12 gap-3 items-end border border[#f0e9df] dark:border[#3d362e] rounded-lg p-3 bg-gray-50/60 dark:bg[#1f1914] recipe-row">
+                            <template x-for="(recipe, index) in recipes" :key="index">
+                                <div class="grid grid-cols-12 gap-3 items-end border border-[#f0e9df] dark:border-[#3d362e] rounded-lg p-3 bg-gray-50/60 dark:bg-[#1f1914]">
                                     <div class="col-span-7">
-                                        <label class="text-xs font-medium text[#897561] dark:text[#a89c92]">Ingredient</label>
-                                        <select name="recipes[{{ $i }}][ingredient_id]" class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary">
+                                        <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Ingredient</label>
+                                        <select :name="'recipes['+index+'][ingredient_id]'" x-model="recipe.ingredient_id"
+                                                class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary">
                                             <option value="">Pilih bahan</option>
                                             @foreach($ingredients as $ingredient)
-                                                <option value="{{ $ingredient->id }}" {{ ($recipe['ingredient_id'] ?? null)==$ingredient->id ? 'selected':'' }}>{{ $ingredient->name }} ({{ $ingredient->unit }})</option>
+                                                <option value="{{ $ingredient->id }}">{{ $ingredient->name }} ({{ $ingredient->unit }})</option>
                                             @endforeach
                                         </select>
                                     </div>
                                     <div class="col-span-4">
-                                        <label class="text-xs font-medium text[#897561] dark:text[#a89c92]">Kuantitas / porsi</label>
-                                        <input type="number" min="0.01" step="0.01" name="recipes[{{ $i }}][quantity_used]" value="{{ $recipe['quantity_used'] ?? '' }}"
-                                               class="w-full px-3 py-2 border border-[#e6e0db] dark_border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="0.00">
+                                        <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Kuantitas / porsi</label>
+                                        <input type="number" min="0.01" step="0.01" :name="'recipes['+index+'][quantity_used]'"
+                                               x-model="recipe.quantity_used"
+                                               class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="0.00">
                                     </div>
-                                    <button type="button" class="col-span-1 text-red-600 text-xs font-semibold justify-self-start flex items-center gap-1 remove-recipe-btn">
+                                    <button type="button" @click="removeRecipe(index)"
+                                            class="col-span-1 text-red-600 text-xs font-semibold justify-self-start flex items-center gap-1">
                                         <span class="material-symbols-outlined text-[18px]">delete</span>
                                     </button>
                                 </div>
-                                @endforeach
-                            </div>
-                            @if(empty($initialRecipes))
-                                <p class="text-xs text[#897561]">Belum ada bahan. Tambahkan komposisi agar stok berkurang otomatis.</p>
-                            @endif
+                            </template>
+                            <template x-if="recipes.length === 0">
+                                <p class="text-xs text-[#897561]">Belum ada bahan. Tambahkan komposisi agar stok berkurang otomatis.</p>
+                            </template>
                             @error('recipes.*.ingredient_id')
                                 <p class="text-red-500 text-xs mt-1">{{ $message }}</p>
                             @enderror
@@ -363,75 +362,4 @@
 @endif
 @endsection
 
-@push('scripts')
-<div class="hidden" data-ingredients-options>
-    @foreach($ingredients as $ingredient)
-        <option value="{{ $ingredient->id }}">{{ $ingredient->name }} ({{ $ingredient->unit }})</option>
-    @endforeach
-</div>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const ingredientOptions = document.querySelector('[data-ingredients-options]')?.innerHTML || '';
 
-    function bindAddons(containerSelector, addBtnSelector) {
-        const container = document.querySelector(containerSelector);
-        const addBtn = document.querySelector(addBtnSelector);
-        if (!container || !addBtn) return;
-        const tpl = () => {
-            const i = container.querySelectorAll('.addon-row').length;
-            return `<div class="grid grid-cols-2 gap-3 items-end addon-row">
-                <div>
-                    <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Name</label>
-                    <input type="text" name="addons[${i}][name]" class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="Extra shot">
-                </div>
-                <div>
-                    <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Price (Rp)</label>
-                    <input type="number" min="0" step="500" name="addons[${i}][price]" class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="0">
-                </div>
-                <button type="button" class="text-red-600 text-xs font-semibold justify-self-start flex items-center gap-1 remove-addon-btn">
-                    <span class="material-symbols-outlined text-[18px]">delete</span>
-                    Remove
-                </button>
-            </div>`;
-        };
-        addBtn.addEventListener('click', (e) => { e.preventDefault(); container.insertAdjacentHTML('beforeend', tpl()); });
-        container.addEventListener('click', (e) => {
-            const btn = e.target.closest('.remove-addon-btn');
-            if (btn) { e.preventDefault(); btn.closest('.addon-row')?.remove(); }
-        });
-    }
-
-    function bindRecipes(containerSelector, addBtnSelector) {
-        const container = document.querySelector(containerSelector);
-        const addBtn = document.querySelector(addBtnSelector);
-        if (!container || !addBtn) return;
-        const tpl = () => {
-            const i = container.querySelectorAll('.recipe-row').length;
-            return `<div class="grid grid-cols-12 gap-3 items-end border border-[#f0e9df] dark:border-[#3d362e] rounded-lg p-3 bg-gray-50/60 dark:bg-[#1f1914] recipe-row">
-                <div class="col-span-7">
-                    <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Ingredient</label>
-                    <select name="recipes[${i}][ingredient_id]" class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary">
-                        <option value=\"\">Pilih bahan</option>${ingredientOptions}
-                    </select>
-                </div>
-                <div class="col-span-4">
-                    <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Kuantitas / porsi</label>
-                    <input type="number" min="0.01" step="0.01" name="recipes[${i}][quantity_used]" class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary" placeholder="0.00">
-                </div>
-                <button type="button" class="col-span-1 text-red-600 text-xs font-semibold justify-self-start flex items-center gap-1 remove-recipe-btn">
-                    <span class="material-symbols-outlined text-[18px]">delete</span>
-                </button>
-            </div>`;
-        };
-        addBtn.addEventListener('click', (e) => { e.preventDefault(); container.insertAdjacentHTML('beforeend', tpl()); });
-        container.addEventListener('click', (e) => {
-            const btn = e.target.closest('.remove-recipe-btn');
-            if (btn) { e.preventDefault(); btn.closest('.recipe-row')?.remove(); }
-        });
-    }
-
-    bindAddons('#add-menu-addon-container', '#add-menu-add-addon');
-    bindRecipes('#add-menu-recipe-container', '#add-menu-add-recipe');
-});
-</script>
-@endpush
