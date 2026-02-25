@@ -26,6 +26,10 @@ $app = Application::configure(basePath: dirname(__DIR__))
             'role' => \App\Http\Middleware\CheckRole::class,
         ]);
 
+        // Auto-cancel pesanan yang sudah > 24 jam dan masih berstatus aktif.
+        // Dijalankan pada semua request web yang terautentikasi (semua role).
+        $middleware->appendToGroup('web', \App\Http\Middleware\AutoCancelStaleOrders::class);
+
         // CORS handling
         $middleware->statefulApi();
     })
