@@ -1,9 +1,43 @@
 {
   "version": 2,
   "builds": [
-    { "src": "api/index.php", "use": "vercel-php@0.9.0" }
+    {
+      "src": "api/index.php",
+      "use": "vercel-php@0.9.0"
+    }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "/api/index.php" }
+    {
+      "src": "/build/(.*)",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      },
+      "dest": "/build/$1"
+    },
+    {
+      "src": "/images/(.*)",
+      "headers": {
+        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
+      },
+      "dest": "/images/$1"
+    },
+    {
+      "src": "/favicon\\.ico",
+      "headers": {
+        "Cache-Control": "public, max-age=86400"
+      },
+      "dest": "/favicon.ico"
+    },
+    {
+      "src": "/(.*\\.(js|css|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|webp|ico))",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      },
+      "dest": "/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.php"
+    }
   ]
 }

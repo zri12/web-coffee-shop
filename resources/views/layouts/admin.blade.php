@@ -10,13 +10,13 @@
     <!-- Anti-FOUC guard: hide until critical assets are ready -->
     <style id="fouc-guard">html.fouc-prep, html.fouc-prep body { visibility: hidden; }</style>
 
-    <!-- Preload & preconnect for icon/fonts to avoid text fallbacks -->
+    <!-- Preconnect & preload untuk font/icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" as="style">
-    <link rel="preload" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" as="style">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <!-- Fonts: gabung 2 request jadi 1 URL (hemat 1 round-trip) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script>
@@ -42,8 +42,8 @@
             },
         }
     </script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 
     <style>
         body { font-family: 'Inter', sans-serif; }

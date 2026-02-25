@@ -7,11 +7,14 @@
     <title>@yield('title', 'Welcome') | {{ $systemSettings['cafe_name'] ?? config('app.name') }}</title>
     @include('layouts.partials.favicon')
     
-    <!-- Fonts -->
+    <!-- Preconnect (harus di atas stylesheet agar lebih cepat) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+
+    <!-- Fonts: gabung 2 request jadi 1, tambah display=swap -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
 
     <!-- Tailwind CSS CDN (serverless-safe fallback for Vercel) -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
@@ -43,7 +46,7 @@
             },
         }
     </script>
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
     <script>
         // Lightweight Cart shim (matches signature used by main app Cart)
         (function () {

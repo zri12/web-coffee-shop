@@ -7,15 +7,18 @@
     <title>@yield('title', $systemSettings['cafe_name'] ?? 'Cafe') - Cafe Web Ordering</title>
     @include('layouts.partials.favicon')
     
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <!-- Preconnect (harus di atas stylesheet agar lebih cepat) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
-    
-    <!-- Alpine.js -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+
+    <!-- Fonts: gabung 2 request jadi 1, tambah display=swap -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+
+    <!-- Alpine.js (pin versi spesifik agar browser bisa cache) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script>
