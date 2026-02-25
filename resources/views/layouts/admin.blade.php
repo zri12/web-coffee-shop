@@ -54,14 +54,22 @@
         ::-webkit-scrollbar-thumb { background: #d47311; border-radius: 3px; opacity: 0.5; }
         /* Sembunyikan teks fallback Material Symbols saat font belum load */
         .material-symbols-outlined {
+            visibility: hidden !important;
             font-size: 0 !important;
-            letter-spacing: -9999px;
-            opacity: 0;
+            line-height: 0 !important;
+            width: 0 !important;
+            height: 0 !important;
+            overflow: hidden !important;
+            display: inline-block !important;
         }
         .fonts-loaded .material-symbols-outlined {
+            visibility: visible !important;
             font-size: inherit !important;
-            letter-spacing: normal;
-            opacity: 1;
+            line-height: normal !important;
+            width: auto !important;
+            height: auto !important;
+            overflow: visible !important;
+            display: inline !important;
         }
     </style>
 
@@ -70,15 +78,28 @@
         document.addEventListener('DOMContentLoaded', () => {
             document.body.classList.add('loading');
         });
-        window.addEventListener('load', () => {
+        // Fallback: jika font gagal load setelah 3 detik
+        var _fontFallback = setTimeout(function() {
+            document.documentElement.classList.add('fonts-loaded');
             document.documentElement.classList.remove('fouc-prep');
             document.body.classList.remove('loading');
-            document.documentElement.classList.add('fonts-loaded');
-        });
-        // Fallback: jika font gagal load setelah 2.5 detik
-        setTimeout(function() {
-            document.documentElement.classList.add('fonts-loaded');
-        }, 2500);
+        }, 3000);
+        // Gunakan Font Loading API untuk deteksi lebih cepat
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(function() {
+                clearTimeout(_fontFallback);
+                document.documentElement.classList.add('fonts-loaded');
+                document.documentElement.classList.remove('fouc-prep');
+                document.body.classList.remove('loading');
+            });
+        } else {
+            window.addEventListener('load', () => {
+                clearTimeout(_fontFallback);
+                document.documentElement.classList.remove('fouc-prep');
+                document.body.classList.remove('loading');
+                document.documentElement.classList.add('fonts-loaded');
+            });
+        }
     </script>
     
     @stack('styles')
