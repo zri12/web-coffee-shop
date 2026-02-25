@@ -45,11 +45,11 @@ class CashierController extends Controller
     public function incomingOrders()
     {
         // Get ALL orders that are not completed or cancelled
+        // AND are within the last 24 hours (orders older than 24h are auto-hidden)
         $allActiveOrders = \App\Models\Order::with(['items.menu', 'payment'])
             ->whereNotIn('status', ['completed', 'cancelled'])
-            // Latest activity at the top: updated_at fallback to created_at
-            ->orderBy('updated_at', 'desc')
-            ->orderBy('created_at', 'desc')
+            ->where('created_at', '>=', now()->subHours(24))   // ← auto-hide orders > 24 jam
+            ->orderBy('created_at', 'desc')                     // ← terbaru selalu di atas
             ->get();
         
         // Categorize orders
