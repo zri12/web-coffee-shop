@@ -95,6 +95,9 @@ class CashierController extends Controller
     // New Orders - Order dari QR meja & online dengan status
     public function orders(Request $request)
     {
+        // Auto-cancel pesanan aktif yang sudah lebih dari 24 jam
+        $this->cancelStaleOrders();
+
         $query = \App\Models\Order::with(['items.menu', 'payment'])
             ->withCount('items');
         
@@ -323,6 +326,9 @@ class CashierController extends Controller
     // Order History - Riwayat transaksi dengan filter
     public function history(Request $request)
     {
+        // Auto-cancel pesanan aktif yang sudah lebih dari 24 jam
+        $this->cancelStaleOrders();
+
         $query = \App\Models\Order::with('items.menu');
         
         // Filter by date if provided
@@ -719,5 +725,32 @@ class CashierController extends Controller
     public function store(Request $request)
     {
         return $this->storeManualOrder($request);
+    }
+
+    /**
+     * Batalkan pesanan aktif yang lebih dari 24 jam.
+     * Dipanggil langsung di controller sebelum query data ditampilkan.
+     */
+    private function cancelStaleOrders(): void
+    {
+        try {
+            $cutoff = now()->subHours(24);
+            DB::table('orders')
+                ->whereIn('status', [
+                    'pending',
+                    'waiting_payment',
+                    'waiting_cashier_confirmation',
+                    'processing',
+                    'preparing',
+                ])
+                ->where('created_at', '<', $cutoff)
+                ->update([
+                    'status'         => 'cancelled',
+                    'payment_status' => DB::raw("CASE WHEN payment_status = 'paid' THEN 'paid' ELSE 'cancelled' END"),
+                    'updated_at'     => now(),
+                ]);
+        } catch (\Throwable $e) {
+            \Log::warning('cancelStaleOrders: ' . $e->getMessage());
+        }
     }
 }

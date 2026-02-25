@@ -299,6 +299,9 @@ class DashboardController extends Controller
     // Orders Management
     public function orders(Request $request)
     {
+        // Auto-cancel pesanan aktif yang sudah lebih dari 24 jam
+        $this->cancelStaleOrders();
+
         $query = Order::with(['items.menu', 'user']);
 
         if ($request->filled('status')) {
@@ -584,5 +587,30 @@ class DashboardController extends Controller
         ]);
 
         return redirect()->back()->with('success', 'Password berhasil diubah');
+    }
+    /**
+     * Batalkan pesanan aktif yang lebih dari 24 jam.
+     */
+    private function cancelStaleOrders(): void
+    {
+        try {
+            $cutoff = now()->subHours(24);
+            DB::table('orders')
+                ->whereIn('status', [
+                    'pending',
+                    'waiting_payment',
+                    'waiting_cashier_confirmation',
+                    'processing',
+                    'preparing',
+                ])
+                ->where('created_at', '<', $cutoff)
+                ->update([
+                    'status'         => 'cancelled',
+                    'payment_status' => DB::raw("CASE WHEN payment_status = 'paid' THEN 'paid' ELSE 'cancelled' END"),
+                    'updated_at'     => now(),
+                ]);
+        } catch (\Throwable $e) {
+            \Log::warning('cancelStaleOrders: ' . $e->getMessage());
+        }
     }
 }

@@ -279,6 +279,9 @@ class ManagerController extends Controller
     
     public function orders(Request $request)
     {
+        // Auto-cancel pesanan aktif yang sudah lebih dari 24 jam
+        $this->cancelStaleOrders();
+
         // Build query with filters
         $query = \App\Models\Order::with(['items', 'payment']);
 
@@ -927,6 +930,32 @@ class ManagerController extends Controller
                 'success' => false,
                 'message' => 'Failed to update password: ' . $e->getMessage()
             ], 500);
+        }
+    }
+
+    /**
+     * Batalkan pesanan aktif yang lebih dari 24 jam (dijalankan sebelum query data).
+     */
+    private function cancelStaleOrders(): void
+    {
+        try {
+            $cutoff = now()->subHours(24);
+            DB::table('orders')
+                ->whereIn('status', [
+                    'pending',
+                    'waiting_payment',
+                    'waiting_cashier_confirmation',
+                    'processing',
+                    'preparing',
+                ])
+                ->where('created_at', '<', $cutoff)
+                ->update([
+                    'status'         => 'cancelled',
+                    'payment_status' => DB::raw("CASE WHEN payment_status = 'paid' THEN 'paid' ELSE 'cancelled' END"),
+                    'updated_at'     => now(),
+                ]);
+        } catch (\Throwable $e) {
+            \Log::warning('cancelStaleOrders: ' . $e->getMessage());
         }
     }
 
