@@ -134,7 +134,27 @@
         [x-cloak] { display: none !important; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* Sembunyikan teks fallback Material Symbols saat font belum load */
+        .material-symbols-outlined {
+            font-size: 0 !important;
+            letter-spacing: -9999px;
+            opacity: 0;
+            transition: opacity 0.1s ease;
+        }
+        .fonts-loaded .material-symbols-outlined {
+            font-size: inherit !important;
+            letter-spacing: normal;
+            opacity: 1;
+        }
     </style>
+    <script>
+        document.fonts.ready.then(function() {
+            document.documentElement.classList.add('fonts-loaded');
+        });
+        setTimeout(function() {
+            document.documentElement.classList.add('fonts-loaded');
+        }, 2000);
+    </script>
 </head>
 <body class="bg-[#faf8f6] text-[#181411] min-h-screen relative overflow-x-hidden selection:bg-orange-100 selection:text-orange-900">
 

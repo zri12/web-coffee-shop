@@ -57,7 +57,29 @@
             overflow-x: hidden;
             max-width: 100vw;
         }
+        /* Sembunyikan teks fallback Material Symbols saat font belum load */
+        .material-symbols-outlined {
+            font-size: 0 !important;
+            letter-spacing: -9999px;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+        .fonts-loaded .material-symbols-outlined {
+            font-size: inherit !important;
+            letter-spacing: normal;
+            opacity: 1;
+        }
     </style>
+    <script>
+        // Tandai fonts-loaded setelah Material Symbols siap
+        document.fonts.ready.then(function() {
+            document.documentElement.classList.add('fonts-loaded');
+        });
+        // Fallback: jika font gagal load setelah 2 detik, tetap tampilkan UI
+        setTimeout(function() {
+            document.documentElement.classList.add('fonts-loaded');
+        }, 2000);
+    </script>
 </head>
 <body class="bg-background-light dark:bg-background-dark text-text-main dark:text-white font-display antialiased" x-data="{ mobileMenuOpen: false }">
     

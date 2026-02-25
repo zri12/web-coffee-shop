@@ -52,10 +52,20 @@
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #d47311; border-radius: 3px; opacity: 0.5; }
+        /* Sembunyikan teks fallback Material Symbols saat font belum load */
+        .material-symbols-outlined {
+            font-size: 0 !important;
+            letter-spacing: -9999px;
+            opacity: 0;
+        }
+        .fonts-loaded .material-symbols-outlined {
+            font-size: inherit !important;
+            letter-spacing: normal;
+            opacity: 1;
+        }
     </style>
 
     <script>
-        // Prepare to hide until CSS & JS are ready
         document.documentElement.classList.add('fouc-prep');
         document.addEventListener('DOMContentLoaded', () => {
             document.body.classList.add('loading');
@@ -63,7 +73,12 @@
         window.addEventListener('load', () => {
             document.documentElement.classList.remove('fouc-prep');
             document.body.classList.remove('loading');
+            document.documentElement.classList.add('fonts-loaded');
         });
+        // Fallback: jika font gagal load setelah 2.5 detik
+        setTimeout(function() {
+            document.documentElement.classList.add('fonts-loaded');
+        }, 2500);
     </script>
     
     @stack('styles')

@@ -33,12 +33,17 @@
         }
     </script>
     
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <!-- Preconnect (harus di atas stylesheet agar lebih cepat) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+
+    <!-- Fonts: gabung 2 request jadi 1 URL -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     
-    <!-- Alpine.js -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Alpine.js (pin versi spesifik) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
 
     <style>
         ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -47,7 +52,26 @@
         ::-webkit-scrollbar-thumb:hover { background: #b0a8a0; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        /* Sembunyikan teks fallback Material Symbols saat font belum load */
+        .material-symbols-outlined {
+            font-size: 0 !important;
+            letter-spacing: -9999px;
+            opacity: 0;
+        }
+        .fonts-loaded .material-symbols-outlined {
+            font-size: inherit !important;
+            letter-spacing: normal;
+            opacity: 1;
+        }
     </style>
+    <script>
+        document.fonts.ready.then(function() {
+            document.documentElement.classList.add('fonts-loaded');
+        });
+        setTimeout(function() {
+            document.documentElement.classList.add('fonts-loaded');
+        }, 2000);
+    </script>
 </head>
 <body class="bg-background-light dark:bg-background-dark text-text-main-light dark:text-text-main-dark overflow-hidden" x-data="{ sidebarOpen: false }">
     <div class="flex h-screen w-full relative">
