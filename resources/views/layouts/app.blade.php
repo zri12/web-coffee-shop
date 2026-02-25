@@ -49,6 +49,10 @@
             },
         }
     </script>
+
+    {{-- Icon Guard: mencegah teks icon muncul & diterjemahkan browser --}}
+    @include('layouts.partials.icon-guard')
+
     @stack('styles')
     
     <style>
@@ -57,38 +61,7 @@
             overflow-x: hidden;
             max-width: 100vw;
         }
-        /* Sembunyikan teks fallback Material Symbols saat font belum load */
-        .material-symbols-outlined {
-            visibility: hidden !important;
-            font-size: 0 !important;
-            line-height: 0 !important;
-            width: 0 !important;
-            height: 0 !important;
-            overflow: hidden !important;
-            display: inline-block !important;
-        }
-        .fonts-loaded .material-symbols-outlined {
-            visibility: visible !important;
-            font-size: inherit !important;
-            line-height: normal !important;
-            width: auto !important;
-            height: auto !important;
-            overflow: visible !important;
-            display: inline !important;
-        }
     </style>
-    <script>
-        // Tandai fonts-loaded setelah Material Symbols siap
-        var _fontFallback = setTimeout(function() {
-            document.documentElement.classList.add('fonts-loaded');
-        }, 3000);
-        if (document.fonts && document.fonts.ready) {
-            document.fonts.ready.then(function() {
-                clearTimeout(_fontFallback);
-                document.documentElement.classList.add('fonts-loaded');
-            });
-        }
-    </script>
 </head>
 <body class="bg-background-light dark:bg-background-dark text-text-main dark:text-white font-display antialiased" x-data="{ mobileMenuOpen: false }">
     

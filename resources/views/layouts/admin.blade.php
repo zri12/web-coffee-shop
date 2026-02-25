@@ -7,8 +7,8 @@
     <title>@yield('title', 'Admin Dashboard') - {{ $systemSettings['cafe_name'] ?? config('app.name') }}</title>
     @include('layouts.partials.favicon')
 
-    <!-- Anti-FOUC guard: hide until critical assets are ready -->
-    <style id="fouc-guard">html.fouc-prep, html.fouc-prep body { visibility: hidden; }</style>
+
+
 
     <!-- Preconnect & preload untuk font/icons -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -45,66 +45,20 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 
+    {{-- Icon Guard: mencegah teks icon muncul & diterjemahkan browser --}}
+    @include('layouts.partials.icon-guard')
+
     <style>
         body { font-family: 'Inter', sans-serif; }
-        body.loading { visibility: hidden; opacity: 0; }
-        body:not(.loading) { opacity: 1; transition: opacity 180ms ease; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #d47311; border-radius: 3px; opacity: 0.5; }
-        /* Sembunyikan teks fallback Material Symbols saat font belum load */
-        .material-symbols-outlined {
-            visibility: hidden !important;
-            font-size: 0 !important;
-            line-height: 0 !important;
-            width: 0 !important;
-            height: 0 !important;
-            overflow: hidden !important;
-            display: inline-block !important;
-        }
-        .fonts-loaded .material-symbols-outlined {
-            visibility: visible !important;
-            font-size: inherit !important;
-            line-height: normal !important;
-            width: auto !important;
-            height: auto !important;
-            overflow: visible !important;
-            display: inline !important;
-        }
     </style>
 
-    <script>
-        document.documentElement.classList.add('fouc-prep');
-        document.addEventListener('DOMContentLoaded', () => {
-            document.body.classList.add('loading');
-        });
-        // Fallback: jika font gagal load setelah 3 detik
-        var _fontFallback = setTimeout(function() {
-            document.documentElement.classList.add('fonts-loaded');
-            document.documentElement.classList.remove('fouc-prep');
-            document.body.classList.remove('loading');
-        }, 3000);
-        // Gunakan Font Loading API untuk deteksi lebih cepat
-        if (document.fonts && document.fonts.ready) {
-            document.fonts.ready.then(function() {
-                clearTimeout(_fontFallback);
-                document.documentElement.classList.add('fonts-loaded');
-                document.documentElement.classList.remove('fouc-prep');
-                document.body.classList.remove('loading');
-            });
-        } else {
-            window.addEventListener('load', () => {
-                clearTimeout(_fontFallback);
-                document.documentElement.classList.remove('fouc-prep');
-                document.body.classList.remove('loading');
-                document.documentElement.classList.add('fonts-loaded');
-            });
-        }
-    </script>
     
     @stack('styles')
 </head>
-<body class="loading bg-background-light dark:bg-background-dark text-text-main-light dark:text-text-main-dark overflow-hidden" x-data="{ sidebarOpen: false }">
+<body class="bg-background-light dark:bg-background-dark text-text-main-light dark:text-text-main-dark overflow-hidden" x-data="{ sidebarOpen: false }">
 <div class="flex h-screen w-full relative">
     <!-- Backdrop for Mobile -->
     <div x-show="sidebarOpen" 
