@@ -22,7 +22,7 @@ WHERE NOT EXISTS (SELECT 1 FROM ingredients WHERE name = 'Dough Base');
 -- 2) Recipes per product (quantities per 1 serving)
 INSERT INTO product_recipes (product_id, ingredient_id, quantity_used, created_at, updated_at)
 SELECT m.id, i.id, 18, NOW(), NOW()
-FROM menus m JOIN ingredients i ON i.name = 'Espresso'
+FROM menus m JOIN ingredients i ON i.name /*  */= 'Espresso'
 WHERE m.name = 'Hazelnut Latte'
 ON DUPLICATE KEY UPDATE quantity_used = VALUES(quantity_used);
 

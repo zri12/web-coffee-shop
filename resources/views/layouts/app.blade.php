@@ -88,7 +88,7 @@
             <div class="flex gap-3">
                 <a href="{{ route('cart') }}" class="relative flex items-center gap-2 h-10 px-3 rounded-lg bg-background-light dark:bg-background-dark/50 hover:bg-primary/10 transition-colors text-text-main dark:text-white group">
                     <span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">shopping_cart</span>
-                    <span id="cart-total-inline" class="hidden md:inline text-xs font-semibold text-primary">Rp 0</span>
+                    <span id="cart-total-inline" class="hidden text-xs font-semibold text-primary"></span>
                     <span id="cart-badge" class="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-bold h-4 min-w-[16px] px-1 rounded-full flex items-center justify-center hidden border-2 border-white dark:border-[#221910]">0</span>
                 </a>
                 
@@ -508,25 +508,39 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
-            Cart.updateBadge();
-            // Sync badge with server session cart
+            // Sembunyikan badge & total dulu sebelum sync dengan server
+            const badge = document.getElementById('cart-badge');
+            const totalLabel = document.getElementById('cart-total-inline');
+            if (badge) badge.classList.add('hidden');
+            if (totalLabel) totalLabel.classList.add('hidden');
+
+            // Sync badge dengan server session cart (sumber kebenaran)
             fetch('/cart/count', { headers: { 'X-Requested-With': 'XMLHttpRequest' }})
                 .then(res => res.json())
                 .then(data => {
                     if (typeof data.count !== 'undefined') {
-                        const badge = document.getElementById('cart-badge');
-                        const totalLabel = document.getElementById('cart-total-inline');
-                        if (badge) {
-                            badge.classList.toggle('hidden', data.count === 0);
-                            badge.innerText = data.count > 99 ? '99+' : data.count;
-                        }
-                        if (totalLabel) {
-                            totalLabel.classList.toggle('hidden', data.count === 0);
-                            totalLabel.innerText = Cart.formatPrice(data.total || 0);
+                        if (data.count > 0) {
+                            // Ada item di server session — tampilkan
+                            if (badge) {
+                                badge.classList.remove('hidden');
+                                badge.innerText = data.count > 99 ? '99+' : data.count;
+                            }
+                            if (totalLabel) {
+                                totalLabel.classList.remove('hidden');
+                                totalLabel.innerText = Cart.formatPrice(data.total || 0);
+                            }
+                        } else {
+                            // Server session kosong — bersihkan localStorage & sembunyikan semua
+                            localStorage.removeItem('cart');
+                            if (badge) badge.classList.add('hidden');
+                            if (totalLabel) totalLabel.classList.add('hidden');
                         }
                     }
                 })
-                .catch(() => {});
+                .catch(() => {
+                    // Fallback ke localStorage jika fetch gagal
+                    Cart.updateBadge();
+                });
         });
     </script>
 </body>

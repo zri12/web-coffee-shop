@@ -13,6 +13,7 @@ class MockMenuSeeder extends Seeder
     public function run()
     {
         // 1. Categories
+        $defaultFlags = config('menu-options.defaults', []);
         $categories = [
             ['name' => 'Coffee', 'slug' => 'coffee', 'sort_order' => 1],
             ['name' => 'Non-Coffee', 'slug' => 'non-coffee', 'sort_order' => 2],
@@ -29,7 +30,8 @@ class MockMenuSeeder extends Seeder
                     'name' => $cat['name'],
                     'description' => $cat['name'] . ' Selection',
                     'is_active' => true,
-                    'sort_order' => $cat['sort_order']
+                    'sort_order' => $cat['sort_order'],
+                    'option_flags' => $defaultFlags,
                 ]
             );
         }
