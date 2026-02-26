@@ -939,21 +939,26 @@ class ManagerController extends Controller
     private function cancelStaleOrders(): void
     {
         try {
-            $cutoff = now()->subHours(24);
+            $cutoff = now()->subHours(24)->toDateTimeString();
+            $staleStatuses = [
+                'pending',
+                'waiting_payment',
+                'waiting_cashier_confirmation',
+                'processing',
+                'preparing',
+            ];
+
             DB::table('orders')
-                ->whereIn('status', [
-                    'pending',
-                    'waiting_payment',
-                    'waiting_cashier_confirmation',
-                    'processing',
-                    'preparing',
-                ])
+                ->whereIn('status', $staleStatuses)
                 ->where('created_at', '<', $cutoff)
-                ->update([
-                    'status'         => 'cancelled',
-                    'payment_status' => DB::raw("CASE WHEN payment_status = 'paid' THEN 'paid' ELSE 'cancelled' END"),
-                    'updated_at'     => now(),
-                ]);
+                ->update(['status' => 'cancelled', 'updated_at' => now()->toDateTimeString()]);
+
+            DB::table('orders')
+                ->where('status', 'cancelled')
+                ->whereNotIn('payment_status', ['paid'])
+                ->where('created_at', '<', $cutoff)
+                ->update(['payment_status' => 'cancelled']);
+
         } catch (\Throwable $e) {
             \Log::warning('cancelStaleOrders: ' . $e->getMessage());
         }
