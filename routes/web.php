@@ -27,6 +27,54 @@ use App\Http\Controllers\Dashboard\UserController as DashboardUserController;
 
 // Public Routes
 Route::get('/ping', fn () => 'Laravel OK');
+
+// DEBUG ROUTE: cek & auto-cancel pesanan stale (HAPUS setelah selesai debug)
+Route::get('/debug-cancel-stale', function () {
+    $cutoff = \Illuminate\Support\Carbon::now()->subHours(24);
+    $statuses = ['pending', 'waiting_payment', 'waiting_cashier_confirmation', 'processing', 'preparing'];
+
+    // Ambil sample sebelum update
+    $before = \Illuminate\Support\Facades\DB::table('orders')
+        ->whereIn('status', $statuses)
+        ->orderByDesc('created_at')
+        ->limit(10)
+        ->get(['id', 'order_number', 'status', 'payment_status', 'created_at']);
+
+    $staleCount = \Illuminate\Support\Facades\DB::table('orders')
+        ->whereIn('status', $statuses)
+        ->where('created_at', '<', $cutoff)
+        ->count();
+
+    // Jalankan update secara terpisah (tanpa DB::raw CASE)
+    $affected = \Illuminate\Support\Facades\DB::table('orders')
+        ->whereIn('status', $statuses)
+        ->where('created_at', '<', $cutoff)
+        ->update([
+            'status'         => 'cancelled',
+            'payment_status' => 'cancelled',
+            'updated_at'     => now(),
+        ]);
+
+    // Kembalikan payment_status ke 'paid' untuk yang seharusnya paid
+    \Illuminate\Support\Facades\DB::table('orders')
+        ->where('status', 'cancelled')
+        ->where('payment_status', 'cancelled')
+        ->where('created_at', '<', $cutoff)
+        // Cek apakah ada payments.status = paid untuk order ini
+        ->whereExists(function ($q) {
+            $q->from('payments')->whereColumn('payments.order_id', 'orders.id')->where('payments.status', 'paid');
+        })
+        ->update(['payment_status' => 'paid']);
+
+    return response()->json([
+        'now'              => now()->toDateTimeString(),
+        'cutoff'           => $cutoff->toDateTimeString(),
+        'stale_count'      => $staleCount,
+        'affected_rows'    => $affected,
+        'sample_all_active' => $before,
+    ], 200, [], JSON_PRETTY_PRINT);
+});
+
 Route::get('/menu-ai-image/{menu}', function ($menu, Request $request) {
     $name = trim((string) $request->query('name', 'Cafe Menu'));
     $hint = trim((string) $request->query('hint', 'food photography'));
