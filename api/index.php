@@ -138,6 +138,66 @@ if (str_starts_with($originalPath, '/api/')) {
             exit;
         }
     }
+
+    // Debug & fix: cancel stale orders directly via raw PDO (no Laravel)
+    if ($originalPath === '/api/cancel-stale') {
+        require_once __DIR__.'/db.php';
+        try {
+            $pdo = getPDO();
+
+            $statuses = ['pending', 'waiting_payment', 'waiting_cashier_confirmation', 'processing', 'preparing'];
+            $placeholders = implode(',', array_fill(0, count($statuses), '?'));
+            $cutoff = date('Y-m-d H:i:s', strtotime('-24 hours'));
+            $now    = date('Y-m-d H:i:s');
+
+            // Show sample BEFORE update
+            $stmt = $pdo->prepare(
+                "SELECT id, order_number, status, payment_status, created_at FROM orders
+                 WHERE status IN ($placeholders)
+                 ORDER BY created_at DESC LIMIT 10"
+            );
+            $stmt->execute($statuses);
+            $sampleBefore = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Count stale rows
+            $stmt2 = $pdo->prepare(
+                "SELECT COUNT(*) as cnt FROM orders
+                 WHERE status IN ($placeholders) AND created_at < ?"
+            );
+            $stmt2->execute(array_merge($statuses, [$cutoff]));
+            $staleCount = $stmt2->fetch(PDO::FETCH_ASSOC)['cnt'];
+
+            // Step 1: update status
+            $stmt3 = $pdo->prepare(
+                "UPDATE orders SET status='cancelled', updated_at=?
+                 WHERE status IN ($placeholders) AND created_at < ?"
+            );
+            $stmt3->execute(array_merge([$now], $statuses, [$cutoff]));
+            $step1 = $stmt3->rowCount();
+
+            // Step 2: update payment_status (only non-paid)
+            $stmt4 = $pdo->prepare(
+                "UPDATE orders SET payment_status='cancelled'
+                 WHERE status='cancelled' AND payment_status != 'paid' AND created_at < ?"
+            );
+            $stmt4->execute([$cutoff]);
+            $step2 = $stmt4->rowCount();
+
+            echo json_encode([
+                'now'            => $now,
+                'cutoff_24h'     => $cutoff,
+                'stale_count'    => (int)$staleCount,
+                'step1_updated'  => $step1,
+                'step2_updated'  => $step2,
+                'sample_before'  => $sampleBefore,
+            ], JSON_PRETTY_PRINT);
+            exit;
+        } catch (\Throwable $e) {
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+            exit;
+        }
+    }
 }
 
 try {
