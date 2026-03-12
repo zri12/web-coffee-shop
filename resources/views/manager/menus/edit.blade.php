@@ -21,11 +21,11 @@
             
             <div class="space-y-4">
                 <!-- Current Image -->
-                @if($menu->image)
+                @if($menu)
                 <div>
                     <label class="block text-sm font-bold text-[#181411] dark:text-white mb-2">Current Image</label>
                     <div class="w-32 h-32 rounded-lg overflow-hidden border border-[#e6e0db] dark:border-[#3d362e]">
-                        <img src="{{ asset('storage/' . $menu->image) }}" alt="{{ $menu->name }}" class="w-full h-full object-cover">
+                        <img src="{{ $menu->display_image_url }}" alt="{{ $menu->name }}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='{{ $menu->placeholder_image_url }}'">
                     </div>
                 </div>
                 @endif

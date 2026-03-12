@@ -33,11 +33,7 @@
                     <td class="px-6 py-4">
                         <div class="flex items-center gap-4">
                             <div class="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center overflow-hidden shrink-0 border border-[#e6e2de] dark:border-[#3e342b]">
-                                @if($menu->image)
-                                <img src="{{ asset('storage/' . $menu->image) }}" alt="{{ $menu->name }}" class="w-full h-full object-cover">
-                                @else
-                                <span class="text-xl">☕</span>
-                                @endif
+                                <img src="{{ $menu->display_image_url }}" alt="{{ $menu->name }}" class="w-full h-full object-cover" onerror="this.onerror=null;this.src='{{ $menu->placeholder_image_url }}'">
                             </div>
                             <div>
                                 <p class="font-semibold text-text-main-light dark:text-text-main-dark text-base">{{ $menu->name }}</p>

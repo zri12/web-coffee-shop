@@ -73,26 +73,20 @@ Route::get('/debug-cancel-stale', function () {
 
 Route::get('/menu-ai-image/{menu}', function ($menu, Request $request) {
     $name = trim((string) $request->query('name', 'Cafe Menu'));
-    $hint = trim((string) $request->query('hint', 'food photography'));
     $safeName = htmlspecialchars(Str::limit($name, 28), ENT_QUOTES, 'UTF-8');
-
-    // Real AI image endpoint for menu cards.
-    if (!str_starts_with((string) $menu, 'placeholder-')) {
-        $prompt = rawurlencode("{$hint}, {$name}, realistic, studio lighting, no text, high detail");
-        $seed = abs(crc32((string) $menu));
-        $url = "https://image.pollinations.ai/prompt/{$prompt}?width=1024&height=1024&seed={$seed}&model=flux";
-
-        return redirect()->away($url);
-    }
-
     $hash = abs(crc32((string) $menu));
     $palettes = [
         ['#4A2E1F', '#C98A4A', '#F8F2E8'],
         ['#2F3E46', '#84A98C', '#F4F1DE'],
         ['#3D2C2E', '#B56B45', '#F5E6CC'],
         ['#1F2A44', '#CFA75E', '#EFE6D5'],
+        ['#2B3A67', '#E6A15A', '#FFF3E3'],
+        ['#3D405B', '#E07A5F', '#F4F1DE'],
+        ['#264653', '#E9C46A', '#FAF3E0'],
     ];
     $palette = $palettes[$hash % count($palettes)];
+    $iconSet = ['☕', '🧋', '🥐', '🍰', '🧁', '🍵', '🥪'];
+    $icon = $iconSet[$hash % count($iconSet)];
 
     $svg = <<<SVG
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
@@ -110,9 +104,10 @@ Route::get('/menu-ai-image/{menu}', function ($menu, Request $request) {
   <rect width="1024" height="1024" fill="url(#shine)"/>
   <circle cx="220" cy="210" r="140" fill="rgba(255,255,255,0.13)"/>
   <circle cx="840" cy="820" r="190" fill="rgba(255,255,255,0.10)"/>
-  <rect x="232" y="278" width="560" height="430" rx="48" fill="rgba(255,255,255,0.14)" stroke="rgba(255,255,255,0.3)" stroke-width="6"/>
-  <text x="512" y="520" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="96" font-weight="700" fill="{$palette[2]}">{$safeName}</text>
-  <text x="512" y="600" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="36" fill="rgba(255,255,255,0.9)">Bean &amp; Brew</text>
+  <rect x="180" y="220" width="664" height="584" rx="48" fill="rgba(255,255,255,0.14)" stroke="rgba(255,255,255,0.3)" stroke-width="6"/>
+  <text x="512" y="430" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="170">{$icon}</text>
+  <text x="512" y="565" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="78" font-weight="700" fill="{$palette[2]}">{$safeName}</text>
+  <text x="512" y="635" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="34" fill="rgba(255,255,255,0.9)">Kopi Nusantara Cafe</text>
 </svg>
 SVG;
 
