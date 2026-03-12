@@ -41,7 +41,14 @@ if (($storagePath = env('APP_STORAGE_PATH')) && is_string($storagePath)) {
     $app->useStoragePath($storagePath);
 }
 
-// Set custom public path (temporary until folder rename)
-$app->usePublicPath($app->basePath('public-laravel'));
+$publicPath = env('APP_PUBLIC_PATH');
+
+if (is_string($publicPath) && $publicPath !== '') {
+    $app->usePublicPath($publicPath);
+} elseif (is_dir($app->basePath('public-laravel'))) {
+    $app->usePublicPath($app->basePath('public-laravel'));
+} else {
+    $app->usePublicPath($app->basePath('public'));
+}
 
 return $app;
