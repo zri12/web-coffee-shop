@@ -65,8 +65,16 @@ setRuntimeEnv('VIEW_COMPILED_PATH', $storagePath.DIRECTORY_SEPARATOR.'framework'
 // Force serverless-safe runtime defaults.
 setRuntimeEnv('LOG_CHANNEL', 'stderr');
 setRuntimeEnv('LOG_STACK', 'stderr');
-setRuntimeEnv('CACHE_STORE', getenv('CACHE_STORE') ?: 'array');
-setRuntimeEnv('SESSION_DRIVER', getenv('SESSION_DRIVER') ?: 'cookie');
+
+$isVercelRuntime = !empty(getenv('VERCEL')) || !empty(getenv('VERCEL_ENV')) || !empty($_SERVER['VERCEL']);
+
+if ($isVercelRuntime) {
+    setRuntimeEnv('CACHE_STORE', 'array');
+    setRuntimeEnv('SESSION_DRIVER', 'cookie');
+} else {
+    setRuntimeEnv('CACHE_STORE', getenv('CACHE_STORE') ?: 'array');
+    setRuntimeEnv('SESSION_DRIVER', getenv('SESSION_DRIVER') ?: 'cookie');
+}
 
 $originalUri  = getOriginalRequestUri();
 $originalPath = parse_url($originalUri, PHP_URL_PATH) ?: '/';
@@ -199,6 +207,8 @@ try {
 
     $app->handleRequest(Illuminate\Http\Request::capture());
 } catch (\Throwable $e) {
+    error_log('Laravel bootstrap error: '.$e->getMessage().' @ '.$e->getFile().':'.$e->getLine());
+    error_log($e->getTraceAsString());
     http_response_code(500);
     header('Content-Type: text/plain; charset=UTF-8');
     echo "Internal Server Error\n";
