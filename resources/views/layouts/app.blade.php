@@ -7,16 +7,16 @@
     <title>@yield('title', $systemSettings['cafe_name'] ?? 'Cafe') - Cafe Web Ordering</title>
     @include('layouts.partials.favicon')
     
-    <!-- Preconnect (harus di atas stylesheet agar lebih cepat) -->
+    <!-- Preconnect -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://cdn.tailwindcss.com">
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
 
-    <!-- Fonts: gabung 2 request jadi 1, tambah display=swap -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800;900&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-25..0&display=swap" rel="stylesheet">
 
-    <!-- Alpine.js (pin versi spesifik agar browser bisa cache) -->
+    <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
 
     <!-- Tailwind CSS CDN -->
@@ -27,17 +27,66 @@
             theme: {
                 extend: {
                     colors: {
-                        "primary": "#d47311",
+                        "primary": "#cf6317",
                         "primary-dark": "#b05d0d",
-                        "background-light": "#FDFBF7",
+                        "on-primary": "#ffffff",
+                        "on-surface-variant": "#976d4e",
+                        "error-container": "#ffdad6",
+                        "secondary-fixed": "#ffdbca",
+                        "secondary": "#f4e9df",
+                        "primary-fixed": "#ffdbca",
+                        "background": "#fcfaf8",
+                        "background-light": "#fcfaf8",
                         "background-dark": "#221910",
-                        "text-main": "#3E2723",
-                        "text-subtle": "#897561",
+                        "surface-container-high": "#f3ece7",
+                        "surface-dim": "#ead6cd",
+                        "primary-container": "#cf6317",
+                        "on-secondary": "#1b130e",
+                        "tertiary": "#006097",
+                        "outline-variant": "#f3ece7",
+                        "primary-fixed-dim": "#ffb68e",
+                        "on-primary-fixed-variant": "#773300",
+                        "surface": "#fcfaf8",
                         "surface-light": "#FFFFFF",
                         "surface-dark": "#2D2115",
+                        "on-primary-container": "#ffffff",
+                        "surface-container-low": "#fcfaf8",
+                        "surface-tint": "#cf6317",
+                        "surface-container-highest": "#dec1b3",
+                        "tertiary-fixed": "#cee5ff",
+                        "surface-bright": "#ffffff",
+                        "outline": "#976d4e",
+                        "on-error-container": "#93000a",
+                        "tertiary-fixed-dim": "#96ccff",
+                        "secondary-container": "#f3ece7",
+                        "tertiary-container": "#cee5ff",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-fixed-variant": "#6a3a1e",
+                        "inverse-surface": "#211811",
+                        "secondary-fixed-dim": "#fdb791",
+                        "on-tertiary-fixed": "#001d32",
+                        "surface-variant": "#f3ece7",
+                        "surface-container": "#f4e9df",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed": "#331200",
+                        "inverse-on-surface": "#ffffff",
+                        "on-secondary-fixed": "#331200",
+                        "on-tertiary-container": "#001d32",
+                        "on-surface": "#1b130e",
+                        "text-main": "#3E2723",
+                        "text-subtle": "#897561",
+                        "error": "#ba1a1a",
+                        "on-error": "#ffffff",
+                        "on-background": "#1b130e",
+                        "on-tertiary-fixed-variant": "#004a76",
+                        "inverse-primary": "#ffb68e",
+                        "on-secondary-container": "#976d4e"
                     },
                     fontFamily: {
-                        "display": ["Inter", "sans-serif"]
+                        "display": ["Plus Jakarta Sans", "sans-serif"],
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Plus Jakarta Sans"],
+                        "label": ["Plus Jakarta Sans"]
                     },
                     borderRadius: {
                         "DEFAULT": "0.5rem",
@@ -56,106 +105,183 @@
     @stack('styles')
     
     <style>
-        /* Prevent horizontal scroll globally */
+        /* Prevent horizontal scroll and normalize body */
         html, body {
+            margin: 0;
+            padding: 0;
             overflow-x: hidden;
-            max-width: 100vw;
+            width: 100%;
+            max-width: 100%;
+            font-family: 'Plus Jakarta Sans', sans-serif;
         }
+        .material-symbols-outlined { 
+            font-family: 'Material Symbols Outlined' !important;
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; 
+        }
+        .hero-gradient { background: linear-gradient(180deg, rgba(252,250,248,0) 0%, rgba(252,250,248,1) 100%); }
     </style>
 </head>
 <body class="bg-background-light dark:bg-background-dark text-text-main dark:text-white font-display antialiased" x-data="{ mobileMenuOpen: false }">
     
     <!-- Top Navigation Bar -->
-    <header class="sticky top-0 z-50 bg-surface-light/95 dark:bg-surface-dark/95 backdrop-blur-sm border-b border-[#f4f2f0] dark:border-[#3e2d23] px-6 py-3 transition-colors">
-        <div class="flex items-center justify-between max-w-7xl mx-auto w-full">
+    <header class="sticky top-0 w-full z-50 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border-b border-orange-200/50 dark:border-stone-800 shadow-sm dark:shadow-none">
+        <nav class="flex justify-between items-center w-full px-6 py-4 max-w-7xl mx-auto">
             <!-- Logo -->
-            <a href="{{ route('home') }}" class="flex items-center gap-4 text-text-main dark:text-white cursor-pointer hover:opacity-80 transition">
+            <a href="{{ route('home') }}" class="text-2xl font-black text-[#1b130e] dark:text-stone-100 tracking-tighter hover:opacity-80 transition flex items-center gap-3">
                 <div class="size-8 text-primary">
                     <svg class="w-full h-full" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
                         <path d="M42.1739 20.1739L27.8261 5.82609C29.1366 7.13663 28.3989 10.1876 26.2002 13.7654C24.8538 15.9564 22.9595 18.3449 20.6522 20.6522C18.3449 22.9595 15.9564 24.8538 13.7654 26.2002C10.1876 28.3989 7.13663 29.1366 5.82609 27.8261L20.1739 42.1739C21.4845 43.4845 24.5355 42.7467 28.1133 40.548C30.3042 39.2016 32.6927 37.3073 35 35C37.3073 32.6927 39.2016 30.3042 40.548 28.1133C42.7467 24.5355 43.4845 21.4845 42.1739 20.1739Z" fill="currentColor"></path>
-                        <path clip-rule="evenodd" d="M7.24189 26.4066C7.31369 26.4411 7.64204 26.5637 8.52504 26.3738C9.59462 26.1438 11.0343 25.5311 12.7183 24.4963C14.7583 23.2426 17.0256 21.4503 19.238 19.238C21.4503 17.0256 23.2426 14.7583 24.4963 12.7183C25.5311 11.0343 26.1438 9.59463 26.3738 8.52504C26.5637 7.64204 26.4411 7.31369 26.4066 7.24189C26.345 7.21246 26.143 7.14535 25.6664 7.1918C24.9745 7.25925 23.9954 7.5498 22.7699 8.14278C20.3369 9.32007 17.3369 11.4915 14.4142 14.4142C11.4915 17.3369 9.32007 20.3369 8.14278 22.7699C7.5498 23.9954 7.25925 24.9745 7.1918 25.6664C7.14534 26.143 7.21246 26.345 7.24189 26.4066ZM29.9001 10.7285C29.4519 12.0322 28.7617 13.4172 27.9042 14.8126C26.465 17.1544 24.4686 19.6641 22.0664 22.0664C19.6641 24.4686 17.1544 26.465 14.8126 27.9042C13.4172 28.7617 12.0322 29.4519 10.7285 29.9001L21.5754 40.747C21.6001 40.7606 21.8995 40.931 22.8729 40.7217C23.9424 40.4916 25.3821 39.879 27.0661 38.8441C29.1062 37.5904 31.3734 35.7982 33.5858 33.5858C35.7982 31.3734 37.5904 29.1062 38.8441 27.0661C39.879 25.3821 40.4916 23.9425 40.7216 22.8729C40.931 21.8995 40.7606 21.6001 40.747 21.5754L29.9001 10.7285ZM29.2403 4.41187L43.5881 18.7597C44.9757 20.1473 44.9743 22.1235 44.6322 23.7139C44.2714 25.3919 43.4158 27.2666 42.252 29.1604C40.8128 31.5022 38.8165 34.012 36.4142 36.4142C34.012 38.8165 31.5022 40.8128 29.1604 42.252C27.2666 43.4158 25.3919 44.2714 23.7139 44.6322C22.1235 44.9743 20.1473 44.9757 18.7597 43.5881L4.41187 29.2403C3.29027 28.1187 3.08209 26.5973 3.21067 25.2783C3.34099 23.9415 3.8369 22.4852 4.54214 21.0277C5.96129 18.0948 8.43335 14.7382 11.5858 11.5858C14.7382 8.43335 18.0948 5.9613 21.0277 4.54214C22.4852 3.8369 23.9415 3.34099 25.2783 3.21067C26.5973 3.08209 28.1187 3.29028 29.2403 4.41187Z" fill="currentColor" fill-rule="evenodd"></path>
                     </svg>
                 </div>
-                <h2 class="text-lg font-bold leading-tight tracking-[-0.015em]">{{ $systemSettings['cafe_name'] ?? 'Cafe' }}</h2>
+                <span>{{ $systemSettings['cafe_name'] ?? 'Amber Roast' }}</span>
             </a>
 
             <!-- Desktop Nav Links -->
-            <nav class="hidden md:flex items-center gap-9">
-                <a class="text-sm font-medium hover:text-primary transition-colors hover:font-bold {{ request()->routeIs('home') ? 'text-primary' : 'text-text-main dark:text-gray-200' }}" href="{{ route('home') }}">Home</a>
-                <a class="text-sm font-bold text-primary" href="{{ route('menu.index') }}">Menu</a>
-                <a class="text-sm font-medium hover:text-primary transition-colors" href="{{ route('track') }}">Order Status</a>
+            <div class="hidden md:flex items-center gap-8">
+                <a class="text-sm font-semibold tracking-wide transition-colors {{ request()->routeIs('home') ? 'text-primary border-b-2 border-primary pb-1' : 'text-[#1b130e] dark:text-stone-300 hover:text-primary' }}" href="{{ route('home') }}">Home</a>
+                <a class="text-sm font-semibold tracking-wide transition-colors {{ request()->routeIs('menu.*') ? 'text-primary border-b-2 border-primary pb-1' : 'text-[#1b130e] dark:text-stone-300 hover:text-primary' }}" href="{{ route('menu.index') }}">Menu</a>
+                <a class="text-sm font-semibold tracking-wide transition-colors {{ request()->routeIs('track') ? 'text-primary border-b-2 border-primary pb-1' : 'text-[#1b130e] dark:text-stone-300 hover:text-primary' }}" href="{{ route('track') }}">Order</a>
                 @auth
-                <a class="text-sm font-medium hover:text-primary transition-colors font-bold" href="@if(auth()->user()->role === 'cashier'){{ route('cashier.incoming-orders') }}@elseif(auth()->user()->role === 'manager'){{ route('manager.dashboard') }}@else{{ route('admin.dashboard') }}@endif">Dashboard</a>
-                @else
-                <!-- <a class="text-sm font-medium hover:text-primary transition-colors" href="{{ route('login') }}">Staff</a> -->
+                <a class="text-sm font-semibold tracking-wide text-[#1b130e] dark:text-stone-300 hover:text-primary transition-colors" href="@if(auth()->user()->role === 'cashier'){{ route('cashier.incoming-orders') }}@elseif(auth()->user()->role === 'manager'){{ route('manager.dashboard') }}@else{{ route('admin.dashboard') }}@endif">Dashboard</a>
                 @endauth
-            </nav>
+            </div>
 
             <!-- Actions -->
-            <div class="flex gap-3">
-                <a href="{{ route('cart') }}" class="relative flex items-center gap-2 h-10 px-3 rounded-lg bg-background-light dark:bg-background-dark/50 hover:bg-primary/10 transition-colors text-text-main dark:text-white group">
-                    <span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">shopping_cart</span>
-                    <span id="cart-total-inline" class="hidden text-xs font-semibold text-primary"></span>
-                    <span id="cart-badge" class="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-bold h-4 min-w-[16px] px-1 rounded-full flex items-center justify-center hidden border-2 border-white dark:border-[#221910]">0</span>
+            <div class="flex items-center gap-4">
+                <a href="{{ route('cart') }}" class="relative p-2 hover:bg-orange-50 dark:hover:bg-stone-800 rounded-lg transition-all text-[#1b130e] dark:text-stone-100 group">
+                    <span class="material-symbols-outlined">shopping_cart</span>
+                    <span id="cart-badge" class="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-bold h-4 min-w-[16px] px-1 rounded-full flex items-center justify-center hidden border-2 border-[#fcfaf8] dark:border-stone-900">0</span>
                 </a>
                 
                 @auth
                 <form action="{{ route('logout') }}" method="POST">
                     @csrf
-                    <button type="submit" class="flex size-10 items-center justify-center rounded-lg bg-background-light dark:bg-background-dark/50 hover:bg-red-50 hover:text-red-500 transition-colors text-text-main dark:text-white" title="Logout">
-                        <span class="material-symbols-outlined text-[20px]">logout</span>
+                    <button type="submit" class="px-5 py-2 bg-stone-100 dark:bg-stone-800 text-on-background dark:text-stone-100 rounded-full font-semibold text-sm shadow-sm hover:scale-95 transition-all">
+                        Logout
                     </button>
                 </form>
                 @else
-                <a href="{{ route('login') }}" class="flex size-10 items-center justify-center rounded-lg bg-background-light dark:bg-background-dark/50 hover:bg-primary/10 transition-colors text-text-main dark:text-white">
-                    <span class="material-symbols-outlined text-[20px]">person</span>
+                <a href="{{ route('login') }}" class="px-5 py-2 bg-primary text-white rounded-full font-semibold text-sm shadow-lg hover:scale-95 transition-all">
+                    Login
                 </a>
                 @endauth
 
                 <!-- Mobile Menu Button -->
-                <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden flex size-10 items-center justify-center rounded-lg bg-background-light dark:bg-background-dark/50 hover:bg-primary/10 transition-colors text-text-main dark:text-white">
-                    <span class="material-symbols-outlined text-[20px]">menu</span>
+                <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden p-2 hover:bg-orange-50 dark:hover:bg-stone-800 rounded-lg transition-all text-[#1b130e] dark:text-stone-100">
+                    <span class="material-symbols-outlined">menu</span>
                 </button>
             </div>
-        </div>
+        </nav>
         
         <!-- Mobile Menu Overlay -->
-        <div x-show="mobileMenuOpen" x-transition class="md:hidden border-t border-[#f4f2f0] dark:border-[#3e2d23] py-4 bg-surface-light dark:bg-surface-dark absolute left-0 right-0 top-full shadow-lg">
-            <nav class="flex flex-col gap-2 px-6">
-                <a href="{{ route('home') }}" class="py-2 text-sm font-medium text-text-main dark:text-gray-200">Home</a>
-                <a href="{{ route('menu.index') }}" class="py-2 text-sm font-bold text-primary">Menu</a>
-                <a href="{{ route('track') }}" class="py-2 text-sm font-medium text-text-main dark:text-gray-200">Order Status</a>
+        <div x-show="mobileMenuOpen" 
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 -translate-y-4"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             class="md:hidden border-t border-orange-100 dark:border-stone-800 py-4 bg-[#fcfaf8]/95 dark:bg-stone-900/95 backdrop-blur-md absolute left-0 right-0 top-full shadow-xl z-50">
+            <nav class="flex flex-col gap-2 px-6 font-semibold">
+                <a href="{{ route('home') }}" class="py-2 text-sm {{ request()->routeIs('home') ? 'text-primary' : 'text-[#1b130e] dark:text-stone-300' }}">Home</a>
+                <a href="{{ route('menu.index') }}" class="py-2 text-sm {{ request()->routeIs('menu.*') ? 'text-primary' : 'text-[#1b130e] dark:text-stone-300' }}">Menu</a>
+                <a href="{{ route('track') }}" class="py-2 text-sm {{ request()->routeIs('track') ? 'text-primary' : 'text-[#1b130e] dark:text-stone-300' }}">Order Status</a>
+                <hr class="my-2 border-orange-100 dark:border-stone-800">
+                @auth
+                <a class="py-2 text-sm text-[#1b130e] dark:text-stone-300" href="@if(auth()->user()->role === 'cashier'){{ route('cashier.incoming-orders') }}@elseif(auth()->user()->role === 'manager'){{ route('manager.dashboard') }}@else{{ route('admin.dashboard') }}@endif">Dashboard</a>
+                <form action="{{ route('logout') }}" method="POST" class="py-2">
+                    @csrf
+                    <button type="submit" class="text-sm text-red-600 font-bold">Logout</button>
+                </form>
+                @else
+                <a href="{{ route('login') }}" class="py-2 text-sm text-primary">Login</a>
+                @endauth
             </nav>
         </div>
     </header>
     
     <!-- Main Content -->
-    <main class="flex-grow">
+    <main class="flex-grow w-full m-0 p-0 border-none">
         @yield('content')
     </main>
     
     <!-- Footer -->
-    <footer class="bg-surface-light dark:bg-surface-dark border-t border-gray-200 dark:border-[#3e2d23] py-10 px-6 mt-auto">
-        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-            <div class="flex items-center gap-2">
-                <div class="size-6 text-primary">
-                    <svg class="w-full h-full" fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M42.1739 20.1739L27.8261 5.82609C29.1366 7.13663 28.3989 10.1876 26.2002 13.7654C24.8538 15.9564 22.9595 18.3449 20.6522 20.6522C18.3449 22.9595 15.9564 24.8538 13.7654 26.2002C10.1876 28.3989 7.13663 29.1366 5.82609 27.8261L20.1739 42.1739C21.4845 43.4845 24.5355 42.7467 28.1133 40.548C30.3042 39.2016 32.6927 37.3073 35 35C37.3073 32.6927 39.2016 30.3042 40.548 28.1133C42.7467 24.5355 43.4845 21.4845 42.1739 20.1739Z" fill="currentColor"></path>
-                    </svg>
+    <footer class="bg-[#1b130e] text-stone-300 pt-20 pb-10 border-t border-white/5">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
+                <!-- Brand Info -->
+                <div class="flex flex-col gap-6">
+                    <div class="flex items-center gap-3">
+                        <div class="size-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+                            <span class="material-symbols-outlined text-3xl">coffee</span>
+                        </div>
+                        <span class="font-black text-2xl text-white tracking-tight">{{ $systemSettings['cafe_name'] ?? 'Amber Roast' }}</span>
+                    </div>
+                    <p class="text-stone-400 leading-relaxed text-sm">
+                        Experience the art of artisanal coffee. Every bean is roasted with passion to bring you the perfect cup since 2010.
+                    </p>
                 </div>
-                <span class="font-bold text-text-main dark:text-white">{{ $systemSettings['cafe_name'] ?? 'Cafe' }}</span>
+
+                <!-- Quick Links -->
+                <div class="flex flex-col gap-6">
+                    <h4 class="font-extrabold text-white uppercase tracking-widest text-xs">Navigation</h4>
+                    <ul class="flex flex-col gap-4">
+                        <li><a href="{{ route('home') }}" class="text-stone-400 hover:text-primary hover:translate-x-1 transition-all inline-block">Home</a></li>
+                        <li><a href="{{ route('menu.index') }}" class="text-stone-400 hover:text-primary hover:translate-x-1 transition-all inline-block">Our Menu</a></li>
+                        <li><a href="#" class="text-stone-400 hover:text-primary hover:translate-x-1 transition-all inline-block">Orders</a></li>
+                        <li><a href="#" class="text-stone-400 hover:text-primary hover:translate-x-1 transition-all inline-block">Contact</a></li>
+                    </ul>
+                </div>
+
+                <!-- Contact Info -->
+                <div class="flex flex-col gap-6">
+                    <h4 class="font-extrabold text-white uppercase tracking-widest text-xs">Reach Us</h4>
+                    <ul class="flex flex-col gap-5">
+                        <li class="flex items-start gap-3">
+                            <span class="material-symbols-outlined text-primary text-xl">location_on</span>
+                            <span class="text-stone-400 text-sm leading-relaxed">
+                                123 Coffee Bean Blvd,<br>Brew City, BC 90210
+                            </span>
+                        </li>
+                        <li class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary text-xl">call</span>
+                            <span class="text-stone-400 text-sm">(555) 123-4567</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Opening Hours -->
+                <div class="flex flex-col gap-6">
+                    <h4 class="font-extrabold text-white uppercase tracking-widest text-xs">Brewing Hours</h4>
+                    <div class="bg-white/5 p-6 rounded-3xl border border-white/5">
+                        <ul class="flex flex-col gap-4">
+                            <li class="flex justify-between items-center text-sm">
+                                <span class="text-stone-500">Mon - Fri</span>
+                                <span class="font-bold text-white">7 am - 8 pm</span>
+                            </li>
+                            <li class="flex justify-between items-center text-sm">
+                                <span class="text-stone-500">Sat - Sun</span>
+                                <span class="font-bold text-primary">8 am - 9 pm</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </div>
-            <div class="flex gap-8 flex-wrap justify-center">
-                <a class="text-sm text-text-muted hover:text-primary transition-colors" href="#">Privacy Policy</a>
-                <a class="text-sm text-text-muted hover:text-primary transition-colors" href="#">Terms of Service</a>
-                <a class="text-sm text-text-muted hover:text-primary transition-colors" href="#">Contact</a>
-            </div>
-            <div class="flex gap-4">
-                <a class="text-text-muted hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined">public</span></a>
-                <a class="text-text-muted hover:text-primary transition-colors" href="#"><span class="material-symbols-outlined">alternate_email</span></a>
+
+            <!-- Bottom Bar -->
+            <div class="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+                <p class="text-xs text-stone-500 font-medium">
+                    © {{ date('Y') }} {{ $systemSettings['cafe_name'] ?? 'Amber Roast' }}. All rights reserved.
+                </p>
+                <div class="flex gap-6">
+                    <a href="#" class="text-stone-500 hover:text-primary transition-all">
+                        <svg class="size-5 fill-current" viewBox="0 0 24 24"><path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24 l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"/></svg>
+                    </a>
+                    <a href="#" class="text-stone-500 hover:text-primary transition-all">
+                        <svg class="size-5 fill-current" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                    </a>
+                </div>
             </div>
         </div>
     </footer>
+
     
     @stack('scripts')
     

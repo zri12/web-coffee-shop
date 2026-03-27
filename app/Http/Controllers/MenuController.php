@@ -77,4 +77,33 @@ class MenuController extends Controller
                 ->with('error', 'Menu belum bisa dimuat saat ini. Silakan coba lagi.');
         }
     }
+
+    /**
+     * Resilient AI image generator fallback for serverless deployments.
+     */
+    public function aiImage(Request $request, string $menu)
+    {
+        $name = $request->query('name', 'Coffee');
+        $hint = $request->query('hint', 'beverage product photography');
+        
+        // Clean up keywords for Unsplash query
+        $keywords = collect(explode(' ', strtolower($name)))
+            ->merge(explode(' ', $hint))
+            ->unique()
+            ->filter(fn($w) => strlen($w) > 3)
+            ->join(',');
+
+        // Redirect to a high-quality stock image provider
+        $providerUrl = "https://source.unsplash.com/featured/?{$keywords},coffee,minimalist";
+        
+        // Use a more predictable provider as Unsplash source is retiring
+        $fallbackUrl = "https://images.unsplash.com/photo-1541167760496-1628856ab752?q=80&w=1000&auto=format&fit=crop";
+        if (str_contains(strtolower($name), 'croissant') || str_contains(strtolower($name), 'bread')) {
+            $fallbackUrl = "https://images.unsplash.com/photo-1555507036-ab1f4038808a?q=80&w=1000&auto=format&fit=crop";
+        } elseif (str_contains(strtolower($name), 'cake') || str_contains(strtolower($name), 'dessert')) {
+            $fallbackUrl = "https://images.unsplash.com/photo-1578985545062-69928b1d9587?q=80&w=1000&auto=format&fit=crop";
+        }
+
+        return redirect()->away($fallbackUrl);
+    }
 }

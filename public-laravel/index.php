@@ -20,7 +20,7 @@ if (is_string($envBasePath) && $envBasePath !== '' && isLaravelAppRoot($envBaseP
 
 if (!is_string($appBasePath)) {
     $searchRoots = [];
-    for ($levels = 0; $levels <= 7; $levels++) {
+    for ($levels = 1; $levels <= 7; $levels++) {
         $searchRoots[] = dirname(__DIR__, $levels);
     }
 
@@ -43,7 +43,7 @@ if (!is_string($appBasePath)) {
 
 if (!is_string($appBasePath)) {
     $searchRoots = [];
-    for ($levels = 0; $levels <= 7; $levels++) {
+    for ($levels = 1; $levels <= 7; $levels++) {
         $searchRoots[] = dirname(__DIR__, $levels);
     }
 

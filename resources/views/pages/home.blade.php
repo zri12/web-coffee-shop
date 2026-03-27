@@ -15,7 +15,8 @@
     <!-- Content -->
     <div class="relative z-10 max-w-7xl mx-auto px-6 w-full pt-16 pb-24 lg:pt-20 lg:pb-32 transform lg:-translate-y-12">
         <div class="max-w-3xl">
-            <span class="inline-block px-3 py-1 bg-primary text-on-primary text-[10px] font-extrabold uppercase tracking-[0.2em] rounded-full mb-6 text-white">Vercel Build: 2026.03.27.2234</span>
+            <span class="inline-block px-3 py-1 bg-primary text-on-primary text-[10px] font-extrabold uppercase tracking-[0.2em] rounded-full mb-6 text-white">// Vercel Build: 2026-03-27 22:45
+5</span>
             <h1 class="text-4xl md:text-5xl lg:text-[4rem] font-black leading-[1.1] tracking-tight text-white mb-8">
                 Order Your Coffee <br>Easily from <span class="text-primary italic">Your Table</span>
             </h1>

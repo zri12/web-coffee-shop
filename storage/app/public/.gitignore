@@ -1,2 +1,6 @@
 *
 !.gitignore
+!menu-images/
+!menu-images/**
+!category-icons/
+!category-icons/**
