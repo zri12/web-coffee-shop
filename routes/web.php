@@ -73,47 +73,25 @@ Route::get('/debug-cancel-stale', function () {
 
 Route::get('/menu-ai-image/{menu}', function ($menu, Request $request) {
     $name = trim((string) $request->query('name', 'Cafe Menu'));
-    $safeName = htmlspecialchars(Str::limit($name, 28), ENT_QUOTES, 'UTF-8');
+    $hint = trim((string) $request->query('hint', 'food photography'));
+    $normalized = strtolower($name.' '.$hint);
     $hash = abs(crc32((string) $menu));
-    $palettes = [
-        ['#4A2E1F', '#C98A4A', '#F8F2E8'],
-        ['#2F3E46', '#84A98C', '#F4F1DE'],
-        ['#3D2C2E', '#B56B45', '#F5E6CC'],
-        ['#1F2A44', '#CFA75E', '#EFE6D5'],
-        ['#2B3A67', '#E6A15A', '#FFF3E3'],
-        ['#3D405B', '#E07A5F', '#F4F1DE'],
-        ['#264653', '#E9C46A', '#FAF3E0'],
-    ];
-    $palette = $palettes[$hash % count($palettes)];
-    $iconSet = ['☕', '🧋', '🥐', '🍰', '🧁', '🍵', '🥪'];
-    $icon = $iconSet[$hash % count($iconSet)];
 
-    $svg = <<<SVG
-<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="{$palette[0]}"/>
-      <stop offset="100%" stop-color="{$palette[1]}"/>
-    </linearGradient>
-    <radialGradient id="shine" cx="30%" cy="20%" r="60%">
-      <stop offset="0%" stop-color="rgba(255,255,255,0.35)"/>
-      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
-    </radialGradient>
-  </defs>
-  <rect width="1024" height="1024" fill="url(#bg)"/>
-  <rect width="1024" height="1024" fill="url(#shine)"/>
-  <circle cx="220" cy="210" r="140" fill="rgba(255,255,255,0.13)"/>
-  <circle cx="840" cy="820" r="190" fill="rgba(255,255,255,0.10)"/>
-  <rect x="180" y="220" width="664" height="584" rx="48" fill="rgba(255,255,255,0.14)" stroke="rgba(255,255,255,0.3)" stroke-width="6"/>
-  <text x="512" y="430" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="170">{$icon}</text>
-  <text x="512" y="565" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="78" font-weight="700" fill="{$palette[2]}">{$safeName}</text>
-  <text x="512" y="635" text-anchor="middle" font-family="Inter,Arial,sans-serif" font-size="34" fill="rgba(255,255,255,0.9)">Kopi Nusantara Cafe</text>
-</svg>
-SVG;
+    $query = ['food', 'restaurant'];
+    if (str_contains($normalized, 'coffee') || str_contains($normalized, 'latte') || str_contains($normalized, 'espresso') || str_contains($normalized, 'cappuccino') || str_contains($normalized, 'brew')) {
+        $query = ['coffee', 'latte', 'cafe'];
+    } elseif (str_contains($normalized, 'croissant') || str_contains($normalized, 'bakery') || str_contains($normalized, 'bread')) {
+        $query = ['croissant', 'bakery', 'pastry'];
+    } elseif (str_contains($normalized, 'cake') || str_contains($normalized, 'dessert') || str_contains($normalized, 'tiramisu')) {
+        $query = ['cake', 'dessert', 'pastry'];
+    } elseif (str_contains($normalized, 'matcha') || str_contains($normalized, 'tea')) {
+        $query = ['matcha', 'tea', 'drink'];
+    }
 
-    return response($svg, 200)
-        ->header('Content-Type', 'image/svg+xml')
-        ->header('Cache-Control', 'public, max-age=31536000, immutable');
+    $queryText = rawurlencode(implode(',', array_filter([$name, implode(',', $query)])));
+    $url = "https://source.unsplash.com/1024x1024/?{$queryText}&sig={$hash}";
+
+    return redirect()->away($url);
 })->name('menu.ai-image');
 
 Route::get('/db-check', function () {
@@ -338,3 +316,16 @@ Route::middleware(['auth', 'role:admin,manager'])->prefix('manager')->name('mana
     Route::post('/profile/update', [App\Http\Controllers\Manager\ManagerController::class, 'updateProfile'])->name('profile.update');
     Route::post('/profile/password', [App\Http\Controllers\Manager\ManagerController::class, 'updatePassword'])->name('profile.password');
 });
+
+// System Routes
+Route::get('/system/clear-cache', function () {
+    \Artisan::call('view:clear');
+    \Artisan::call('cache:clear');
+    \Artisan::call('config:clear');
+    return response()->json([
+        'message' => 'Cache cleared successfully!',
+        'timestamp' => now()->toDateTimeString(),
+        'vercel_env' => env('VERCEL_ENV', 'unknown')
+    ]);
+});
+
