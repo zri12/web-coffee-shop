@@ -4,210 +4,154 @@
 
 @section('content')
 <!-- Hero Section -->
-<section class="relative w-full">
-    <div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-20">
-        <div class="grid lg:grid-cols-2 gap-12 items-center">
-            <!-- Text Content -->
-            <div class="flex flex-col gap-6 order-2 lg:order-1">
-                <h1 class="text-4xl md:text-5xl lg:text-6xl font-black leading-[1.1] text-text-main dark:text-white tracking-tight">
-                    Pesan Mudah dari <br><span class="text-primary">Meja Anda</span>
-                </h1>
-                <p class="text-lg text-text-subtle dark:text-gray-400 max-w-lg leading-relaxed">
-                    Lewati antrian. Kopi segar dan pastry artisan diantar langsung ke tempat duduk Anda. Scan, pesan, dan nikmati.
-                </p>
-                <div class="flex flex-wrap gap-4 pt-2">
-                    <a href="{{ route('menu.index') }}" class="flex items-center justify-center h-12 px-8 rounded-full bg-primary hover:bg-primary-dark text-white text-base font-bold transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5">
-                        Mulai Pesan
-                    </a>
-                    <a href="{{ route('menu.index') }}" class="flex items-center justify-center h-12 px-8 rounded-full border-2 border-[#e6e0db] dark:border-surface-dark hover:border-primary text-text-main dark:text-white text-base font-bold transition-colors bg-transparent">
-                        Lihat Menu
-                    </a>
-                </div>
-            </div>
-            
-            <!-- Hero Image -->
-            <div class="relative order-1 lg:order-2">
-                <div class="aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl relative group">
-                    <!-- Decorative gradient overlay -->
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-10"></div>
-                    <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuC0wbxu_-0SKHhGfZWylXTdXiRVlZjyBtw0ChR8DRc6glkIcuoEmCPUhfvp4oCw7EICpO7PB62wYxSi3cgZfQCvRgo8IT5wzwZK45wyN6HWj1oD55F25BzlxfTIFpKFMkrwpijCmUORphBqJ5Mh1eU9Bihj-zLROzUwi88_PDoMPWUvonmFSnIhOO8Pm0RG9_mwGbpFHEi_UVs5Gag4nO8rFMfwb1rRtR1y8rRpp_UsSmypq-BYRLmjt2ZeBMh3DYdTM3_wlX80_gbn" 
-                         alt="Cozy cafe interior with latte art on wooden table" 
-                         class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105">
-                </div>
-                
-                <!-- Floating Badge -->
-                <div class="absolute -bottom-6 -left-6 z-20 hidden md:flex bg-white dark:bg-surface-dark p-4 rounded-xl shadow-xl border border-[#f4f2f0] dark:border-none items-center gap-3">
-                    <div class="bg-green-100 text-green-700 p-2 rounded-full">
-                        <span class="material-symbols-outlined">eco</span>
-                    </div>
-                    <div>
-                        <p class="text-xs text-text-subtle uppercase font-bold tracking-wider">Biji Pilihan</p>
-                        <p class="text-sm font-bold text-text-main dark:text-white">100% Kopi Nusantara</p>
-                    </div>
-                </div>
+<section class="relative w-full min-h-[700px] lg:min-h-[850px] flex items-center overflow-hidden">
+    <!-- Background Image & Overlay -->
+    <div class="absolute inset-0 z-0">
+        <img class="w-full h-full object-cover object-[center_25%]" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2TsRmJG7cbr_BudmT1KMc1X4BfCuQH247b6h8w8VUWe0k3xlT5bVYL9edblgPlnusq3gq1U2oocj97x_MOe4Cbv5rFIACkeX2P3pFoz2EFcoPc3KmPuhT0HRFSL1o8A_HCn8K4O7c5CBgWcCeBrtFj0iSdWpI-fIOe-B2fr8gpPALolKwMkv9AwGKPUZkQeMAEUWczul8OaKpzbh3NoIQID5NhccXVPK3dAcgNJZZf_MfrqcqGJrXukFgA2AGjw6xr6rxQxYm3gxt" alt="Cafe Interior">
+        <div class="absolute inset-0 bg-black/45"></div>
+        <div class="absolute inset-0 hero-gradient"></div>
+    </div>
+
+    <!-- Content -->
+    <div class="relative z-10 max-w-7xl mx-auto px-6 w-full pt-16 pb-24 lg:pt-20 lg:pb-32 transform lg:-translate-y-12">
+        <div class="max-w-3xl">
+            <span class="inline-block px-3 py-1 bg-primary text-on-primary text-[10px] font-extrabold uppercase tracking-[0.2em] rounded-full mb-6 text-white">Vercel Build: 2026.03.27.2234</span>
+            <h1 class="text-4xl md:text-5xl lg:text-[4rem] font-black leading-[1.1] tracking-tight text-white mb-8">
+                Order Your Coffee <br>Easily from <span class="text-primary italic">Your Table</span>
+            </h1>
+            <p class="text-xl text-stone-200 mb-10 leading-relaxed max-w-lg">
+                Experience the perfect blend of artisan craft and digital convenience. Freshly roasted beans delivered to your table in minutes.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 items-center">
+                <a href="{{ route('menu.index') }}" class="w-full sm:w-auto px-10 py-5 bg-primary text-on-primary rounded-full font-bold text-lg shadow-[0_15px_30px_rgba(207,99,23,0.4)] hover:scale-95 transition-all flex items-center justify-center gap-3">
+                    <span class="material-symbols-outlined">qr_code_scanner</span>
+                    Scan & Order Now
+                </a>
+                <a href="{{ route('menu.index') }}" class="w-full sm:w-auto px-10 py-5 bg-white text-[#1b130e] border border-stone-200 rounded-full font-bold text-lg shadow-sm hover:bg-stone-50 transition-all flex items-center justify-center">
+                    View Full Menu
+                </a>
             </div>
         </div>
     </div>
 </section>
 
-<!-- How it Works Section -->
-<section class="w-full bg-white dark:bg-[#1a120b] py-20 border-y border-[#f4f2f0] dark:border-[#3E2723]">
-    <div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+<!-- How It Works (Bento Inspired) -->
+<section class="py-24 bg-surface px-6">
+    <div class="max-w-7xl mx-auto">
         <div class="text-center mb-16">
-            <span class="text-primary font-bold text-sm tracking-widest uppercase mb-2 block">Proses Mudah</span>
-            <h2 class="text-3xl md:text-4xl font-bold text-text-main dark:text-white mb-4">Cara Kerja</h2>
-            <p class="text-text-subtle dark:text-gray-400 max-w-xl mx-auto">Nikmati pengalaman makan yang mulus dalam tiga langkah sederhana.</p>
+            <h2 class="text-4xl font-black text-on-background mb-4">Effortless Perfection</h2>
+            <p class="text-on-surface-variant max-w-sm mx-auto font-medium">Three simple steps to your favorite artisanal cup.</p>
         </div>
-        
-        <div class="grid md:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
             <!-- Step 1 -->
-            <div class="group flex flex-col items-center text-center p-6 rounded-2xl hover:bg-background-light dark:hover:bg-surface-dark transition-colors duration-300">
-                <div class="size-20 bg-[#FDFBF7] dark:bg-surface-dark rounded-full flex items-center justify-center mb-6 group-hover:bg-primary/10 transition-colors">
-                    <span class="material-symbols-outlined text-4xl text-primary">qr_code_scanner</span>
+            <div class="bg-surface-bright p-10 rounded-[2.5rem] shadow-sm border border-outline-variant/50 group hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
+                <div class="w-16 h-16 bg-secondary rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-primary text-3xl">qr_code_scanner</span>
                 </div>
-                <h3 class="text-xl font-bold text-text-main dark:text-white mb-3">Scan QR Code</h3>
-                <p class="text-text-subtle dark:text-gray-400">Temukan QR code unik di meja Anda untuk akses menu digital kami.</p>
+                <h3 class="text-2xl font-bold mb-4">1. Scan</h3>
+                <p class="text-on-surface-variant leading-relaxed">Simply scan the QR code located on your table to access our digital menu instantly.</p>
             </div>
-            
             <!-- Step 2 -->
-            <div class="group flex flex-col items-center text-center p-6 rounded-2xl hover:bg-background-light dark:hover:bg-surface-dark transition-colors duration-300">
-                <div class="size-20 bg-[#FDFBF7] dark:bg-surface-dark rounded-full flex items-center justify-center mb-6 group-hover:bg-primary/10 transition-colors">
-                    <span class="material-symbols-outlined text-4xl text-primary">restaurant_menu</span>
+            <div class="bg-[#f4e9df] p-10 rounded-[2.5rem] shadow-sm group hover:shadow-xl transition-all duration-500 transform md:-translate-y-4 hover:-translate-y-5">
+                <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-primary text-3xl">coffee</span>
                 </div>
-                <h3 class="text-xl font-bold text-text-main dark:text-white mb-3">Pilih Menu</h3>
-                <p class="text-text-subtle dark:text-gray-400">Pilih dari berbagai kopi artisan, pastry segar, dan makanan lezat.</p>
+                <h3 class="text-2xl font-bold mb-4">2. Choose</h3>
+                <p class="text-on-surface-variant leading-relaxed">Browse our curated selection of roasts and customize your brew exactly how you like it.</p>
             </div>
-            
             <!-- Step 3 -->
-            <div class="group flex flex-col items-center text-center p-6 rounded-2xl hover:bg-background-light dark:hover:bg-surface-dark transition-colors duration-300">
-                <div class="size-20 bg-[#FDFBF7] dark:bg-surface-dark rounded-full flex items-center justify-center mb-6 group-hover:bg-primary/10 transition-colors">
-                    <span class="material-symbols-outlined text-4xl text-primary">credit_card</span>
+            <div class="bg-surface-bright p-10 rounded-[2.5rem] shadow-sm border border-outline-variant/50 group hover:shadow-xl transition-all duration-500 hover:-translate-y-1">
+                <div class="w-16 h-16 bg-secondary rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                    <span class="material-symbols-outlined text-primary text-3xl">contactless</span>
                 </div>
-                <h3 class="text-xl font-bold text-text-main dark:text-white mb-3">Checkout Cepat</h3>
-                <p class="text-text-subtle dark:text-gray-400">Bayar dan pesanan diantar langsung ke meja Anda.</p>
+                <h3 class="text-2xl font-bold mb-4">3. Pay</h3>
+                <p class="text-on-surface-variant leading-relaxed">Secure checkout via your phone. No waiting for the bill, just pure coffee enjoyment.</p>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Featured Items Grid -->
-<section class="w-full py-20 bg-background-light dark:bg-background-dark">
-    <div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-end mb-10">
+<!-- Featured Menu -->
+<section class="py-24 bg-surface-container-high px-6 overflow-hidden">
+    <div class="max-w-7xl mx-auto">
+        <div class="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
             <div>
-                <h2 class="text-3xl font-bold text-text-main dark:text-white">Menu Favorit</h2>
-                <p class="text-text-subtle dark:text-gray-400 mt-2">Pilihan favorit pelanggan kami.</p>
+                <span class="text-primary font-bold tracking-widest text-xs uppercase mb-3 block">From Our Barista</span>
+                <h2 class="text-4xl md:text-5xl font-black text-on-background">Featured Menu</h2>
             </div>
-            <a href="{{ route('menu.index') }}" class="hidden sm:flex items-center gap-1 text-primary font-bold hover:text-primary-dark transition-colors">
-                Lihat Semua <span class="material-symbols-outlined text-sm">arrow_forward</span>
-            </a>
+            <div class="flex gap-4">
+                <a href="{{ route('menu.index') }}" class="px-6 py-3 bg-white hover:bg-primary hover:text-white transition-all rounded-full border border-stone-200 font-bold text-sm">
+                    Explore All Menu
+                </a>
+            </div>
         </div>
         
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="flex flex-wrap justify-center gap-x-8 gap-y-12">
             @forelse($featuredMenus as $menu)
-            <!-- Menu Card -->
-            <div class="bg-white dark:bg-surface-dark rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group flex flex-col h-full border border-[#f4f2f0] dark:border-[#3E2723]">
-                <div class="aspect-[4/3] overflow-hidden relative bg-gradient-to-br from-primary/10 to-primary/5">
-                    <img src="{{ $menu->display_image_url }}" 
-                         alt="{{ $menu->name }}" 
-                         onerror="this.onerror=null;this.src='{{ $menu->placeholder_image_url }}'"
-                         class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
-                    <button onclick="addToCart({{ $menu->id }}, '{{ $menu->name }}', {{ $menu->price }})" 
-                            class="absolute bottom-3 right-3 size-10 bg-white/90 dark:bg-black/60 rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors shadow-sm text-text-main dark:text-white">
-                        <span class="material-symbols-outlined">add</span>
-                    </button>
-                </div>
-                <div class="p-4 flex flex-col flex-1">
-                    <div class="flex justify-between items-start mb-2">
-                        <h3 class="font-bold text-text-main dark:text-white text-lg">{{ $menu->name }}</h3>
-                        <span class="font-bold text-primary">{{ $menu->formatted_price }}</span>
+            <!-- Item -->
+            <div class="group w-full sm:w-[calc(50%-1.5rem)] lg:w-[calc(25%-1.75rem)] max-w-[300px]">
+                <div class="relative aspect-[4/5] rounded-[2.5rem] overflow-hidden mb-6 shadow-lg bg-white">
+                    <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" 
+                         src="{{ $menu->display_image_url }}" alt="{{ $menu->name }}"
+                         onerror="this.onerror=null;this.src='{{ $menu->placeholder_image_url }}'">
+                    
+                    @if($menu->is_featured)
+                    <div class="absolute top-4 right-4 px-3 py-1 bg-white/90 backdrop-blur rounded-full text-xs font-bold text-primary shadow-sm">
+                        Best Seller
                     </div>
-                    <p class="text-sm text-text-subtle dark:text-gray-400 line-clamp-2">{{ $menu->description ?? 'Minuman lezat dengan cita rasa premium.' }}</p>
+                    @endif
+
+
+                </div>
+                <div class="mt-4 flex justify-between items-start">
+                    <div class="flex-grow pr-4">
+                        <h4 class="text-xl font-black text-[#1b130e] dark:text-stone-100 mb-1 leading-tight tracking-tight">{{ $menu->name }}</h4>
+                        <p class="text-on-surface-variant font-medium text-sm line-clamp-2 leading-snug">
+                            {{ $menu->description ?? 'Rich artisan flavors crafted for your enjoyment.' }}
+                        </p>
+                    </div>
+                    <div class="text-right flex flex-col items-end shrink-0">
+                        <span class="text-[11px] font-black uppercase text-primary tracking-widest mb-0.5 opacity-80">Rp</span>
+                        <span class="text-2xl font-black text-primary tracking-tighter leading-none">{{ number_format($menu->price, 0, ',', '.') }}</span>
+                    </div>
                 </div>
             </div>
             @empty
-            <!-- Placeholder Cards when no menus -->
-            <div class="bg-white dark:bg-surface-dark rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group flex flex-col h-full border border-[#f4f2f0] dark:border-[#3E2723]">
-                <div class="aspect-[4/3] overflow-hidden relative">
-                    <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBLq8VwP5OqsrRuk_kYuvhNbBzx5UoNLxVKRYhAVKMk8KFzM3EaaSPFKR_6v690LB9h_ICXe4r-GLRa5PQU3MFYjAOwoETa6gwWu8KH-f2cVjMe_d5uNU1kk81fZ8NmySjHw0Q5LU1sFmggDoZ25TaCojlzPK3irjUw1sq59HuZBXrMWyl0Lo4IrOJjiGBWyKsGrxQSzgwEZrh5UTJZArRZr-BSFOxM8zM1QXpFNJWlYb61MqK65WyqgScI_SLXeI_c39OmNxHhJP94" 
-                         alt="Caramel Macchiato" 
-                         class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
-                    <button class="absolute bottom-3 right-3 size-10 bg-white/90 dark:bg-black/60 rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors shadow-sm text-text-main dark:text-white">
-                        <span class="material-symbols-outlined">add</span>
-                    </button>
-                </div>
-                <div class="p-4 flex flex-col flex-1">
-                    <div class="flex justify-between items-start mb-2">
-                        <h3 class="font-bold text-text-main dark:text-white text-lg">Caramel Macchiato</h3>
-                        <span class="font-bold text-primary">Rp 45.000</span>
-                    </div>
-                    <p class="text-sm text-text-subtle dark:text-gray-400 line-clamp-2">Espresso kaya rasa dengan sirup vanilla, susu steamed, dan drizzle karamel.</p>
-                </div>
-            </div>
-            
-            <div class="bg-white dark:bg-surface-dark rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group flex flex-col h-full border border-[#f4f2f0] dark:border-[#3E2723]">
-                <div class="aspect-[4/3] overflow-hidden relative">
-                    <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDgK5VZiy5Pc6GBtL_Vt4sFL6xvNUpKiWsROMwlMIxwqxAgt1ELEW7jnLDbVpIcBhJWWULWsbDx3T32QHRE5FwNoZxgaKAExDv5LVALMw5Ruwlt82Jn4LKtRSkLzjy-XjJ5VxvJ3-NRItliCEqjZAFQuk5aHwwZiICkv0qv8wH8BlGVvCcRTDXsafmpOnatWbjGDSmhUBzR2ZoP-ZGwhMVHaClIU5IbMdT8zcPWakjyjeRHumwViOgQGv6kZyN4B7BCU5lfSHH8mMbo" 
-                         alt="Avocado Toast" 
-                         class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
-                    <button class="absolute bottom-3 right-3 size-10 bg-white/90 dark:bg-black/60 rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors shadow-sm text-text-main dark:text-white">
-                        <span class="material-symbols-outlined">add</span>
-                    </button>
-                </div>
-                <div class="p-4 flex flex-col flex-1">
-                    <div class="flex justify-between items-start mb-2">
-                        <h3 class="font-bold text-text-main dark:text-white text-lg">Avocado Toast</h3>
-                        <span class="font-bold text-primary">Rp 55.000</span>
-                    </div>
-                    <p class="text-sm text-text-subtle dark:text-gray-400 line-clamp-2">Roti sourdough dengan alpukat hancur, chili flakes, dan microgreens.</p>
-                </div>
-            </div>
-            
-            <div class="bg-white dark:bg-surface-dark rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group flex flex-col h-full border border-[#f4f2f0] dark:border-[#3E2723]">
-                <div class="aspect-[4/3] overflow-hidden relative">
-                    <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDTf7rAJzKPLtNdzp2GJEUu6KQvGdUAhDGZWtkdKyQPvvviWTLOmO9nt1vyTufGrrk9JjZrJJdZCVelyyz0SLUHeP7hW5O_35U2cYm9160F5s9dO5H4om5d2QX_OBt2PYo52VWGT-CJGkst26gN0lIjB41SgznCboJPN4_0Xh3HB29VER6hl0RkCztSpaZ6htspbP_ChCWl5Oo1Lu4mvQyXriwlIbHTTXnpp7TMy2w6ogEksLZgqdPSCN0kQ7AL990u-BnxpsHK8XxG" 
-                         alt="Blueberry Scone" 
-                         class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
-                    <button class="absolute bottom-3 right-3 size-10 bg-white/90 dark:bg-black/60 rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors shadow-sm text-text-main dark:text-white">
-                        <span class="material-symbols-outlined">add</span>
-                    </button>
-                </div>
-                <div class="p-4 flex flex-col flex-1">
-                    <div class="flex justify-between items-start mb-2">
-                        <h3 class="font-bold text-text-main dark:text-white text-lg">Blueberry Scone</h3>
-                        <span class="font-bold text-primary">Rp 35.000</span>
-                    </div>
-                    <p class="text-sm text-text-subtle dark:text-gray-400 line-clamp-2">Scone buttery dan flaky dengan blueberry segar dan taburan gula.</p>
-                </div>
-            </div>
-            
-            <div class="bg-white dark:bg-surface-dark rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow group flex flex-col h-full border border-[#f4f2f0] dark:border-[#3E2723]">
-                <div class="aspect-[4/3] overflow-hidden relative">
-                    <img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDk8A2yGc4Pgm65z7zJRBUBYZdkSShHq1TPDi6Rr5NpXesGoqjsL1MAACLNJ25wGgTHf1IPCFtkBVMo3WsFOgzKcj-2IZ28Q5kEDyLzutqyt2PymGWDV0J9CxBiUp1-ncVlYxYBDUdofQQ3bR1fJo0lNMVLc9dz2_xIFJMhrrhMsxWxRCeBQfaiVweeIYgpKYEm6BwSBczY25V-wUvJscdVsk1WH-t5TltqSzhHdIggUz9iqn1DU8uHKMkvzyPeJdf67CSSAOs2k2Nh" 
-                         alt="Pour Over Coffee" 
-                         class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110">
-                    <button class="absolute bottom-3 right-3 size-10 bg-white/90 dark:bg-black/60 rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors shadow-sm text-text-main dark:text-white">
-                        <span class="material-symbols-outlined">add</span>
-                    </button>
-                </div>
-                <div class="p-4 flex flex-col flex-1">
-                    <div class="flex justify-between items-start mb-2">
-                        <h3 class="font-bold text-text-main dark:text-white text-lg">Pour Over</h3>
-                        <span class="font-bold text-primary">Rp 38.000</span>
-                    </div>
-                    <p class="text-sm text-text-subtle dark:text-gray-400 line-clamp-2">Biji single-origin diseduh perlahan untuk rasa yang bersih dan kompleks.</p>
-                </div>
-            </div>
+            <!-- Placeholder if empty -->
+            <p class="col-span-full text-center text-on-surface-variant">Check back soon for our barista's picks!</p>
             @endforelse
-        </div>
-        
-        <div class="mt-8 flex justify-center sm:hidden">
-            <a href="{{ route('menu.index') }}" class="w-full max-w-xs flex items-center justify-center h-12 px-6 rounded-lg border border-[#e6e0db] dark:border-surface-dark text-text-main dark:text-white text-sm font-bold bg-white dark:bg-surface-dark">
-                Lihat Semua Menu
-            </a>
         </div>
     </div>
 </section>
+
+<!-- Newsletter / App CTA -->
+<section class="py-24 bg-surface px-6 relative overflow-hidden">
+    <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16">
+        <div class="lg:w-1/2 relative">
+            <div class="absolute -top-10 -left-10 w-64 h-64 bg-secondary rounded-full filter blur-3xl opacity-50 z-0"></div>
+            <div class="relative z-10 bg-inverse-surface p-8 rounded-[3rem] shadow-2xl">
+                <div class="bg-white p-6 rounded-2xl mb-8 flex items-center justify-center">
+                    <div class="w-48 h-48 bg-stone-100 rounded-xl flex items-center justify-center border-4 border-stone-200">
+                        <span class="material-symbols-outlined text-stone-300 text-9xl">qr_code_2</span>
+                    </div>
+                </div>
+                <h3 class="text-white text-2xl font-bold text-center mb-2">Scan for Exclusive Rewards</h3>
+                <p class="text-stone-400 text-center text-sm font-medium">Join the Amber Roast circle for special discounts.</p>
+            </div>
+        </div>
+        <div class="lg:w-1/2">
+            <h2 class="text-5xl font-black text-on-background mb-8 leading-tight">Elevate Your Morning Ritual</h2>
+            <p class="text-xl text-on-surface-variant mb-10 leading-relaxed">
+                Stay connected with our seasonal releases, events, and workshops. Join our community of coffee lovers and experience the craft.
+            </p>
+            <form action="#" class="flex flex-col sm:flex-row gap-4">
+                <input class="flex-1 px-8 py-5 rounded-full border border-outline-variant bg-surface-bright focus:ring-primary focus:border-primary outline-none" placeholder="Enter your email" type="email">
+                <button class="px-10 py-5 bg-primary text-on-primary rounded-full font-bold shadow-lg hover:bg-on-primary-fixed transition-all active:scale-95">Subscribe</button>
+            </form>
+        </div>
+    </div>
+</section>
+
 
 @push('scripts')
 <script>
