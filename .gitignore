@@ -8,7 +8,8 @@ docker-compose.override.yml
 proxy.php
 /public/build
 /public/hot
-/public/storage
+!/public/storage/
+!/public/storage/**
 /storage/*.key
 /storage/app/*
 !/storage/app/public/

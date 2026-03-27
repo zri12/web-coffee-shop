@@ -57,19 +57,28 @@ class Menu extends Model
                 return $candidate;
             }
 
+            // Normalize and resolve path
             $normalized = ltrim($candidate, '/');
             if (Str::startsWith($normalized, 'storage/')) {
                 $normalized = Str::after($normalized, 'storage/');
             }
-            // Serve from public storage only if file exists; otherwise continue to fallback
+
+            // Check if file exists in public storage or repo root
+            $exists = false;
             try {
-                if (Storage::disk('public')->exists($normalized)) {
-                    return $isSecure
-                        ? secure_asset('storage/' . $normalized)
-                        : asset('storage/' . $normalized);
-                }
+                // Prioritize checking in standard public storage (mapped to public/storage in this project)
+                $exists = file_exists(public_path('storage/' . $normalized)) || 
+                          file_exists(base_path('storage/app/public/' . $normalized)) ||
+                          Storage::disk('public')->exists($normalized);
             } catch (\Throwable $e) {
-                // If storage check fails (read-only env), skip to fallback
+                $exists = file_exists(public_path('storage/' . $normalized)) || 
+                          file_exists(base_path('storage/app/public/' . $normalized));
+            }
+
+            if ($exists) {
+                return $isSecure
+                    ? secure_asset('storage/' . $normalized)
+                    : asset('storage/' . $normalized);
             }
         }
 
