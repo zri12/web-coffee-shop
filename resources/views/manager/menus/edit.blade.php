@@ -124,8 +124,14 @@
                     @enderror
                 </div>
 
+                @php
+                    $recipes = old('recipes') ?? ($initialRecipes ?? $menu->recipes->map(function($r) {
+                        return ['ingredient_id' => $r->ingredient_id, 'quantity_used' => (float)$r->quantity_used];
+                    })->toArray());
+                @endphp
+
                 <!-- Recipe / Ingredients -->
-                <div x-data="recipeForm(@json($initialRecipes))" class="space-y-3 mt-6">
+                <div x-data="recipeForm(@json($recipes))" class="space-y-3 mt-6">
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-xs uppercase tracking-wide text-[#a89c92]">Resep</p>
@@ -143,9 +149,9 @@
                                 <label class="text-xs font-medium text-[#897561] dark:text-[#a89c92]">Ingredient</label>
                                 <select :name="'recipes['+index+'][ingredient_id]'" x-model="recipe.ingredient_id"
                                         class="w-full px-3 py-2 border border-[#e6e0db] dark:border-[#3d362e] rounded-lg text-sm focus:outline-none focus:border-primary">
-                                    <option value=\"\">Pilih bahan</option>
+                                    <option value="">Pilih bahan</option>
                                     @foreach($ingredients as $ingredient)
-                                        <option value=\"{{ $ingredient->id }}\">{{ $ingredient->name }} ({{ $ingredient->unit }})</option>
+                                        <option value="{{ $ingredient->id }}">{{ $ingredient->name }} ({{ $ingredient->unit }})</option>
                                     @endforeach
                                 </select>
                             </div>

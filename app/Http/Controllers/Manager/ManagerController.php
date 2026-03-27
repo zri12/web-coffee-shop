@@ -172,9 +172,14 @@ class ManagerController extends Controller
         $menu = \App\Models\Menu::findOrFail($id);
         $categories = \App\Models\Category::all();
         $ingredients = Ingredient::orderBy('name')->get();
-        $menuRecipes = $menu->recipes()->with('ingredient')->get();
+        $initialRecipes = $menu->recipes()->get(['ingredient_id', 'quantity_used'])->toArray();
 
-        return view('manager.menus.edit', compact('menu', 'categories', 'ingredients', 'menuRecipes'));
+        return view('manager.menus.edit', [
+            'menu' => $menu,
+            'categories' => $categories,
+            'ingredients' => $ingredients,
+            'initialRecipes' => $initialRecipes,
+        ]);
     }
     
     public function updateMenu(Request $request, $id)
